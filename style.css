@@ -3721,13 +3721,14 @@
     
     @media (max-width: 480px) {
       header img {
-        height: 1.25rem;
-        display: block;
+        height: 1.25rem !important;
+        display: block !important;
+        width: auto !important;
       }
       
       /* Keep text logo hidden on all screen sizes */
       header .mobile-logo {
-        display: none;
+        display: none !important;
       }
     }
     
@@ -3819,8 +3820,31 @@
 
     /* Mobile Header Icons - Make them bigger and more touch-friendly */
     @media (max-width: 768px) {
-      /* Hide desktop navigation buttons on mobile */
-      .nav-btn {
+      /* Hide desktop navigation buttons on mobile, but keep sign in button visible */
+      .nav-btn:not(#btnSignIn) {
+        display: none !important;
+      }
+      
+      /* Ensure sign in button is visible and properly styled on mobile */
+      #btnSignIn {
+        display: flex !important;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+        min-height: 2.5rem;
+        min-width: auto;
+      }
+      
+      /* Ensure logo image is displayed on mobile */
+      header img {
+        display: block !important;
+        height: 1.5rem !important;
+        width: auto !important;
+      }
+      
+      /* Hide mobile logo text completely */
+      header .mobile-logo {
         display: none !important;
       }
       
@@ -3830,6 +3854,34 @@
         height: 2.5rem !important;
         min-width: 2.5rem !important;
         min-height: 2.5rem !important;
+      }
+      
+      /* Ensure account menu button is visible on mobile */
+      #accountMenuBtn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      /* Ensure account dropdown is properly positioned on mobile */
+      #accountDropdown {
+        right: 0 !important;
+        left: auto !important;
+        width: 16rem !important;
+        max-width: calc(100vw - 2rem) !important;
+        z-index: 9999 !important;
+      }
+      
+      /* Ensure header buttons are properly spaced on mobile */
+      header .flex.items-center.gap-2 {
+        gap: 0.5rem !important;
+        flex-wrap: nowrap !important;
+      }
+      
+      /* Make sure all header buttons are visible and touch-friendly */
+      header .icon-btn,
+      header #btnSignIn {
+        flex-shrink: 0 !important;
       }
       
       /* Make icons inside buttons bigger */
