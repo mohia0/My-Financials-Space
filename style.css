@@ -3730,6 +3730,14 @@
       header .mobile-logo {
         display: none !important;
       }
+      
+      /* Ensure sign-in button is visible on smaller mobile devices */
+      #btnSignIn {
+        display: flex !important;
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.75rem !important;
+        min-height: 2.25rem !important;
+      }
     }
     
     /* Default mobile logo hidden on desktop */
@@ -3820,9 +3828,21 @@
 
     /* Mobile Header Icons - Make them bigger and more touch-friendly */
     @media (max-width: 768px) {
-      /* Hide desktop navigation buttons on mobile */
-      .nav-btn {
+      /* Hide desktop navigation buttons on mobile, but keep sign-in button visible */
+      .nav-btn:not(#btnSignIn) {
         display: none !important;
+      }
+      
+      /* Make sign-in button visible and properly styled on mobile */
+      #btnSignIn {
+        display: flex !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 0.8rem !important;
+        min-height: 2.5rem !important;
+        border-radius: 0.5rem !important;
+        background: var(--glass) !important;
+        border: 1px solid var(--stroke) !important;
+        color: var(--fg) !important;
       }
       
       /* Center the header content vertically */
