@@ -45,6 +45,19 @@ window.supabaseClient = supabase;
         // Set initial state
         showPage('expenses');
         
+        // Initialize mobile navigation
+        updateMobileNavActiveState('expenses');
+        
+        // Add mobile navigation click listeners
+        document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = btn.getAttribute('data-page');
+            console.log('Mobile nav button clicked:', page);
+            showPage(page);
+          });
+        });
+        
         // Add click listeners
         tabExpenses.addEventListener('click', () => showPage('expenses'));
         tabIncome.addEventListener('click', () => showPage('income'));
@@ -101,6 +114,24 @@ window.supabaseClient = supabase;
         // Update analytics page data
         updateAnalyticsPage();
       }
+      
+      // Update mobile navigation active state
+      updateMobileNavActiveState(page);
+    }
+    
+    // Update mobile navigation active state
+    function updateMobileNavActiveState(page) {
+      document.querySelectorAll('.mobile-nav-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.querySelector(`.mobile-nav-btn[data-page="${page}"]`);
+      if (activeBtn) {
+        activeBtn.classList.add('active');
+      }
+    }
+    
+    // Mobile navigation function (called from HTML onclick)
+    function switchPage(page) {
+      console.log('Mobile nav clicked:', page);
+      showPage(page);
     }
     
     // Ensure current year is selected
@@ -484,15 +515,15 @@ window.supabaseClient = supabase;
         if (years.includes(currentYearNum)) {
           switchYear(currentYearNum.toString());
         } else {
-          switchYear(years[0].toString());
+        switchYear(years[0].toString());
         }
       }
       
       console.log(`Created year tabs:`, years);
       
       // Save years to Supabase to ensure they're persisted
-      console.log('Saving years to Supabase:', years);
-      save(); // This will update available_years in user_settings
+        console.log('Saving years to Supabase:', years);
+        save(); // This will update available_years in user_settings
     }
     
     function addYearToTabs(newYear) {
@@ -1444,16 +1475,6 @@ window.supabaseClient = supabase;
       // Load current user data
       loadAccountData();
       
-      // Ensure date input is specifically enabled
-      setTimeout(() => {
-        const birthdayInput = $('#accountBirthday');
-        if (birthdayInput) {
-          birthdayInput.disabled = false;
-          birthdayInput.style.pointerEvents = 'auto';
-          birthdayInput.style.opacity = '1';
-          birthdayInput.style.cursor = 'pointer';
-        }
-      }, 100);
       
       clearAuthStatus();
     }
@@ -1529,38 +1550,6 @@ window.supabaseClient = supabase;
         // Load user email (readonly)
         $('#accountEmail').value = currentUser.email || '';
         
-        // Load user birthday (from metadata)
-        const birthday = currentUser.user_metadata?.birthday || '';
-        $('#accountBirthday').value = birthday;
-        
-        // Set date input attributes for better UX
-        const birthdayInput = $('#accountBirthday');
-        if (birthdayInput) {
-          // Set reasonable date range (100 years ago to today)
-          const today = new Date();
-          const hundredYearsAgo = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate());
-          
-          birthdayInput.setAttribute('max', today.toISOString().split('T')[0]);
-          birthdayInput.setAttribute('min', hundredYearsAgo.toISOString().split('T')[0]);
-          
-          // Remove any existing event listeners to avoid duplicates
-          birthdayInput.removeEventListener('focus', handleDateFocus);
-          birthdayInput.removeEventListener('click', handleDateClick);
-          birthdayInput.removeEventListener('input', handleDateInput);
-          birthdayInput.removeEventListener('keydown', handleDateKeydown);
-          
-          // Add event listeners for better typing experience
-          birthdayInput.addEventListener('focus', handleDateFocus);
-          birthdayInput.addEventListener('click', handleDateClick);
-          birthdayInput.addEventListener('input', handleDateInput);
-          birthdayInput.addEventListener('keydown', handleDateKeydown);
-          
-          // Ensure the input is fully functional and editable
-          birthdayInput.style.pointerEvents = 'auto';
-          birthdayInput.disabled = false;
-          birthdayInput.readOnly = false;
-          birthdayInput.style.cursor = 'text';
-        }
         
         // Date input focus handler
         function handleDateFocus() {
@@ -1621,7 +1610,6 @@ window.supabaseClient = supabase;
     // Function to save account data
     async function saveAccountData() {
       const name = $('#accountName').value;
-      const birthday = $('#accountBirthday').value;
       const profilePicFile = $('#accountProfilePic').files[0];
       
       if (!name.trim()) {
@@ -1629,12 +1617,6 @@ window.supabaseClient = supabase;
         return;
       }
       
-      // Validate birthday format if provided
-      if (birthday && !isValidDate(birthday)) {
-        showAuthStatus('Please enter a valid date format (YYYY-MM-DD)', 'error');
-        $('#accountBirthday').focus();
-        return;
-      }
       
       try {
         showAuthLoading(true);
@@ -1649,12 +1631,12 @@ window.supabaseClient = supabase;
           const reader = new FileReader();
           reader.onload = async (e) => {
             avatarUrl = e.target.result;
-            await updateUserMetadata(name, birthday, avatarUrl);
+            await updateUserMetadata(name, avatarUrl);
           };
           reader.readAsDataURL(profilePicFile);
           return; // Exit early, updateUserMetadata will be called in the reader callback
         } else {
-          await updateUserMetadata(name, birthday, avatarUrl);
+          await updateUserMetadata(name, avatarUrl);
         }
         
       } catch (error) {
@@ -1665,11 +1647,10 @@ window.supabaseClient = supabase;
     }
     
     // Function to update user metadata
-    async function updateUserMetadata(name, birthday, avatarUrl) {
+    async function updateUserMetadata(name, avatarUrl) {
       const { error } = await window.supabaseClient.auth.updateUser({
         data: {
           full_name: name,
-          birthday: birthday,
           avatar_url: avatarUrl,
           profile_pic: avatarUrl
         }
@@ -2325,10 +2306,10 @@ window.supabaseClient = supabase;
           
           // Apply lock state after loading settings
           if (typeof updateLockIcon === 'function') {
-            updateLockIcon();
+          updateLockIcon();
           }
           if (typeof updateInputsLockState === 'function') {
-            updateInputsLockState();
+          updateInputsLockState();
           }
         }
         
@@ -3036,36 +3017,36 @@ window.supabaseClient = supabase;
     // Display the actual notification
     async displayNotification(notification) {
       const { message, type, duration } = notification;
-      const notificationCenter = document.getElementById('notificationCenter');
-      const text = notificationCenter.querySelector('.notification-text');
+    const notificationCenter = document.getElementById('notificationCenter');
+    const text = notificationCenter.querySelector('.notification-text');
       
       // Update last message tracking
       this.lastMessage = message;
       this.lastMessageTime = notification.timestamp;
-      
-      // Set message
-      text.textContent = message;
-      
-      // Set type class for glow effect
-      notificationCenter.className = `notification-center ${type}`;
-      
-      // Show notification
-      notificationCenter.style.opacity = '1';
-      notificationCenter.style.transform = 'translate(-50%, 0) translateX(0)';
-      notificationCenter.classList.add('show');
-      
-      // Hide after duration
+    
+    // Set message
+    text.textContent = message;
+    
+    // Set type class for glow effect
+    notificationCenter.className = `notification-center ${type}`;
+    
+    // Show notification
+    notificationCenter.style.opacity = '1';
+    notificationCenter.style.transform = 'translate(-50%, 0) translateX(0)';
+    notificationCenter.classList.add('show');
+    
+    // Hide after duration
       await new Promise(resolve => {
-        setTimeout(() => {
-          notificationCenter.classList.remove('show');
-          notificationCenter.classList.add('hide');
-          setTimeout(() => {
-            notificationCenter.style.opacity = '0';
-            notificationCenter.style.transform = 'translate(-50%, 0) translateX(20px)';
-            notificationCenter.classList.remove('hide');
+    setTimeout(() => {
+      notificationCenter.classList.remove('show');
+      notificationCenter.classList.add('hide');
+      setTimeout(() => {
+        notificationCenter.style.opacity = '0';
+        notificationCenter.style.transform = 'translate(-50%, 0) translateX(20px)';
+        notificationCenter.classList.remove('hide');
             resolve();
-          }, 300);
-        }, duration);
+      }, 300);
+    }, duration);
       });
     }
     
@@ -9895,10 +9876,10 @@ window.supabaseClient = supabase;
     
     // Initialize lock state
     if (typeof updateLockIcon === 'function') {
-      updateLockIcon();
+    updateLockIcon();
     }
     if (typeof updateInputsLockState === 'function') {
-      updateInputsLockState();
+    updateInputsLockState();
     }
     
     // Check database schema on load
@@ -9997,10 +9978,10 @@ window.supabaseClient = supabase;
 
   // Only observe if document.body exists
   if (document.body) {
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
   }
 
 

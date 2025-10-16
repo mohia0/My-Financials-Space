@@ -179,6 +179,29 @@
       </div>
     </header>
 
+    <!-- Mobile Bottom Navigation -->
+    <div id="mobileBottomNav" class="mobile-bottom-nav">
+      <button class="mobile-nav-btn" data-page="expenses">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+          <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+        <span class="nav-label">Expenses</span>
+      </button>
+      <button class="mobile-nav-btn" data-page="income">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+          <path d="M12 5v14M19 12l-7 7-7-7"/>
+        </svg>
+        <span class="nav-label">Income</span>
+      </button>
+      <button class="mobile-nav-btn" data-page="analytics">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+          <path d="M3 3v18h18"/>
+          <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+        </svg>
+        <span class="nav-label">Analytics</span>
+      </button>
+    </div>
+
 
     <!-- Expenses Page -->
     <div id="pageExpenses" class="page-content">
@@ -977,10 +1000,6 @@
             <input type="email" id="accountEmail" class="auth-input" placeholder="Enter your email" required readonly>
           </div>
           
-          <div class="auth-form-group">
-            <label for="accountBirthday" class="auth-label">Birthday</label>
-            <input type="date" id="accountBirthday" class="auth-input" placeholder="YYYY-MM-DD (e.g., 1990-05-15)">
-          </div>
           
           <div class="auth-form-group">
             <label for="accountProfilePic" class="auth-label">Profile Picture</label>

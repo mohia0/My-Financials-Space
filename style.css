@@ -3710,6 +3710,7 @@
       header img {
         height: 1.5rem;
         width: auto;
+        display: block;
       }
       
       /* Hide text logo completely */
@@ -3721,6 +3722,7 @@
     @media (max-width: 480px) {
       header img {
         height: 1.25rem;
+        display: block;
       }
       
       /* Keep text logo hidden on all screen sizes */
@@ -3733,6 +3735,142 @@
     @media (min-width: 769px) {
       header .mobile-logo {
         display: none;
+      }
+    }
+
+    /* Mobile Bottom Navigation - Super Compact */
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      border-top: 1px solid var(--stroke);
+      padding: 0.25rem 0.5rem;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .mobile-nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.125rem;
+      padding: 0.375rem 0.25rem;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.6rem;
+      font-weight: 500;
+      border-radius: 0.375rem;
+      transition: all 0.2s ease;
+      flex: 1;
+      min-height: 48px;
+      cursor: pointer;
+    }
+
+    .mobile-nav-btn:hover {
+      color: var(--fg);
+      background: rgba(var(--primary-rgb), 0.05);
+    }
+
+    .mobile-nav-btn.active {
+      color: var(--primary);
+      background: rgba(var(--primary-rgb), 0.1);
+    }
+
+    .mobile-nav-btn .nav-icon {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .mobile-nav-btn .nav-label {
+      font-size: 0.55rem;
+      line-height: 1;
+      font-weight: 500;
+    }
+
+    /* Show mobile nav only on mobile */
+    @media (max-width: 768px) {
+      .mobile-bottom-nav {
+        display: flex;
+      }
+      
+      /* Add bottom padding to main content to account for mobile nav */
+      #mainContent {
+        padding-bottom: 4rem;
+      }
+    }
+
+    /* Hide mobile nav on larger screens */
+    @media (min-width: 769px) {
+      .mobile-bottom-nav {
+        display: none;
+      }
+      
+      #mainContent {
+        padding-bottom: 1.5rem;
+      }
+    }
+
+    /* Mobile Header Icons - Make them bigger and more touch-friendly */
+    @media (max-width: 768px) {
+      /* Hide desktop navigation buttons on mobile */
+      .nav-btn {
+        display: none !important;
+      }
+      
+      /* Make header icon buttons bigger on mobile */
+      .icon-btn {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        min-width: 2.5rem !important;
+        min-height: 2.5rem !important;
+      }
+      
+      /* Make icons inside buttons bigger */
+      .icon-btn svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      
+      /* Make refresh button icon bigger */
+      #iconRefresh {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      
+      /* Make lock button icon bigger */
+      #iconLock {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      
+      /* Make theme button icon bigger */
+      #iconTheme {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      
+      /* Make settings button icon bigger */
+      #btnSettings svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      
+      /* Improve touch targets */
+      .icon-btn {
+        padding: 0.5rem !important;
+        border-radius: 0.75rem !important;
+      }
+      
+      /* Better spacing between icons on mobile */
+      header .flex.items-center.gap-2 {
+        gap: 0.5rem !important;
       }
     }
     
