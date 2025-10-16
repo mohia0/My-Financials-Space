@@ -2305,8 +2305,12 @@ window.supabaseClient = supabase;
           updateSettingsUI();
           
           // Apply lock state after loading settings
-          updateLockIcon();
-          updateInputsLockState();
+          if (typeof updateLockIcon === 'function') {
+            updateLockIcon();
+          }
+          if (typeof updateInputsLockState === 'function') {
+            updateInputsLockState();
+          }
         }
         
         // Process personal expenses
@@ -9637,8 +9641,12 @@ window.supabaseClient = supabase;
     fixMobileLogo();
     
     // Initialize lock state
-    updateLockIcon();
-    updateInputsLockState();
+    if (typeof updateLockIcon === 'function') {
+      updateLockIcon();
+    }
+    if (typeof updateInputsLockState === 'function') {
+      updateInputsLockState();
+    }
     
     // Check database schema on load
     if (currentUser && supabaseReady) {
