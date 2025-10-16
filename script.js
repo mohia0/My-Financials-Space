@@ -1934,7 +1934,7 @@ window.supabaseClient = supabase;
     async function signOut() {
       try {
         await window.supabaseClient.auth.signOut();
-        showNotification('Signed out successfully!', 'success');
+        showSuccessNotification('Signed out successfully!');
         
         // Clear all data immediately
         clearAllData();
@@ -1946,7 +1946,7 @@ window.supabaseClient = supabase;
         
       } catch (error) {
         console.error('Sign out error:', error);
-        showNotification('Sign out failed. Please try again.', 'error');
+        showErrorNotification('Sign out failed. Please try again.');
       }
     }
     
@@ -2433,7 +2433,7 @@ window.supabaseClient = supabase;
         }
         
         renderAll();
-        showNotification('Data loaded from cloud!', 'success');
+        showSuccessNotification('Data loaded from cloud!');
         
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -2929,47 +2929,256 @@ window.supabaseClient = supabase;
       }
     }
   
-  // Super Minimal Notification System
-  function showNotification(message, type = 'success', duration = 3000) {
-    const notificationCenter = document.getElementById('notificationCenter');
-    const text = notificationCenter.querySelector('.notification-text');
+  // 🧠 SMART NOTIFICATION SYSTEM
+  class SmartNotificationSystem {
+    constructor() {
+      this.messageQueue = [];
+      this.isShowing = false;
+      this.lastMessage = null;
+      this.lastMessageTime = 0;
+      this.messageHistory = new Set();
+      this.suppressedTypes = new Set(['save', 'info']); // Don't show these by default
+      this.context = {
+        isBulkOperation: false,
+        isUserAction: false,
+        isSystemAction: false,
+        lastActionTime: 0
+      };
+    }
     
-    // Set message
-    text.textContent = message;
+    // Main notification function - now smart!
+    show(message, type = 'success', duration = 3000, options = {}) {
+      const notification = {
+        message,
+        type,
+        duration,
+        timestamp: Date.now(),
+        priority: this.getPriority(type),
+        context: { ...this.context, ...options }
+      };
+      
+      // Smart filtering
+      if (this.shouldSuppress(notification)) {
+        return;
+      }
+      
+      // Add to queue
+      this.messageQueue.push(notification);
+      
+      // Process queue
+      this.processQueue();
+    }
     
-    // Set type class for glow effect
-    notificationCenter.className = `notification-center ${type}`;
+    // Smart suppression logic
+    shouldSuppress(notification) {
+      const { message, type, timestamp } = notification;
+      
+      // Suppress duplicate messages within 2 seconds
+      if (this.lastMessage === message && (timestamp - this.lastMessageTime) < 2000) {
+        return true;
+      }
+      
+      // Suppress low-priority messages during bulk operations
+      if (this.context.isBulkOperation && notification.priority < 3) {
+        return true;
+      }
+      
+      // Suppress system messages if user just performed an action
+      if (this.context.isUserAction && (timestamp - this.context.lastActionTime) < 1000) {
+        return true;
+      }
+      
+      // Suppress certain types by default
+      if (this.suppressedTypes.has(type) && !notification.context.force) {
+        return true;
+      }
+      
+      return false;
+    }
     
-    // Show notification
-    notificationCenter.style.opacity = '1';
-    notificationCenter.style.transform = 'translate(-50%, 0) translateX(0)';
-    notificationCenter.classList.add('show');
+    // Get message priority (1-5, 5 being highest)
+    getPriority(type) {
+      const priorities = {
+        'error': 5,
+        'warning': 4,
+        'success': 3,
+        'info': 2,
+        'save': 1
+      };
+      return priorities[type] || 2;
+    }
     
-    // Hide after duration
-    setTimeout(() => {
-      notificationCenter.classList.remove('show');
-      notificationCenter.classList.add('hide');
-      setTimeout(() => {
-        notificationCenter.style.opacity = '0';
-        notificationCenter.style.transform = 'translate(-50%, 0) translateX(20px)';
-        notificationCenter.classList.remove('hide');
-      }, 300);
-    }, duration);
+    // Process message queue
+    async processQueue() {
+      if (this.isShowing || this.messageQueue.length === 0) return;
+      
+      this.isShowing = true;
+      
+      // Sort by priority and timestamp
+      this.messageQueue.sort((a, b) => {
+        if (a.priority !== b.priority) {
+          return b.priority - a.priority; // Higher priority first
+        }
+        return a.timestamp - b.timestamp; // Earlier timestamp first
+      });
+      
+      const notification = this.messageQueue.shift();
+      await this.displayNotification(notification);
+      
+      this.isShowing = false;
+      
+      // Process next message after a short delay
+      if (this.messageQueue.length > 0) {
+        setTimeout(() => this.processQueue(), 500);
+      }
+    }
+    
+    // Display the actual notification
+    async displayNotification(notification) {
+      const { message, type, duration } = notification;
+      const notificationCenter = document.getElementById('notificationCenter');
+      const text = notificationCenter.querySelector('.notification-text');
+      
+      // Update last message tracking
+      this.lastMessage = message;
+      this.lastMessageTime = notification.timestamp;
+      
+      // Set message
+      text.textContent = message;
+      
+      // Set type class for glow effect
+      notificationCenter.className = `notification-center ${type}`;
+      
+      // Show notification
+      notificationCenter.style.opacity = '1';
+      notificationCenter.style.transform = 'translate(-50%, 0) translateX(0)';
+      notificationCenter.classList.add('show');
+      
+      // Hide after duration
+      await new Promise(resolve => {
+        setTimeout(() => {
+          notificationCenter.classList.remove('show');
+          notificationCenter.classList.add('hide');
+          setTimeout(() => {
+            notificationCenter.style.opacity = '0';
+            notificationCenter.style.transform = 'translate(-50%, 0) translateX(20px)';
+            notificationCenter.classList.remove('hide');
+            resolve();
+          }, 300);
+        }, duration);
+      });
+    }
+    
+    // Context management
+    setContext(context) {
+      this.context = { ...this.context, ...context };
+    }
+    
+    // Suppress certain message types
+    suppressTypes(types) {
+      types.forEach(type => this.suppressedTypes.add(type));
+    }
+    
+    // Allow certain message types
+    allowTypes(types) {
+      types.forEach(type => this.suppressedTypes.delete(type));
+    }
+    
+    // Clear queue
+    clearQueue() {
+      this.messageQueue = [];
+    }
+    
+    // Get queue status
+    getQueueStatus() {
+      return {
+        queueLength: this.messageQueue.length,
+        isShowing: this.isShowing,
+        suppressedTypes: Array.from(this.suppressedTypes)
+      };
+    }
   }
   
+  // Global smart notification instance
+  const smartNotifications = new SmartNotificationSystem();
+  
+  // Main notification function - now uses smart system
+  function showNotification(message, type = 'success', duration = 3000, options = {}) {
+    smartNotifications.show(message, type, duration, options);
+  }
+  
+  // Smart notification helpers for common scenarios
+  function showUserActionNotification(message, type = 'success', duration = 2000) {
+    smartNotifications.setContext({ 
+      isUserAction: true, 
+      lastActionTime: Date.now() 
+    });
+    showNotification(message, type, duration, { force: true });
+  }
+  
+  function showBulkOperationNotification(message, type = 'info', duration = 3000) {
+    smartNotifications.setContext({ isBulkOperation: true });
+    showNotification(message, type, duration, { force: true });
+  }
+  
+  function showErrorNotification(message, duration = 4000) {
+    showNotification(message, 'error', duration, { force: true });
+  }
+  
+  function showSuccessNotification(message, duration = 2000) {
+    showNotification(message, 'success', duration, { force: true });
+  }
+  
+  // Debug function to check notification system status
+  function getNotificationStatus() {
+    return smartNotifications.getQueueStatus();
+  }
+  
+  // Smart notification summary for bulk operations
+  function showBulkOperationSummary(operation, totalItems, successCount, errorCount = 0) {
+    const context = smartNotifications.getQueueStatus();
+    
+    if (context.isBulkOperation) {
+      smartNotifications.setContext({ isBulkOperation: false });
+      
+      if (errorCount === 0) {
+        showSuccessNotification(`✅ ${operation} completed: ${successCount} items processed`);
+      } else {
+        showNotification(`⚠️ ${operation} completed: ${successCount}/${totalItems} items processed (${errorCount} failed)`, 'warning', 4000, { force: true });
+      }
+    }
+  }
+  
+  // Initialize smart notification system with optimal settings
+  function initializeSmartNotifications() {
+    // Suppress common spam types
+    smartNotifications.suppressTypes(['save', 'info']);
+    
+    // Allow important types
+    smartNotifications.allowTypes(['error', 'warning', 'success']);
+    
+    console.log('🧠 Smart notification system initialized');
+  }
+  
+  // Call initialization when script loads
+  initializeSmartNotifications();
+  
   function showSaveIndicator() {
+    // Only show save indicator for important saves, not every keystroke
     if (currentUser && supabaseReady) {
-      showNotification('Saved to cloud', 'save', 2000);
+      showNotification('Synced to cloud', 'success', 1500, { priority: 2 });
     } else {
-      showNotification('Saved locally', 'save', 2000);
+      // Don't show local save notifications - they're not important
+      return;
     }
   }
   
   function showSaveError() {
+    // Always show errors - they're important
     if (currentUser && supabaseReady) {
-      showNotification('Cloud save failed', 'error', 3000);
+      showNotification('Cloud sync failed', 'error', 3000, { force: true });
     } else {
-      showNotification('Local save failed', 'error', 3000);
+      showNotification('Save failed', 'error', 3000, { force: true });
     }
   }
 
@@ -3246,10 +3455,16 @@ window.supabaseClient = supabase;
       });
       
       // Show notification
+      // Set context for user action
+      smartNotifications.setContext({ 
+        isUserAction: true, 
+        lastActionTime: Date.now() 
+      });
+      
       if (state.inputsLocked) {
-        showNotification('All inputs locked', 'info', 2000);
+        showNotification('All inputs locked', 'warning', 2000, { force: true });
       } else {
-        showNotification('All inputs unlocked', 'success', 2000);
+        showNotification('All inputs unlocked', 'success', 2000, { force: true });
       }
     }
     
@@ -3306,7 +3521,8 @@ window.supabaseClient = supabase;
           savePromise.then(() => {
         lastSaveTime = Date.now();
             updateSyncStatus('success');
-        showNotification('Data saved instantly', 'success', 800);
+        // Don't show save notifications for every keystroke
+        // showNotification('Data saved instantly', 'success', 800);
             setTimeout(() => {
               updateSyncStatus('');
               isSaving = false;
@@ -3358,7 +3574,8 @@ window.supabaseClient = supabase;
         await saveToSupabase();
         
         updateSyncStatus('success');
-        showNotification('Synced to cloud instantly', 'success', 1000);
+        // Only show sync notifications for important operations
+        // showNotification('Synced to cloud instantly', 'success', 1000);
         
         // Also save locally as backup
         saveToLocal();
@@ -3562,7 +3779,8 @@ window.supabaseClient = supabase;
                   if (retryError) {
                     showNotification('Failed to sync tags', 'error', 3000);
                   } else {
-                    showNotification('Tags synced', 'success', 1000);
+                    // Don't show individual tag sync notifications
+              // showNotification('Tags synced', 'success', 1000);
                   }
                 } catch (retryErr) {
                   // Silent retry error
@@ -3571,7 +3789,8 @@ window.supabaseClient = supabase;
               
               throw updateError;
             } else {
-              showNotification('Tags updated', 'success', 800);
+              // Don't show individual tag update notifications
+              // showNotification('Tags updated', 'success', 800);
             }
           } else {
             // Create new income record
@@ -3603,7 +3822,8 @@ window.supabaseClient = supabase;
               if (newIncome) {
                 incomeRow.id = newIncome.id;
               }
-              showNotification('Income saved', 'success', 800);
+              // Don't show individual income save notifications
+              // showNotification('Income saved', 'success', 800);
             }
           }
           
@@ -3670,7 +3890,8 @@ window.supabaseClient = supabase;
             showNotification('Failed to save changes', 'error', 2000);
             throw updateError;
           } else {
-            showNotification('Changes synced', 'success', 800);
+            // Don't show individual change sync notifications
+            // showNotification('Changes synced', 'success', 800);
           }
         } else {
           instantSaveIncomeRow(incomeRow, year);
@@ -3700,7 +3921,9 @@ window.supabaseClient = supabase;
         return;
       }
 
-      showNotification(`Saving ${totalRows} imported income rows to cloud...`, 'info', 3000);
+      // Set context for bulk operation
+      smartNotifications.setContext({ isBulkOperation: true });
+      showNotification(`Importing ${totalRows} income rows...`, 'info', 2000, { force: true });
 
       try {
         // Process each year sequentially
@@ -3765,10 +3988,13 @@ window.supabaseClient = supabase;
         }
 
         // Show final result
+        // Clear bulk operation context
+        smartNotifications.setContext({ isBulkOperation: false });
+        
         if (errorRows === 0) {
-          showNotification(`Successfully saved all ${savedRows} imported income rows to cloud!`, 'success', 3000);
+          showNotification(`✅ Imported ${savedRows} income rows successfully!`, 'success', 3000, { force: true });
         } else {
-          showNotification(`Saved ${savedRows}/${totalRows} imported rows (${errorRows} failed)`, 'warning', 4000);
+          showNotification(`⚠️ Imported ${savedRows}/${totalRows} rows (${errorRows} failed)`, 'warning', 4000, { force: true });
         }
 
         // Save to local storage as backup
@@ -3835,7 +4061,7 @@ window.supabaseClient = supabase;
       if (currentUser && supabaseReady) {
         loadUserData().then(() => {
           updateSyncStatus('success');
-          showNotification('Data synced from cloud', 'success', 2000);
+          showNotification('🔄 Data synced from cloud', 'success', 2000, { force: true });
           resetRefreshIcon();
         }).catch((error) => {
           updateSyncStatus('error');
@@ -6716,7 +6942,7 @@ window.supabaseClient = supabase;
                 return; // Don't delete locally if Supabase delete failed
               } else {
                 console.log(`Successfully deleted ${tableName} record:`, row.id);
-                showNotification(`${isBiz ? 'Business' : 'Personal'} expense deleted`, 'success', 1000);
+                showNotification(`🗑️ ${isBiz ? 'Business' : 'Personal'} expense deleted`, 'success', 1500, { force: true });
               }
             }
             
@@ -7171,7 +7397,7 @@ window.supabaseClient = supabase;
                   showNotification('Failed to delete income', 'error', 2000);
                 } else {
                   console.log('Successfully deleted income record:', row.id);
-                  showNotification('Income deleted', 'success', 1000);
+                  showNotification('🗑️ Income deleted', 'success', 1500, { force: true });
                 }
               });
           }
@@ -8166,7 +8392,7 @@ window.supabaseClient = supabase;
       URL.revokeObjectURL(url);
         
         document.body.removeChild(modal);
-        showNotification('Data exported successfully', 'success', 2000);
+        showNotification('📁 Data exported successfully', 'success', 2000, { force: true });
       });
     }
     
@@ -8316,7 +8542,7 @@ window.supabaseClient = supabase;
               save();
               renderAll();
               document.body.removeChild(modal);
-              showNotification('Data imported successfully', 'success', 2000);
+              showNotification('📥 Data imported successfully', 'success', 2000, { force: true });
               
             } catch (error) {
               showNotification('Invalid file format', 'error', 3000);

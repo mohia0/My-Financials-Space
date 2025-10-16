@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Structure Test</title>
+</head>
+<body>
+    <h1>Sync Structure Test</h1>
+    <div id="status"></div>
+    
+    <!-- Load sync system -->
+    <script src="sync/sync-loader.js"></script>
+    
+    <script>
+        // Test the sync system loading with better debugging
+        function checkSyncStatus() {
+            const status = document.getElementById('status');
+            let html = '<h2>Sync System Status:</h2>';
+            
+            // Check sync system status
+            if (window.syncSystemStatus) {
+                html += `
+                    <ul>
+                        <li>Core Loaded: ${window.syncSystemStatus.coreLoaded ? '✅' : '❌'}</li>
+                        <li>Integration Loaded: ${window.syncSystemStatus.integrationLoaded ? '✅' : '❌'}</li>
+                        <li>Ready: ${window.syncSystemStatus.ready ? '✅' : '❌'}</li>
+                    </ul>
+                `;
+            } else {
+                html += '<p>❌ Sync system status not available</p>';
+            }
+            
+            // Check classes
+            html += '<h3>Available Classes:</h3><ul>';
+            const classes = ['SmartSyncManager', 'ChangeTracker', 'BatchProcessor', 'RealtimeSync', 'ConflictResolver', 'SyncPerformanceMonitor'];
+            classes.forEach(className => {
+                const available = typeof window[className] !== 'undefined';
+                html += `<li>${className}: ${available ? '✅' : '❌'}</li>`;
+            });
+            html += '</ul>';
+            
+            // Check functions
+            html += '<h3>Available Functions:</h3><ul>';
+            const functions = ['initializeOptimizedSync', 'cleanupOptimizedSync', 'saveToSupabaseOptimized', 'instantSaveAllOptimized'];
+            functions.forEach(funcName => {
+                const available = typeof window[funcName] === 'function';
+                html += `<li>${funcName}: ${available ? '✅' : '❌'}</li>`;
+            });
+            html += '</ul>';
+            
+            // Check if ready
+            if (window.isSyncSystemReady && window.isSyncSystemReady()) {
+                html += '<p style="color: green; font-weight: bold;">🎉 Sync system is fully ready!</p>';
+            } else {
+                html += '<p style="color: orange;">⏳ Sync system still loading...</p>';
+            }
+            
+            status.innerHTML = html;
+        }
+        
+        // Check immediately and then every 500ms
+        checkSyncStatus();
+        const interval = setInterval(() => {
+            checkSyncStatus();
+            if (window.syncSystemStatus && window.syncSystemStatus.ready) {
+                clearInterval(interval);
+            }
+        }, 500);
+        
+        // Stop checking after 10 seconds
+        setTimeout(() => {
+            clearInterval(interval);
+        }, 10000);
+    </script>
+</body>
+</html>
