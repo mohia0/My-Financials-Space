@@ -1,6 +1,21 @@
 // 🚀 OPTIMIZED SYNC INTEGRATION FOR YOUR FINANCIAL TOOL
 // This replaces the current slow sync system with a fast, smart, and live system
 
+// ========================================
+// 0. DUPLICATION PREVENTION GUARDS
+// ========================================
+
+// Prevent multiple loading of this script
+if (window.optimizedSyncIntegrationLoaded) {
+  console.warn('⚠️ Optimized sync integration already loaded, preventing duplicate initialization');
+  throw new Error('Optimized sync integration already loaded');
+}
+window.optimizedSyncIntegrationLoaded = true;
+
+// Track processed records to prevent duplicates
+const processedRecords = new Set();
+const syncInProgress = new Set();
+
 // Wait for core sync classes to be loaded
 function waitForSyncClasses() {
   return new Promise((resolve) => {
@@ -21,6 +36,7 @@ function waitForSyncClasses() {
 
 let smartSyncManager = null;
 let syncPerformanceMonitor = null;
+let isInitialized = false;
 
 // ========================================
 // 2. INITIALIZE OPTIMIZED SYNC
@@ -28,6 +44,12 @@ let syncPerformanceMonitor = null;
 
 async function initializeOptimizedSync() {
   if (!currentUser || !supabaseReady) return;
+  
+  // Prevent multiple initialization
+  if (isInitialized) {
+    console.warn('⚠️ Sync system already initialized, skipping duplicate initialization');
+    return;
+  }
   
   console.log('🚀 Initializing optimized sync system...');
   
@@ -41,6 +63,7 @@ async function initializeOptimizedSync() {
   smartSyncManager = new window.SmartSyncManager(window.supabaseClient, currentUser.id);
   await smartSyncManager.initialize();
   
+  isInitialized = true;
   console.log('✅ Optimized sync system initialized');
 }
 
@@ -52,6 +75,14 @@ async function initializeOptimizedSync() {
 async function saveToSupabaseOptimized() {
   if (!currentUser || !supabaseReady || !smartSyncManager) return;
   
+  // Prevent concurrent sync operations
+  const syncKey = 'settings_sync';
+  if (syncInProgress.has(syncKey)) {
+    console.log('🔄 Sync already in progress, skipping duplicate request');
+    return;
+  }
+  
+  syncInProgress.add(syncKey);
   const startTime = performance.now();
   
   try {
@@ -70,9 +101,11 @@ async function saveToSupabaseOptimized() {
     
     smartSyncManager.trackChange('settings', currentUser.id, settingsData);
     
-    // Track personal expenses changes
+    // Track personal expenses changes with deduplication
     state.personal.forEach(expense => {
-      if (smartSyncManager.changeTracker.hasChanged('personal_expense', expense.id, expense)) {
+      const recordKey = `personal_${expense.id}`;
+      if (smartSyncManager.changeTracker.hasChanged('personal_expense', expense.id, expense) && 
+          !processedRecords.has(recordKey)) {
         const expenseData = {
           id: expense.id,
           user_id: currentUser.id,
@@ -90,12 +123,15 @@ async function saveToSupabaseOptimized() {
         };
         
         smartSyncManager.trackChange('personal_expense', expense.id, expenseData);
+        processedRecords.add(recordKey);
       }
     });
     
-    // Track business expenses changes
+    // Track business expenses changes with deduplication
     state.biz.forEach(expense => {
-      if (smartSyncManager.changeTracker.hasChanged('business_expense', expense.id, expense)) {
+      const recordKey = `business_${expense.id}`;
+      if (smartSyncManager.changeTracker.hasChanged('business_expense', expense.id, expense) && 
+          !processedRecords.has(recordKey)) {
         const expenseData = {
           id: expense.id,
           user_id: currentUser.id,
@@ -114,13 +150,16 @@ async function saveToSupabaseOptimized() {
         };
         
         smartSyncManager.trackChange('business_expense', expense.id, expenseData);
+        processedRecords.add(recordKey);
       }
     });
     
-    // Track income changes
+    // Track income changes with deduplication
     Object.keys(state.income).forEach(year => {
       state.income[year].forEach(income => {
-        if (smartSyncManager.changeTracker.hasChanged('income', income.id, income)) {
+        const recordKey = `income_${income.id}`;
+        if (smartSyncManager.changeTracker.hasChanged('income', income.id, income) && 
+            !processedRecords.has(recordKey)) {
           const incomeData = {
             id: income.id,
             user_id: currentUser.id,
@@ -138,6 +177,7 @@ async function saveToSupabaseOptimized() {
           };
           
           smartSyncManager.trackChange('income', income.id, incomeData);
+          processedRecords.add(recordKey);
         }
       });
     });
@@ -156,6 +196,9 @@ async function saveToSupabaseOptimized() {
     
     console.error('Optimized sync failed:', error);
     throw error;
+  } finally {
+    // Always clean up the sync lock
+    syncInProgress.delete(syncKey);
   }
 }
 
@@ -213,6 +256,22 @@ async function instantSaveAllOptimized(source = 'general') {
 function handleRealtimeUpdate(table, payload) {
   console.log(`📡 Real-time update from ${table}:`, payload);
   
+  // Create a unique key for this update to prevent duplicates
+  const updateKey = `${table}_${payload.new?.id || payload.old?.id}_${Date.now()}`;
+  
+  if (processedRecords.has(updateKey)) {
+    console.log('🔄 Duplicate real-time update detected, skipping');
+    return;
+  }
+  
+  processedRecords.add(updateKey);
+  
+  // Clean up old processed records to prevent memory leaks
+  if (processedRecords.size > 1000) {
+    const oldRecords = Array.from(processedRecords).slice(0, 500);
+    oldRecords.forEach(record => processedRecords.delete(record));
+  }
+  
   switch (table) {
     case 'personal_expenses':
       updatePersonalExpenseFromRealtime(payload);
@@ -240,11 +299,15 @@ function updatePersonalExpenseFromRealtime(payload) {
     case 'INSERT':
     case 'UPDATE':
       if (newRecord) {
-        const index = state.personal.findIndex(expense => expense.id === newRecord.id);
-        if (index >= 0) {
-          state.personal[index] = mapSupabaseToLocal(newRecord, 'personal');
+        // Check if this record already exists to prevent duplicates
+        const existingIndex = state.personal.findIndex(expense => expense.id === newRecord.id);
+        if (existingIndex >= 0) {
+          // Update existing record
+          state.personal[existingIndex] = mapSupabaseToLocal(newRecord, 'personal');
         } else {
-          state.personal.push(mapSupabaseToLocal(newRecord, 'personal'));
+          // Only add if it doesn't already exist
+          const mappedRecord = mapSupabaseToLocal(newRecord, 'personal');
+          state.personal.push(mappedRecord);
         }
       }
       break;
@@ -264,11 +327,15 @@ function updateBusinessExpenseFromRealtime(payload) {
     case 'INSERT':
     case 'UPDATE':
       if (newRecord) {
-        const index = state.biz.findIndex(expense => expense.id === newRecord.id);
-        if (index >= 0) {
-          state.biz[index] = mapSupabaseToLocal(newRecord, 'business');
+        // Check if this record already exists to prevent duplicates
+        const existingIndex = state.biz.findIndex(expense => expense.id === newRecord.id);
+        if (existingIndex >= 0) {
+          // Update existing record
+          state.biz[existingIndex] = mapSupabaseToLocal(newRecord, 'business');
         } else {
-          state.biz.push(mapSupabaseToLocal(newRecord, 'business'));
+          // Only add if it doesn't already exist
+          const mappedRecord = mapSupabaseToLocal(newRecord, 'business');
+          state.biz.push(mappedRecord);
         }
       }
       break;
@@ -293,11 +360,15 @@ function updateIncomeFromRealtime(payload) {
           state.income[year] = [];
         }
         
-        const index = state.income[year].findIndex(income => income.id === newRecord.id);
-        if (index >= 0) {
-          state.income[year][index] = mapSupabaseToLocal(newRecord, 'income');
+        // Check if this record already exists to prevent duplicates
+        const existingIndex = state.income[year].findIndex(income => income.id === newRecord.id);
+        if (existingIndex >= 0) {
+          // Update existing record
+          state.income[year][existingIndex] = mapSupabaseToLocal(newRecord, 'income');
         } else {
-          state.income[year].push(mapSupabaseToLocal(newRecord, 'income'));
+          // Only add if it doesn't already exist
+          const mappedRecord = mapSupabaseToLocal(newRecord, 'income');
+          state.income[year].push(mappedRecord);
         }
       }
       break;
@@ -454,7 +525,132 @@ function cleanupOptimizedSync() {
   }
   
   syncPerformanceMonitor = null;
+  isInitialized = false;
+  
+  // Clear processed records and sync locks
+  processedRecords.clear();
+  syncInProgress.clear();
+  
   console.log('🧹 Optimized sync system cleaned up');
+}
+
+// ========================================
+// 11. DUPLICATION PREVENTION UTILITIES
+// ========================================
+
+// Clear processed records (useful for testing or manual cleanup)
+function clearProcessedRecords() {
+  processedRecords.clear();
+  console.log('🧹 Processed records cleared');
+}
+
+// Get sync status information
+function getSyncStatus() {
+  return {
+    isInitialized,
+    processedRecordsCount: processedRecords.size,
+    syncInProgress: Array.from(syncInProgress),
+    smartSyncManagerActive: !!smartSyncManager,
+    syncPerformanceMonitorActive: !!syncPerformanceMonitor
+  };
+}
+
+// Force cleanup of old processed records
+function cleanupOldProcessedRecords() {
+  if (processedRecords.size > 500) {
+    const oldRecords = Array.from(processedRecords).slice(0, 250);
+    oldRecords.forEach(record => processedRecords.delete(record));
+    console.log(`🧹 Cleaned up ${oldRecords.length} old processed records`);
+  }
+}
+
+// ========================================
+// 12. DATA DEDUPLICATION UTILITIES
+// ========================================
+
+// Remove duplicates from personal expenses
+function deduplicatePersonalExpenses() {
+  const seen = new Set();
+  const originalLength = state.personal.length;
+  
+  state.personal = state.personal.filter(expense => {
+    const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+    if (seen.has(key)) {
+      console.log(`🔄 Removing duplicate personal expense: ${expense.name}`);
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+  
+  const removed = originalLength - state.personal.length;
+  if (removed > 0) {
+    console.log(`✅ Removed ${removed} duplicate personal expenses`);
+    renderAll();
+  }
+}
+
+// Remove duplicates from business expenses
+function deduplicateBusinessExpenses() {
+  const seen = new Set();
+  const originalLength = state.biz.length;
+  
+  state.biz = state.biz.filter(expense => {
+    const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+    if (seen.has(key)) {
+      console.log(`🔄 Removing duplicate business expense: ${expense.name}`);
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+  
+  const removed = originalLength - state.biz.length;
+  if (removed > 0) {
+    console.log(`✅ Removed ${removed} duplicate business expenses`);
+    renderAll();
+  }
+}
+
+// Remove duplicates from income
+function deduplicateIncome() {
+  let totalRemoved = 0;
+  
+  Object.keys(state.income).forEach(year => {
+    const seen = new Set();
+    const originalLength = state.income[year].length;
+    
+    state.income[year] = state.income[year].filter(income => {
+      const key = `${income.name}_${income.date}_${income.allPayment}`;
+      if (seen.has(key)) {
+        console.log(`🔄 Removing duplicate income: ${income.name} (${year})`);
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+    
+    totalRemoved += originalLength - state.income[year].length;
+  });
+  
+  if (totalRemoved > 0) {
+    console.log(`✅ Removed ${totalRemoved} duplicate income records`);
+    renderAll();
+  }
+}
+
+// Remove all duplicates from all data
+function deduplicateAllData() {
+  console.log('🧹 Starting comprehensive data deduplication...');
+  
+  deduplicatePersonalExpenses();
+  deduplicateBusinessExpenses();
+  deduplicateIncome();
+  
+  // Clear processed records to start fresh
+  clearProcessedRecords();
+  
+  console.log('✅ Data deduplication completed');
 }
 
 // ========================================
@@ -502,5 +698,13 @@ window.instantSaveAllOptimized = instantSaveAllOptimized;
 window.saveOptimized = saveOptimized;
 window.getSyncMetrics = getSyncMetrics;
 window.logSyncPerformance = logSyncPerformance;
+window.clearProcessedRecords = clearProcessedRecords;
+window.getSyncStatus = getSyncStatus;
+window.cleanupOldProcessedRecords = cleanupOldProcessedRecords;
+window.handleRealtimeUpdate = handleRealtimeUpdate;
+window.deduplicatePersonalExpenses = deduplicatePersonalExpenses;
+window.deduplicateBusinessExpenses = deduplicateBusinessExpenses;
+window.deduplicateIncome = deduplicateIncome;
+window.deduplicateAllData = deduplicateAllData;
 
 console.log('✅ Sync integration functions loaded and made globally available');

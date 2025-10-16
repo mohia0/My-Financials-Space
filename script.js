@@ -2200,10 +2200,19 @@ window.supabaseClient = supabase;
       }
     }
     
+    // Prevent multiple simultaneous data loading
+    let isLoadingData = false;
+    
     async function loadUserData() {
       console.log('🔍 DEBUG: loadUserData called');
       console.log('🔍 DEBUG: currentUser:', currentUser);
       console.log('🔍 DEBUG: supabaseReady:', supabaseReady);
+      
+      // Prevent multiple simultaneous loads
+      if (isLoadingData) {
+        console.log('🔄 Data loading already in progress, skipping duplicate call');
+        return;
+      }
       
       if (!currentUser) {
         console.log('❌ No current user, skipping data load');
@@ -2216,6 +2225,8 @@ window.supabaseClient = supabase;
         loadLocalData();
         return;
       }
+      
+      isLoadingData = true;
       
       // Check for CORS issues and fallback to local data
       try {
@@ -2245,6 +2256,12 @@ window.supabaseClient = supabase;
         console.log('Loading user data with parallel requests for maximum speed...');
         console.log('User ID:', currentUser.id);
         console.log('Supabase ready:', supabaseReady);
+        
+        // CRITICAL: Clear existing data to prevent duplication
+        console.log('🧹 Clearing existing data before loading from cloud...');
+        state.personal = [];
+        state.biz = [];
+        state.income = {};
         
         // Load custom icons from localStorage first
         loadCustomIcons();
@@ -2413,6 +2430,9 @@ window.supabaseClient = supabase;
           createYearTabsFromData(state.income);
         }
         
+        // Check for and fix duplicates in the database
+        await checkAndFixDuplicates();
+        
         renderAll();
         showSuccessNotification('Data loaded from cloud!');
         
@@ -2436,6 +2456,107 @@ window.supabaseClient = supabase;
         }
         
         loadLocalData();
+      } finally {
+        // Always reset the loading flag
+        isLoadingData = false;
+      }
+    }
+    
+    // Function to check and fix duplicates in the database
+    async function checkAndFixDuplicates() {
+      if (!currentUser || !supabaseReady) return;
+      
+      console.log('🔍 Checking for duplicates in database...');
+      
+      try {
+        // Check for duplicate personal expenses
+        const { data: personalData } = await window.supabaseClient
+          .from('personal_expenses')
+          .select('*')
+          .eq('user_id', currentUser.id);
+          
+        if (personalData) {
+          const seen = new Set();
+          const duplicates = [];
+          
+          personalData.forEach(expense => {
+            const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+            if (seen.has(key)) {
+              duplicates.push(expense.id);
+            } else {
+              seen.add(key);
+            }
+          });
+          
+          if (duplicates.length > 0) {
+            console.log(`🔄 Found ${duplicates.length} duplicate personal expenses, removing...`);
+            await window.supabaseClient
+              .from('personal_expenses')
+              .delete()
+              .in('id', duplicates);
+          }
+        }
+        
+        // Check for duplicate business expenses
+        const { data: businessData } = await window.supabaseClient
+          .from('business_expenses')
+          .select('*')
+          .eq('user_id', currentUser.id);
+          
+        if (businessData) {
+          const seen = new Set();
+          const duplicates = [];
+          
+          businessData.forEach(expense => {
+            const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+            if (seen.has(key)) {
+              duplicates.push(expense.id);
+            } else {
+              seen.add(key);
+            }
+          });
+          
+          if (duplicates.length > 0) {
+            console.log(`🔄 Found ${duplicates.length} duplicate business expenses, removing...`);
+            await window.supabaseClient
+              .from('business_expenses')
+              .delete()
+              .in('id', duplicates);
+          }
+        }
+        
+        // Check for duplicate income
+        const { data: incomeData } = await window.supabaseClient
+          .from('income')
+          .select('*')
+          .eq('user_id', currentUser.id);
+          
+        if (incomeData) {
+          const seen = new Set();
+          const duplicates = [];
+          
+          incomeData.forEach(income => {
+            const key = `${income.name}_${income.date}_${income.all_payment}`;
+            if (seen.has(key)) {
+              duplicates.push(income.id);
+            } else {
+              seen.add(key);
+            }
+          });
+          
+          if (duplicates.length > 0) {
+            console.log(`🔄 Found ${duplicates.length} duplicate income records, removing...`);
+            await window.supabaseClient
+              .from('income')
+              .delete()
+              .in('id', duplicates);
+          }
+        }
+        
+        console.log('✅ Duplicate check completed');
+        
+      } catch (error) {
+        console.error('Error checking for duplicates:', error);
       }
     }
     
@@ -8451,40 +8572,50 @@ window.supabaseClient = supabase;
               // Import selected data
               if (document.getElementById('importPersonal').checked && importedData.personal) {
                 if (replaceExisting) {
-                  state.personal = importedData.personal;
-                } else {
-                  state.personal = [...state.personal, ...importedData.personal];
+                  // Clear existing data first
+                  state.personal = [];
                 }
-                // Clear IDs for new data
-                state.personal.forEach(item => delete item.id);
+                // Add imported data and clear IDs to prevent duplicates
+                const newPersonalData = importedData.personal.map(item => {
+                  const cleanItem = { ...item };
+                  delete cleanItem.id; // Clear ID to ensure it's treated as new
+                  return cleanItem;
+                });
+                state.personal = [...state.personal, ...newPersonalData];
               }
               
               if (document.getElementById('importBiz').checked && importedData.biz) {
                 if (replaceExisting) {
-                  state.biz = importedData.biz;
-                } else {
-                  state.biz = [...state.biz, ...importedData.biz];
+                  // Clear existing data first
+                  state.biz = [];
                 }
-                // Clear IDs for new data
-                state.biz.forEach(item => delete item.id);
+                // Add imported data and clear IDs to prevent duplicates
+                const newBizData = importedData.biz.map(item => {
+                  const cleanItem = { ...item };
+                  delete cleanItem.id; // Clear ID to ensure it's treated as new
+                  return cleanItem;
+                });
+                state.biz = [...state.biz, ...newBizData];
               }
               
               if (document.getElementById('importIncome').checked && importedData.income) {
                 if (replaceExisting) {
-                  state.income = importedData.income;
-                } else {
-                  // Merge income data by year
-                  Object.keys(importedData.income).forEach(year => {
-                    if (!state.income[year]) {
-                      state.income[year] = [];
-                    }
-                    state.income[year] = [...state.income[year], ...importedData.income[year]];
-                    // Clear IDs for new data to ensure they get saved as new records
-                    state.income[year].forEach(item => {
-                      delete item.id;
-                    });
-                  });
+                  // Clear existing income data first
+                  state.income = {};
                 }
+                // Merge income data by year and clear IDs to prevent duplicates
+                Object.keys(importedData.income).forEach(year => {
+                  if (!state.income[year]) {
+                    state.income[year] = [];
+                  }
+                  // Clear IDs for new data to ensure they get saved as new records
+                  const newIncomeData = importedData.income[year].map(item => {
+                    const cleanItem = { ...item };
+                    delete cleanItem.id; // Clear ID to ensure it's treated as new
+                    return cleanItem;
+                  });
+                  state.income[year] = [...state.income[year], ...newIncomeData];
+                });
                 
                 // Update available years to include imported years
                 const importedYears = Object.keys(importedData.income).map(year => parseInt(year));
@@ -8518,6 +8649,12 @@ window.supabaseClient = supabase;
                 if (importedData.theme) state.theme = importedData.theme;
                 if (importedData.autosave) state.autosave = importedData.autosave;
                 if (importedData.includeAnnualInMonthly !== undefined) state.includeAnnualInMonthly = importedData.includeAnnualInMonthly;
+              }
+              
+              // Run deduplication after import to clean up any duplicates
+              if (window.deduplicateAllData) {
+                console.log('🧹 Running deduplication after import...');
+                window.deduplicateAllData();
               }
               
               save();
@@ -9984,4 +10121,6 @@ window.supabaseClient = supabase;
   });
   }
 
+  // Make duplicate check function globally available
+  window.checkAndFixDuplicates = checkAndFixDuplicates;
 
