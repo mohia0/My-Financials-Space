@@ -446,8 +446,20 @@ window.supabaseClient = supabase;
       const existingTabs = yearTabsContainer.querySelectorAll('.year-tab');
       existingTabs.forEach(tab => tab.remove());
       
-      // Get all years from income data and sort them
-      const years = Object.keys(incomeData).map(year => parseInt(year)).sort((a, b) => a - b);
+      // Always show current, previous, and next year
+      const currentYearNum = new Date().getFullYear();
+      const years = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
+      
+      // Also include any years that have data but aren't in our default range
+      const dataYears = Object.keys(incomeData).map(year => parseInt(year));
+      dataYears.forEach(year => {
+        if (!years.includes(year)) {
+          years.push(year);
+        }
+      });
+      
+      // Sort years chronologically
+      years.sort((a, b) => a - b);
       
       // Create year tabs for all years
       years.forEach(year => {
@@ -462,18 +474,16 @@ window.supabaseClient = supabase;
         yearTabsContainer.insertBefore(yearTab, manageBtn);
       });
       
-      // Set the first year as active if no current year is set
-      if (years.length > 0 && !currentYear) {
-        switchYear(years[0].toString());
+      // Set current year as active if no current year is set
+      if (!currentYear) {
+        switchYear(currentYearNum.toString());
       }
       
-      console.log(`Created year tabs from Supabase data:`, years);
+      console.log(`Created year tabs:`, years);
       
       // Save years to Supabase to ensure they're persisted
-      if (years.length > 0) {
-        console.log('Saving years to Supabase:', years);
-        save(); // This will update available_years in user_settings
-      }
+      console.log('Saving years to Supabase:', years);
+      save(); // This will update available_years in user_settings
     }
     
     function addYearToTabs(newYear) {
@@ -2798,7 +2808,12 @@ window.supabaseClient = supabase;
             console.log('✅ Loaded data from localStorage');
             state.personal = parsed.personal || [];
             state.biz = parsed.biz || [];
-            state.income = parsed.income || { 2022: [], 2023: [], 2024: [], 2025: [] };
+            const currentYear = new Date().getFullYear();
+            state.income = parsed.income || { 
+              [currentYear - 1]: [], 
+              [currentYear]: [], 
+              [currentYear + 1]: [] 
+            };
             state.fx = parsed.fx || 48.1843;
             state.theme = parsed.theme || 'dark';
             state.autosave = parsed.autosave || 'on';
@@ -2821,14 +2836,22 @@ window.supabaseClient = supabase;
       
       // If no saved data, initialize with empty state
       console.log('📝 Initializing with empty state');
+      const currentYear = new Date().getFullYear();
       state.personal = [];
       state.biz = [];
-      state.income = { 2022: [], 2023: [], 2024: [], 2025: [] };
+      state.income = { 
+        [currentYear - 1]: [], 
+        [currentYear]: [], 
+        [currentYear + 1]: [] 
+      };
       state.fx = 48.1843;
       state.theme = 'dark';
       state.autosave = 'on';
       state.includeAnnualInMonthly = true;
       state.inputsLocked = false;
+      
+      // Create year tabs for the three default years
+      createYearTabsFromData(state.income);
       
       renderAll();
     }
