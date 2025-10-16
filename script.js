@@ -446,17 +446,21 @@ window.supabaseClient = supabase;
       const existingTabs = yearTabsContainer.querySelectorAll('.year-tab');
       existingTabs.forEach(tab => tab.remove());
       
-      // Always show current, previous, and next year
-      const currentYearNum = new Date().getFullYear();
-      const years = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
-      
-      // Also include any years that have data but aren't in our default range
+      // Get years from data
       const dataYears = Object.keys(incomeData).map(year => parseInt(year));
-      dataYears.forEach(year => {
-        if (!years.includes(year)) {
-          years.push(year);
-        }
-      });
+      
+      let years = [];
+      
+      // Only add default years if there are NO years at all
+      if (dataYears.length === 0) {
+        const currentYearNum = new Date().getFullYear();
+        years = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
+        console.log('No data years found, creating default years:', years);
+      } else {
+        // Use only the years that have data
+        years = dataYears;
+        console.log('Using data years:', years);
+      }
       
       // Sort years chronologically
       years.sort((a, b) => a - b);
@@ -475,8 +479,13 @@ window.supabaseClient = supabase;
       });
       
       // Set current year as active if no current year is set
-      if (!currentYear) {
-        switchYear(currentYearNum.toString());
+      if (!currentYear && years.length > 0) {
+        const currentYearNum = new Date().getFullYear();
+        if (years.includes(currentYearNum)) {
+          switchYear(currentYearNum.toString());
+        } else {
+          switchYear(years[0].toString());
+        }
       }
       
       console.log(`Created year tabs:`, years);
@@ -2836,21 +2845,16 @@ window.supabaseClient = supabase;
       
       // If no saved data, initialize with empty state
       console.log('📝 Initializing with empty state');
-      const currentYear = new Date().getFullYear();
       state.personal = [];
       state.biz = [];
-      state.income = { 
-        [currentYear - 1]: [], 
-        [currentYear]: [], 
-        [currentYear + 1]: [] 
-      };
+      state.income = {}; // Start with empty income object
       state.fx = 48.1843;
       state.theme = 'dark';
       state.autosave = 'on';
       state.includeAnnualInMonthly = true;
       state.inputsLocked = false;
       
-      // Create year tabs for the three default years
+      // Create year tabs (will create default years since income is empty)
       createYearTabsFromData(state.income);
       
       renderAll();

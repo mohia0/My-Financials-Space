@@ -3706,29 +3706,26 @@
         object-fit: contain;
       }
       
-      /* Show text logo as fallback */
-      header .mobile-logo {
-        display: block;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--fg);
-        letter-spacing: -0.02em;
-        margin-top: 0.25rem;
+      /* Keep logo image on mobile, just make it smaller */
+      header img {
+        height: 1.5rem;
+        width: auto;
       }
       
-      /* Hide text logo when image loads */
-      header img:not([src=""]) + .mobile-logo {
+      /* Hide text logo completely */
+      header .mobile-logo {
         display: none;
       }
     }
     
     @media (max-width: 480px) {
       header img {
-        height: 1.5rem;
+        height: 1.25rem;
       }
       
+      /* Keep text logo hidden on all screen sizes */
       header .mobile-logo {
-        font-size: 1.25rem;
+        display: none;
       }
     }
     
