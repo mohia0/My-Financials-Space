@@ -3725,11 +3725,14 @@
       right: 0;
       background: var(--bg);
       border-top: 1px solid var(--stroke);
-      padding: 0.25rem 0.5rem;
+      padding: 8px 16px 12px;
       z-index: 1000;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      justify-content: space-around;
+      align-items: center;
+      gap: 8px;
     }
 
     .mobile-nav-btn {
@@ -3772,22 +3775,6 @@
       font-weight: 500;
     }
 
-    /* Mobile Logo Button Styling */
-    .mobile-logo-btn {
-      background: rgba(var(--primary-rgb), 0.1);
-      border: 1px solid rgba(var(--primary-rgb), 0.2);
-    }
-
-    .mobile-logo-icon {
-      width: 1.5rem;
-      height: 1.5rem;
-      filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
-    }
-
-    /* Dark mode logo color */
-    [data-theme="dark"] .mobile-logo-icon {
-      filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(103%) contrast(103%);
-    }
 
     /* Show mobile nav only on mobile */
     @media (max-width: 768px) {
