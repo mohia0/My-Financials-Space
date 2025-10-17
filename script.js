@@ -4661,6 +4661,12 @@ async function saveProfile({ fullName, file }) {
       // Update UI
       document.getElementById('currencySymbol').textContent = state.currencySymbol;
       
+      // Update page title
+      const titleCurrencyEl = document.getElementById('titleCurrency');
+      if (titleCurrencyEl) {
+        titleCurrencyEl.textContent = state.currencySymbol;
+      }
+      
       // Update table headers
       const currencyText = state.currencySymbol;
       setText('headerMonthlyEGP', `Monthly ${currencyText}`);
@@ -4668,9 +4674,6 @@ async function saveProfile({ fullName, file }) {
       setText('headerBizMonthlyEGP', `Monthly ${currencyText}`);
       setText('headerBizYearlyEGP', `Yearly ${currencyText}`);
       setText('headerPaidEGP', `Paid ${currencyText}`);
-      
-      // Update page title
-      setText('pageTitle', `MY FINANCIALS — USD · ${currencyText}`);
       
       // Update settings label
       setText('fxRateLabel', `USD → ${currencyText} Rate`);
@@ -4841,7 +4844,16 @@ async function saveProfile({ fullName, file }) {
       }; 
     }
 
-    function setText(id,val){ const el=document.getElementById(id); if(el) el.textContent=val; }
+    // Enhanced setText function with value comparison to prevent unnecessary updates
+    function setText(id, val) { 
+      const el = document.getElementById(id); 
+      if (el) {
+        // Only update if the value has actually changed
+        if (el.textContent !== val) {
+          el.textContent = val;
+        }
+      }
+    }
 
     // Custom method options management
     function getCustomMethodOptions() {
@@ -4898,8 +4910,45 @@ async function saveProfile({ fullName, file }) {
 
   // Cache for KPI values to prevent unnecessary updates
   let lastKPIValues = {};
+  let renderKPIsTimeout = null;
   
-  function renderKPIs(){
+  // Deep equality check for KPI values
+  function isEqual(obj1, obj2) {
+    if (obj1 === obj2) return true;
+    if (obj1 == null || obj2 == null) return false;
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
+    
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    for (let key of keys1) {
+      if (!keys2.includes(key)) return false;
+      if (!isEqual(obj1[key], obj2[key])) return false;
+    }
+    
+    return true;
+  }
+  
+  function renderKPIs(forceUpdate = false){
+    // If force update is requested, skip debouncing
+    if (forceUpdate) {
+      renderKPIsImmediate();
+      return;
+    }
+    
+    // Debounce rapid successive calls
+    if (renderKPIsTimeout) {
+      clearTimeout(renderKPIsTimeout);
+    }
+    
+    renderKPIsTimeout = setTimeout(() => {
+      renderKPIsImmediate();
+    }, 10); // Small delay to batch updates
+  }
+  
+  function renderKPIsImmediate(){
     // Calculate all values first
     const p = totals(state.personal); 
     const b = totals(state.biz);
@@ -4939,8 +4988,8 @@ async function saveProfile({ fullName, file }) {
       lifetimeYearlySelected: lifetimeIncome.yearlySelected
     };
     
-    // Only update if values have actually changed
-    const hasChanged = JSON.stringify(currentValues) !== JSON.stringify(lastKPIValues);
+    // Only update if values have actually changed (more precise comparison)
+    const hasChanged = !isEqual(currentValues, lastKPIValues);
     if (!hasChanged) return;
     
     // Update last values
@@ -4971,8 +5020,12 @@ async function saveProfile({ fullName, file }) {
     const sb = total > 0 ? Math.round((b.mUSD/total)*100) : 0;
     setText('sharePersonalVal', sp + '%'); 
     setText('shareBizVal', sb + '%');
-    const ps=$('#sharePersonalBar'); if(ps) ps.style.width=sp+'%'; 
-    const bs=$('#shareBizBar'); if(bs) bs.style.width=sb+'%';
+    
+    // Update bar widths only if they've changed
+    const ps = document.getElementById('sharePersonalBar');
+    const bs = document.getElementById('shareBizBar');
+    if (ps && ps.style.width !== sp + '%') ps.style.width = sp + '%';
+    if (bs && bs.style.width !== sb + '%') bs.style.width = sb + '%';
     
     // Update Income KPIs with lifetime totals
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
@@ -6215,7 +6268,7 @@ async function saveProfile({ fullName, file }) {
               </div>
               <div class="metric-item">
                 <div class="metric-value">${Math.round((all.mEGP * 0.032 / (all.mUSD + all.mEGP * 0.032) * 100) || 0)}%</div>
-                <div class="metric-label">EGP Share</div>
+                <div class="metric-label">${state.currencySymbol} Share</div>
               </div>
             </div>
           </div>
@@ -8260,6 +8313,17 @@ async function saveProfile({ fullName, file }) {
       $('#inputIncludeAnnual').value = state.includeAnnualInMonthly ? 'true' : 'false';
       $('#inputDeleteConfirm').value = '';
       $('#btnDeleteAll').disabled = true;
+      
+      // Sync currency selector in settings
+      const settingsCurrencySelect = document.getElementById('settingsCurrencySelect');
+      const settingsCurrencyDisplay = document.getElementById('settingsCurrencyDisplay');
+      if (settingsCurrencySelect) {
+        settingsCurrencySelect.value = state.selectedCurrency || 'EGP';
+      }
+      if (settingsCurrencyDisplay) {
+        settingsCurrencyDisplay.textContent = state.currencySymbol || 'EGP';
+      }
+      
       $('#settings').showModal(); 
     });
     
@@ -8850,13 +8914,15 @@ async function saveProfile({ fullName, file }) {
       }
       
       try {
-        // Try to fetch live USD/EGP rate from a free API
+        // Try to fetch live USD rate for the currently selected currency
         const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
         const data = await response.json();
-        const newRate = data.rates.EGP;
+        const selectedCurrency = state.selectedCurrency || 'EGP';
+        const newRate = data.rates[selectedCurrency];
         if (newRate && newRate > 0) {
           $('#inputFx').value = newRate.toFixed(4);
           state.fx = newRate;
+          state.currencyRate = newRate;
           
           if (showFeedback) {
           // Show success feedback
@@ -8868,17 +8934,31 @@ async function saveProfile({ fullName, file }) {
           }, 2000);
           }
           
-          // Save the new rate
+          // Update currency system and save
+          updateCurrency(state.selectedCurrency);
           save();
           return true;
         } else {
           throw new Error('Invalid rate received');
         }
       } catch (error) {
-
-        // Fallback to a reasonable rate if API fails
-        $('#inputFx').value = '48.1843';
-        state.fx = 48.1843;
+        console.warn('Currency API failed, using fallback rate:', error);
+        
+        // Fallback to the current currency's default rate if API fails
+        const selectedCurrency = state.selectedCurrency || 'EGP';
+        const fallbackRates = {
+          'EGP': 48.1843,
+          'KWD': 0.31,
+          'SAR': 3.75,
+          'AED': 3.67,
+          'QAR': 3.64,
+          'BHD': 0.38,
+          'EUR': 0.92
+        };
+        const fallbackRate = fallbackRates[selectedCurrency] || 48.1843;
+        $('#inputFx').value = fallbackRate.toFixed(4);
+        state.fx = fallbackRate;
+        state.currencyRate = fallbackRate;
         
         if (showFeedback) {
         btn.style.background = '#f59e0b';
@@ -8889,6 +8969,8 @@ async function saveProfile({ fullName, file }) {
         }, 2000);
         }
         
+        // Update currency system and save
+        updateCurrency(state.selectedCurrency);
         save();
         return false;
       } finally {
@@ -8901,6 +8983,35 @@ async function saveProfile({ fullName, file }) {
     
     // Refresh FX rate button
     $('#btnRefreshFx').addEventListener('click', () => refreshCurrencyRate(true));
+    
+    // Settings currency selector
+    const settingsCurrencySelect = document.getElementById('settingsCurrencySelect');
+    const settingsCurrencyDisplay = document.getElementById('settingsCurrencyDisplay');
+    
+    if (settingsCurrencySelect) {
+      // Set initial value
+      settingsCurrencySelect.value = state.selectedCurrency || 'EGP';
+      if (settingsCurrencyDisplay) {
+        settingsCurrencyDisplay.textContent = state.currencySymbol || 'EGP';
+      }
+      
+      // Handle currency change in settings
+      settingsCurrencySelect.addEventListener('change', (e) => {
+        const newCurrency = e.target.value;
+        updateCurrency(newCurrency);
+        
+        // Update the display
+        if (settingsCurrencyDisplay) {
+          settingsCurrencyDisplay.textContent = state.currencySymbol;
+        }
+        
+        // Update the FX input with the new currency's rate
+        $('#inputFx').value = state.currencyRate.toFixed(4);
+        
+        // Save the changes
+        save();
+      });
+    }
     
     // Auto-refresh currency removed to prevent KPI flickering
     // Users can manually refresh currency rates using the refresh button
