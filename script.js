@@ -5,6 +5,7 @@ let ticking = false;
 function updateHeader() {
   const header = document.querySelector('header');
   const scrollY = window.scrollY;
+  const isMobile = window.innerWidth <= 768;
   
   if (header) {
     if (scrollY > 50) {
@@ -27,6 +28,12 @@ function requestTick() {
 
 // Add scroll event listener
 window.addEventListener('scroll', requestTick, { passive: true });
+
+// Add resize event listener to handle mobile/desktop transitions
+window.addEventListener('resize', () => {
+  // Update header state when screen size changes
+  updateHeader();
+});
 
 // Initialize header state
 document.addEventListener('DOMContentLoaded', () => {
