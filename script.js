@@ -863,7 +863,8 @@ async function saveProfile({ fullName, file }) {
         functions: {
           saveOptimized: !!window.saveOptimized,
           instantSaveAllOptimized: !!window.instantSaveAllOptimized,
-          saveToSupabaseOptimized: !!window.saveToSupabaseOptimized
+          saveToSupabaseOptimized: !!window.saveToSupabaseOptimized,
+          syncLockStateOptimized: !!window.syncLockStateOptimized
         },
         active: isActive
       });
@@ -871,11 +872,43 @@ async function saveProfile({ fullName, file }) {
       return isActive;
     }
     
+    // Test lock sync functionality
+    function testLockSync() {
+      if (!window.syncLockStateOptimized) {
+        console.log('⚠️ Lock sync not available - optimized sync not loaded');
+        return false;
+      }
+      
+      console.log('🔒 Testing lock sync...');
+      const originalLockState = state.inputsLocked;
+      
+      // Toggle lock state
+      state.inputsLocked = !state.inputsLocked;
+      
+      // Test sync
+      window.syncLockStateOptimized(state.inputsLocked).then(() => {
+        console.log('✅ Lock sync test successful');
+        // Restore original state
+        state.inputsLocked = originalLockState;
+        updateLockIcon();
+        updateInputsLockState();
+      }).catch((error) => {
+        console.error('❌ Lock sync test failed:', error);
+        // Restore original state
+        state.inputsLocked = originalLockState;
+        updateLockIcon();
+        updateInputsLockState();
+      });
+      
+      return true;
+    }
+    
     // Make functions globally accessible
     window.addRow = addRow;
     window.removeYear = removeYear;
     window.testSyncPerformance = testSyncPerformance;
     window.isOptimizedSyncActive = isOptimizedSyncActive;
+    window.testLockSync = testLockSync;
     window.addYearBefore = addYearBefore;
     window.saveImportedIncomeSequentially = saveImportedIncomeSequentially;
     window.saveAllRowsWithoutIds = saveAllRowsWithoutIds;
@@ -3608,12 +3641,20 @@ async function saveProfile({ fullName, file }) {
         // Immediately save lock state to localStorage
         saveToLocal();
         
-        save('lock');
-      
-      // Save lock state to cloud if user is authenticated
-      if (currentUser) {
-        saveLockStateToCloud();
-      }
+        // Use optimized sync for instant lock state syncing
+        if (window.saveOptimized && window.syncSystemStatus?.ready) {
+          // Use optimized sync which will handle lock state instantly
+          window.saveOptimized('lock');
+          console.log(`🔒 Lock state ${state.inputsLocked ? 'enabled' : 'disabled'} - syncing instantly`);
+        } else {
+          // Fallback to original sync
+          save('lock');
+          
+          // Save lock state to cloud if user is authenticated
+          if (currentUser) {
+            saveLockStateToCloud();
+          }
+        }
     }
     
     function updateInputsLockState() {
