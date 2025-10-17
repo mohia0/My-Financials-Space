@@ -3849,54 +3849,54 @@ header img:hover {
     width: 100% !important;
   }
   
-  /* Make header icon buttons bigger on mobile */
+  /* Make header icon buttons bigger on mobile - 25% scale up */
   .icon-btn {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
-    min-width: 2.5rem !important;
-    min-height: 2.5rem !important;
-    font-size: 1rem !important;
+    width: 3.125rem !important; /* 2.5rem * 1.25 = 3.125rem */
+    height: 3.125rem !important;
+    min-width: 3.125rem !important;
+    min-height: 3.125rem !important;
+    font-size: 1.25rem !important; /* Also scale up font size */
   }
   
-  /* Make icons inside buttons bigger */
+  /* Make icons inside buttons bigger - 25% scale up */
   .icon-btn svg {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
+    width: 1.5625rem !important; /* 1.25rem * 1.25 = 1.5625rem */
+    height: 1.5625rem !important;
   }
   
-  /* Make refresh button icon bigger */
+  /* Make refresh button icon bigger - 25% scale up */
   #iconRefresh {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
+    width: 1.5625rem !important; /* 1.25rem * 1.25 = 1.5625rem */
+    height: 1.5625rem !important;
   }
   
-  /* Make lock button icon bigger */
+  /* Make lock button icon bigger - 25% scale up */
   #iconLock {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
+    width: 1.5625rem !important; /* 1.25rem * 1.25 = 1.5625rem */
+    height: 1.5625rem !important;
   }
   
-  /* Make theme button icon bigger */
+  /* Make theme button icon bigger - 25% scale up */
   #iconTheme {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
+    width: 1.5625rem !important; /* 1.25rem * 1.25 = 1.5625rem */
+    height: 1.5625rem !important;
   }
   
-  /* Make settings button icon bigger */
+  /* Make settings button icon bigger - 25% scale up */
   #btnSettings svg {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
+    width: 1.5625rem !important; /* 1.25rem * 1.25 = 1.5625rem */
+    height: 1.5625rem !important;
   }
   
-  /* Improve touch targets */
+  /* Improve touch targets - 25% scale up */
   .icon-btn {
-    padding: 0.5rem !important;
-    border-radius: 0.75rem !important;
+    padding: 0.625rem !important; /* 0.5rem * 1.25 = 0.625rem */
+    border-radius: 0.9375rem !important; /* 0.75rem * 1.25 = 0.9375rem */
   }
   
-  /* Better spacing between icons on mobile */
+  /* Better spacing between icons on mobile - 25% scale up */
   header .flex.items-center.gap-2 {
-    gap: 0.5rem !important;
+    gap: 0.625rem !important; /* 0.5rem * 1.25 = 0.625rem */
   }
 }
 
