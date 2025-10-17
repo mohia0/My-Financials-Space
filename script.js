@@ -1,3 +1,38 @@
+// Sticky Header Scroll Interactions
+let lastScrollY = 0;
+let ticking = false;
+
+function updateHeader() {
+  const header = document.querySelector('header');
+  const scrollY = window.scrollY;
+  
+  if (header) {
+    if (scrollY > 50) {
+      header.classList.add('scrolled');
+    } else {
+      header.classList.remove('scrolled');
+    }
+  }
+  
+  lastScrollY = scrollY;
+  ticking = false;
+}
+
+function requestTick() {
+  if (!ticking) {
+    requestAnimationFrame(updateHeader);
+    ticking = true;
+  }
+}
+
+// Add scroll event listener
+window.addEventListener('scroll', requestTick, { passive: true });
+
+// Initialize header state
+document.addEventListener('DOMContentLoaded', () => {
+  updateHeader();
+});
+
 // Supabase configuration - NEW PROJECT
 const SUPABASE_URL = 'https://whurxquryihxeqkwzaly.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXJ4cXVyeWloeGVxa3d6YWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NjE4ODgsImV4cCI6MjA3NjEzNzg4OH0.SP3SAmaNSTht4oV_rKE8DY7wHmdR7NYjqDjpXV7elDE';
