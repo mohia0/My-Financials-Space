@@ -397,7 +397,7 @@
     }
     
     .sync-status.success {
-      background: #10b981;
+      background: #6366f1;
       opacity: 1;
       transform: scale(1);
     }
@@ -629,9 +629,9 @@
     
     /* Modern Status color styling */
     .select.status-active{ 
-      color:#10b981; 
+      color:#6366f1; 
       font-weight:500; 
-      background:rgba(16, 185, 129, 0.08);
+      background:rgba(99, 102, 241, 0.08);
       border:none;
     }
     .select.status-cancelled{ 
@@ -641,7 +641,7 @@
       border:none;
     }
     .select.status-active option[value="Active"]{ 
-      color:#10b981; 
+      color:#6366f1; 
       background:var(--card);
     }
     .select.status-active option[value="Cancelled"]{ 
@@ -649,7 +649,7 @@
       background:var(--card);
     }
     .select.status-cancelled option[value="Active"]{ 
-      color:#10b981; 
+      color:#6366f1; 
       background:var(--card);
     }
     .select.status-cancelled option[value="Cancelled"]{ 
@@ -1859,9 +1859,9 @@
     }
     
     .status-trigger-minimal.status-active {
-      background: rgba(16, 185, 129, 0.1);
-      border-color: rgba(16, 185, 129, 0.3);
-      color: #10b981;
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #6366f1;
     }
     
     .status-trigger-minimal.status-cancelled {
@@ -1949,7 +1949,7 @@
     }
     
     .status-item-minimal.status-active {
-      color: #10b981;
+      color: #6366f1;
     }
     
     .status-item-minimal.status-cancelled {
@@ -2076,7 +2076,7 @@
     }
     
     .toggle-switch.status-active {
-      background: #10b981;
+      background: #6366f1;
     }
     
     .toggle-switch.status-cancelled {
@@ -3531,7 +3531,7 @@
     
     /* Financial Health Score Color Coding */
     .value[data-health="excellent"] {
-      color: #10b981 !important; /* Green */
+      color: #6366f1 !important; /* Purple */
     }
     
     .value[data-health="good"] {
@@ -3647,7 +3647,7 @@
     
     /* Simple notification types */
     .notification-center.success .notification-text {
-      color: #22c55e;
+      color: #6366f1;
     }
     
     .notification-center.error .notification-text {
@@ -3701,7 +3701,7 @@
     /* Mobile logo improvements - SVG logo primary everywhere */
     @media (max-width: 768px) {
       header img {
-        height: 2rem;
+        height: 2.3rem; /* 15% bigger than 2rem (2 * 1.15 = 2.3) */
         max-width: 100%;
         object-fit: contain;
         display: block;
@@ -3817,7 +3817,7 @@
       /* Make logo bigger and center it */
       header img {
         display: block !important;
-        height: 2rem !important;
+        height: 2.3rem !important; /* 15% bigger than 2rem */
         width: auto !important;
         margin: 0 auto !important;
       }
@@ -3918,7 +3918,7 @@
     }
     
     .autosave-status.enabled {
-      color: #10b981;
+      color: #6366f1;
     }
     
     .autosave-status.disabled {
@@ -4235,8 +4235,8 @@
     }
     
     .trend-up {
-      color: #10b981;
-      background: rgba(16, 185, 129, 0.1);
+      color: #6366f1;
+      background: rgba(99, 102, 241, 0.1);
     }
     
     .trend-down {

@@ -8513,8 +8513,8 @@ async function saveProfile({ fullName, file }) {
           
           if (showFeedback) {
           // Show success feedback
-          btn.style.background = '#10b981';
-          btn.style.borderColor = '#10b981';
+          btn.style.background = '#6366f1';
+          btn.style.borderColor = '#6366f1';
           setTimeout(() => {
             btn.style.background = '';
             btn.style.borderColor = '';
