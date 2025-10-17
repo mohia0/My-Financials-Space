@@ -839,43 +839,9 @@ async function saveProfile({ fullName, file }) {
       renderAll();
     }
     
-    // Test sync performance function
-    function testSyncPerformance() {
-      if (window.getSyncMetrics) {
-        const metrics = window.getSyncMetrics();
-        console.log('📊 Sync Performance Metrics:', metrics);
-        return metrics;
-      } else {
-        console.log('⚠️ Sync metrics not available');
-        return null;
-      }
-    }
-    
-    // Check if optimized sync is active
-    function isOptimizedSyncActive() {
-      const isActive = window.syncSystemStatus?.ready && 
-                      window.saveOptimized && 
-                      window.instantSaveAllOptimized && 
-                      window.saveToSupabaseOptimized;
-      
-      console.log('🚀 Optimized Sync Status:', {
-        ready: window.syncSystemStatus?.ready,
-        functions: {
-          saveOptimized: !!window.saveOptimized,
-          instantSaveAllOptimized: !!window.instantSaveAllOptimized,
-          saveToSupabaseOptimized: !!window.saveToSupabaseOptimized
-        },
-        active: isActive
-      });
-      
-      return isActive;
-    }
-    
     // Make functions globally accessible
     window.addRow = addRow;
     window.removeYear = removeYear;
-    window.testSyncPerformance = testSyncPerformance;
-    window.isOptimizedSyncActive = isOptimizedSyncActive;
     window.addYearBefore = addYearBefore;
     window.saveImportedIncomeSequentially = saveImportedIncomeSequentially;
     window.saveAllRowsWithoutIds = saveAllRowsWithoutIds;
@@ -913,11 +879,6 @@ async function saveProfile({ fullName, file }) {
       if (window.supabaseClient) {
         supabaseReady = true;
         clearInterval(checkSupabase);
-        
-        // Check if sync system is ready
-        if (window.syncSystemStatus) {
-          console.log('🔄 Sync system status:', window.syncSystemStatus);
-        }
 
 
 
@@ -965,35 +926,15 @@ async function saveProfile({ fullName, file }) {
       checkPasswordResetToken();
       
       // Set up Supabase authentication state listener
-      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      window.supabaseClient.auth.onAuthStateChange((event, session) => {
         if (session?.user) {
           currentUser = session.user;
           updateAuthUI();
           updateUserDisplay();
           loadUserData();
-          
-          // Initialize optimized sync system
-          if (window.initializeOptimizedSync && window.syncSystemStatus?.ready) {
-            try {
-              await window.initializeOptimizedSync();
-              console.log('🚀 Optimized sync system initialized');
-            } catch (error) {
-              console.warn('⚠️ Failed to initialize optimized sync, using fallback:', error);
-            }
-          }
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
           updateAuthUI();
-          
-          // Cleanup optimized sync system
-          if (window.cleanupOptimizedSync) {
-            try {
-              window.cleanupOptimizedSync();
-              console.log('🧹 Optimized sync system cleaned up');
-            } catch (error) {
-              console.warn('⚠️ Error cleaning up sync system:', error);
-            }
-          }
           
           // Clear all data when signed out
           state.personal = [];
@@ -2648,16 +2589,6 @@ async function saveProfile({ fullName, file }) {
         renderAll();
         showSuccessNotification('Data loaded from cloud!');
         
-        // Set up real-time subscriptions for live updates
-        if (window.handleRealtimeUpdate && window.syncSystemStatus?.ready) {
-          try {
-            // The real-time subscriptions are already set up in the optimized sync system
-            console.log('📡 Real-time subscriptions active');
-          } catch (error) {
-            console.warn('⚠️ Failed to set up real-time subscriptions:', error);
-          }
-        }
-        
       } catch (error) {
         
         // Check if it's a CORS or network error
@@ -2885,11 +2816,6 @@ async function saveProfile({ fullName, file }) {
     
     
     async function saveToSupabase() {
-      // Use optimized sync if available, otherwise fallback to original
-      if (window.saveToSupabaseOptimized && window.syncSystemStatus?.ready) {
-        return await window.saveToSupabaseOptimized();
-      }
-      
       if (!currentUser || !supabaseReady) return;
       
       try {
@@ -3185,11 +3111,6 @@ async function saveProfile({ fullName, file }) {
     }
     
     function save(source = 'general'){ 
-      // Use optimized sync if available, otherwise fallback to original
-      if (window.saveOptimized && window.syncSystemStatus?.ready) {
-        return window.saveOptimized(source);
-      }
-      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked && currentUser && supabaseReady) {
 
@@ -3915,11 +3836,6 @@ async function saveProfile({ fullName, file }) {
     let instantSaveInProgress = new Set();
     
     async function instantSaveAll(source = 'general') {
-      // Use optimized sync if available, otherwise fallback to original
-      if (window.instantSaveAllOptimized && window.syncSystemStatus?.ready) {
-        return await window.instantSaveAllOptimized(source);
-      }
-      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
 
