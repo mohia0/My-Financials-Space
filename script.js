@@ -2475,7 +2475,15 @@ async function saveProfile({ fullName, file }) {
           state.theme = settings.theme || 'dark';
           state.autosave = settings.autosave ? 'on' : 'off';
           state.includeAnnualInMonthly = settings.include_annual_in_monthly === true || settings.include_annual_in_monthly === 'true' || false;
-          state.inputsLocked = settings.inputs_locked === true || settings.inputs_locked === 'true' || false;
+          // Handle inputs_locked properly - only default to false if it's explicitly null/undefined
+          // If the user has never set it, preserve their current state or default to false
+          if (settings.inputs_locked === null || settings.inputs_locked === undefined) {
+            // If database has null/undefined, preserve current state or default to false
+            state.inputsLocked = state.inputsLocked !== undefined ? state.inputsLocked : false;
+          } else {
+            // If database has a value, use it
+            state.inputsLocked = settings.inputs_locked === true || settings.inputs_locked === 'true';
+          }
           columnOrder = settings.column_order || ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
           
           // Update UI elements to reflect loaded settings
@@ -2488,6 +2496,9 @@ async function saveProfile({ fullName, file }) {
           if (typeof updateInputsLockState === 'function') {
           updateInputsLockState();
           }
+          
+          // Ensure user settings exist with current lock state
+          ensureUserSettingsExist();
         }
         
         // Process personal expenses
@@ -2616,6 +2627,9 @@ async function saveProfile({ fullName, file }) {
         }
         
         loadLocalData();
+        
+        // Ensure user settings exist even if no data was loaded
+        ensureUserSettingsExist();
       } finally {
         // Always reset the loading flag
         isLoadingData = false;
@@ -2734,6 +2748,8 @@ async function saveProfile({ fullName, file }) {
 
           
           // Completely reset state to avoid merging
+          // Preserve current lock state if it exists
+          const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
           state = {
             personal: parsed.personal || [],
             biz: parsed.biz || [],
@@ -2741,7 +2757,8 @@ async function saveProfile({ fullName, file }) {
             fx: parsed.fx || 48.1843,
             theme: parsed.theme || 'dark',
             autosave: parsed.autosave || 'on',
-            includeAnnualInMonthly: parsed.includeAnnualInMonthly || true
+            includeAnnualInMonthly: parsed.includeAnnualInMonthly || true,
+            inputsLocked: currentLockState
           };
           
           // Handle migration from old income structure to new year-based structure
@@ -2760,6 +2777,8 @@ async function saveProfile({ fullName, file }) {
       } else {
 
         // No local data - initialize with default empty state
+        // Preserve current lock state if it exists
+        const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
         state = {
           personal: [],
           biz: [],
@@ -2772,7 +2791,8 @@ async function saveProfile({ fullName, file }) {
           fx: 48.1843,
           theme: 'dark',
           autosave: 'on',
-          includeAnnualInMonthly: true
+          includeAnnualInMonthly: true,
+          inputsLocked: currentLockState
         };
       }
       
@@ -3089,7 +3109,8 @@ async function saveProfile({ fullName, file }) {
             state.theme = parsed.theme || 'dark';
             state.autosave = parsed.autosave || 'on';
             state.includeAnnualInMonthly = parsed.includeAnnualInMonthly !== undefined ? parsed.includeAnnualInMonthly : true;
-            state.inputsLocked = parsed.inputsLocked || false;
+            // Handle inputs_locked properly - preserve the actual value from localStorage
+            state.inputsLocked = parsed.inputsLocked !== undefined ? parsed.inputsLocked : false;
             
             // Load column order
             const savedColumnOrder = localStorage.getItem('columnOrder');
@@ -3106,6 +3127,8 @@ async function saveProfile({ fullName, file }) {
       }
       
       // If no saved data, initialize with empty state
+      // Preserve current lock state if it exists, otherwise default to false
+      const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
 
       state.personal = [];
       state.biz = [];
@@ -3114,7 +3137,7 @@ async function saveProfile({ fullName, file }) {
       state.theme = 'dark';
       state.autosave = 'on';
       state.includeAnnualInMonthly = true;
-      state.inputsLocked = false;
+      state.inputsLocked = currentLockState;
       
       // Create year tabs (will create default years since income is empty)
       createYearTabsFromData(state.income);
@@ -3538,6 +3561,9 @@ async function saveProfile({ fullName, file }) {
           }
         });
         
+        // Immediately save lock state to localStorage
+        saveToLocal();
+        
         save('lock');
       
       // Save lock state to cloud if user is authenticated
@@ -3730,16 +3756,55 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
+    // Function to ensure user settings exist with current state
+    async function ensureUserSettingsExist() {
+      if (!currentUser || !supabaseReady) return;
+      
+      try {
+        // Check if user_settings record exists
+        const { data: existingSettings, error: fetchError } = await window.supabaseClient
+          .from('user_settings')
+          .select('id, inputs_locked')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        // If no record exists or inputs_locked is null, create/update with current state
+        if (fetchError && fetchError.code === 'PGRST116' || 
+            (existingSettings && existingSettings.inputs_locked === null)) {
+          
+          await window.supabaseClient
+            .from('user_settings')
+            .upsert({
+              user_id: currentUser.id,
+              inputs_locked: state.inputsLocked,
+              fx_rate: state.fx || 48.1843,
+              theme: state.theme || 'dark',
+              autosave: state.autosave === 'on',
+              include_annual_in_monthly: state.includeAnnualInMonthly !== undefined ? state.includeAnnualInMonthly : true
+            }, {
+              onConflict: 'user_id'
+            });
+        }
+      } catch (error) {
+        console.error('Failed to ensure user settings exist:', error);
+      }
+    }
+
     // Function to save lock state to cloud
     async function saveLockStateToCloud() {
       if (!currentUser) return;
       
       try {
+        // First, ensure user_settings record exists with current state
         await window.supabaseClient
           .from('user_settings')
           .upsert({
             user_id: currentUser.id,
-            inputs_locked: state.inputsLocked
+            inputs_locked: state.inputsLocked,
+            fx_rate: state.fx || 48.1843,
+            theme: state.theme || 'dark',
+            autosave: state.autosave === 'on',
+            include_annual_in_monthly: state.includeAnnualInMonthly !== undefined ? state.includeAnnualInMonthly : true
           }, {
             onConflict: 'user_id'
           });
