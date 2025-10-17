@@ -3772,6 +3772,23 @@
       font-weight: 500;
     }
 
+    /* Mobile Logo Button Styling */
+    .mobile-logo-btn {
+      background: rgba(var(--primary-rgb), 0.1);
+      border: 1px solid rgba(var(--primary-rgb), 0.2);
+    }
+
+    .mobile-logo-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+      filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+    }
+
+    /* Dark mode logo color */
+    [data-theme="dark"] .mobile-logo-icon {
+      filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(103%) contrast(103%);
+    }
+
     /* Show mobile nav only on mobile */
     @media (max-width: 768px) {
       .mobile-bottom-nav {
@@ -4407,11 +4424,54 @@
       position: relative;
     }
 
+    .auth-modal-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .auth-modal-logo {
+      width: 2rem;
+      height: 2rem;
+      filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+    }
+
+    /* Dark mode logo color */
+    [data-theme="dark"] .auth-modal-logo {
+      filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(103%) contrast(103%);
+    }
+
+    /* Settings Modal Logo */
+    .settings-modal-logo {
+      width: 1.5rem;
+      height: 1.5rem;
+      filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+    }
+
+    /* Dark mode logo color for settings */
+    [data-theme="dark"] .settings-modal-logo {
+      filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(103%) contrast(103%);
+    }
+
+    /* Icon Picker Modal Logo */
+    .icon-picker-modal-logo {
+      width: 1.75rem;
+      height: 1.75rem;
+      filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+    }
+
+    /* Dark mode logo color for icon picker */
+    [data-theme="dark"] .icon-picker-modal-logo {
+      filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(103%) contrast(103%);
+    }
+
     .auth-modal-title {
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--fg);
-      margin: 0 0 8px 0;
+      margin: 0;
     }
 
     .auth-modal-subtitle {
