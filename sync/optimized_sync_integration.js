@@ -203,52 +203,7 @@ async function saveToSupabaseOptimized() {
 }
 
 // ========================================
-// 4. LOCK STATE SYNC FUNCTIONS
-// ========================================
-
-// Optimized lock state sync function
-async function syncLockStateOptimized(lockState) {
-  if (!currentUser || !supabaseReady || !smartSyncManager) return;
-  
-  const startTime = performance.now();
-  
-  try {
-    console.log(`🔒 Syncing lock state: ${lockState ? 'locked' : 'unlocked'}`);
-    
-    // Track lock state change
-    const settingsData = {
-      user_id: currentUser.id,
-      fx_rate: state.fx,
-      theme: state.theme,
-      autosave: state.autosave === 'on',
-      include_annual_in_monthly: state.includeAnnualInMonthly,
-      column_order: columnOrder,
-      available_years: Object.keys(state.income).map(year => parseInt(year)).sort((a, b) => a - b),
-      inputs_locked: lockState,
-      updated_at: new Date().toISOString()
-    };
-    
-    smartSyncManager.trackChange('settings', currentUser.id, settingsData);
-    
-    // Force immediate sync for lock state changes
-    await smartSyncManager.forceSync();
-    
-    const duration = performance.now() - startTime;
-    syncPerformanceMonitor.recordSync(duration, true);
-    
-    console.log(`⚡ Lock state synced in ${duration.toFixed(2)}ms`);
-    
-  } catch (error) {
-    const duration = performance.now() - startTime;
-    syncPerformanceMonitor.recordSync(duration, false);
-    
-    console.error('Lock state sync failed:', error);
-    throw error;
-  }
-}
-
-// ========================================
-// 5. REPLACE INSTANT SAVE FUNCTIONS
+// 4. REPLACE INSTANT SAVE FUNCTIONS
 // ========================================
 
 // Replace instantSaveAll with optimized version
@@ -434,8 +389,6 @@ function updateSettingsFromRealtime(payload) {
   
   if (eventType === 'INSERT' || eventType === 'UPDATE') {
     if (newRecord) {
-      const previousLockState = state.inputsLocked;
-      
       state.fx = newRecord.fx_rate || 48.1843;
       state.theme = newRecord.theme || 'dark';
       state.autosave = newRecord.autosave ? 'on' : 'off';
@@ -454,28 +407,6 @@ function updateSettingsFromRealtime(payload) {
       // Update UI
       applyTheme();
       updateSettingsUI();
-      
-      // Handle lock state changes from other devices
-      if (previousLockState !== state.inputsLocked) {
-        console.log(`🔒 Lock state changed from another device: ${state.inputsLocked ? 'locked' : 'unlocked'}`);
-        
-        // Update lock icon and UI state
-        if (typeof updateLockIcon === 'function') {
-          updateLockIcon();
-        }
-        if (typeof updateInputsLockState === 'function') {
-          updateInputsLockState();
-        }
-        
-        // Show notification about lock state change
-        if (typeof showNotification === 'function') {
-          showNotification(
-            `Inputs ${state.inputsLocked ? 'locked' : 'unlocked'} from another device`, 
-            'info', 
-            3000
-          );
-        }
-      }
     }
   }
 }
@@ -543,12 +474,6 @@ function mapSupabaseToLocal(supabaseData, type) {
 
 // Replace the current save function
 function saveOptimized(source = 'general') {
-  // Handle lock state changes specially
-  if (source === 'lock' && currentUser && supabaseReady && smartSyncManager) {
-    syncLockStateOptimized(state.inputsLocked);
-    return;
-  }
-  
   // Check if lock is active - if so, only save locally, not to cloud
   if (state.inputsLocked && currentUser && supabaseReady) {
     console.log('Lock is active - saving locally only, not to cloud');
@@ -771,7 +696,6 @@ window.cleanupOptimizedSync = cleanupOptimizedSync;
 window.saveToSupabaseOptimized = saveToSupabaseOptimized;
 window.instantSaveAllOptimized = instantSaveAllOptimized;
 window.saveOptimized = saveOptimized;
-window.syncLockStateOptimized = syncLockStateOptimized;
 window.getSyncMetrics = getSyncMetrics;
 window.logSyncPerformance = logSyncPerformance;
 window.clearProcessedRecords = clearProcessedRecords;
