@@ -918,14 +918,6 @@ async function saveProfile({ fullName, file }) {
     }
     
     function initializeAuth() {
-
-      console.log('Environment check:', {
-        hostname: window.location.hostname,
-        protocol: window.location.protocol,
-        isLocalhost: window.location.hostname === 'localhost',
-        isGitHubPages: window.location.hostname.includes('github.io'),
-        isCustomDomain: window.location.hostname === 'myfinancials.space'
-      });
       
       // Test Supabase connection
       testSupabaseConnection();
@@ -1851,16 +1843,6 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
-    // Debug function to check which form is currently visible
-    function debugFormVisibility() {
-      const forms = ['emailAuthForm', 'forgotPasswordForm', 'passwordResetForm', 'changePasswordForm'];
-      forms.forEach(formId => {
-        const form = document.getElementById(formId);
-        if (form) {
-
-        }
-      });
-    }
     
     async function sendPasswordReset() {
       const email = $('#forgotEmail').value;
@@ -2608,14 +2590,6 @@ async function saveProfile({ fullName, file }) {
         showSuccessNotification('Data loaded from cloud!');
         
       } catch (error) {
-
-        console.error('Error details:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          status: error.status
-        });
         
         // Check if it's a CORS or network error
         if (error.message.includes('CORS') || error.message.includes('Network') || error.message.includes('fetch')) {
@@ -2850,15 +2824,6 @@ async function saveProfile({ fullName, file }) {
 
         
         // Save user settings
-        console.log('Saving settings to Supabase:', {
-          user_id: currentUser.id,
-          fx_rate: state.fx,
-          theme: state.theme,
-          autosave: state.autosave === 'on',
-          include_annual_in_monthly: state.includeAnnualInMonthly,
-          column_order: columnOrder,
-          available_years: availableYears
-        });
         
         await window.supabaseClient
           .from('user_settings')
@@ -3786,7 +3751,7 @@ async function saveProfile({ fullName, file }) {
             });
         }
       } catch (error) {
-        console.error('Failed to ensure user settings exist:', error);
+        // Silently handle user settings initialization errors
       }
     }
 
@@ -4653,33 +4618,71 @@ async function saveProfile({ fullName, file }) {
     }
 
 
+  // Cache for KPI values to prevent unnecessary updates
+  let lastKPIValues = {};
+  
   function renderKPIs(){
-      const p = totals(state.personal); const b = totals(state.biz);
+    // Calculate all values first
+    const p = totals(state.personal); 
+    const b = totals(state.biz);
     const currentYearData = state.income[currentYear] || [];
     const i = incomeTotals(currentYearData);
-      const all = { mUSD:p.mUSD + b.mUSD, yUSD:p.yUSD + b.yUSD };
-    all.mEGP = usdToEgp(all.mUSD); all.yEGP = usdToEgp(all.yUSD);
-      setText('kpiAllMonthlyUSD', nfUSD.format(all.mUSD));
-      setText('kpiAllMonthlyEGP', 'EGP ' + nfINT.format(Math.round(all.mEGP)));
-      setText('kpiAllYearlyUSD', nfUSD.format(all.yUSD));
-      setText('kpiAllYearlyEGP', 'EGP ' + nfINT.format(Math.round(all.yEGP)));
-      setText('kpiFxSmall', Number(state.fx||0).toFixed(4));
-      setText('kpiPersonalMonthly', nfUSD.format(p.mUSD));
-      setText('kpiPersonalMonthlyEGP', 'EGP ' + nfINT.format(Math.round(p.mEGP)));
-      setText('kpiPersonalYearly', nfUSD.format(p.yUSD));
-      setText('kpiPersonalYearlyEGP', 'EGP ' + nfINT.format(Math.round(p.yEGP)));
-      setText('kpiBizMonthly', nfUSD.format(b.mUSD));
-      setText('kpiBizMonthlyEGP', 'EGP ' + nfINT.format(Math.round(b.mEGP)));
-      setText('kpiBizYearly', nfUSD.format(b.yUSD));
-      setText('kpiBizYearlyEGP', 'EGP ' + nfINT.format(Math.round(b.yEGP)));
+    const all = { mUSD:p.mUSD + b.mUSD, yUSD:p.yUSD + b.yUSD };
+    all.mEGP = usdToEgp(all.mUSD); 
+    all.yEGP = usdToEgp(all.yUSD);
+    const lifetimeIncome = lifetimeIncomeTotals();
+    
+    // Create current values object for comparison
+    const currentValues = {
+      allMonthlyUSD: all.mUSD,
+      allYearlyUSD: all.yUSD,
+      personalMonthly: p.mUSD,
+      personalYearly: p.yUSD,
+      bizMonthly: b.mUSD,
+      bizYearly: b.yUSD,
+      fx: state.fx,
+      incomeMonthly: i.mUSD,
+      incomeYearly: i.yUSD,
+      lifetimeMonthly: lifetimeIncome.monthlyUSD,
+      lifetimeYearly: lifetimeIncome.yearlyUSD
+    };
+    
+    // Only update if values have actually changed
+    const hasChanged = JSON.stringify(currentValues) !== JSON.stringify(lastKPIValues);
+    if (!hasChanged) return;
+    
+    // Update last values
+    lastKPIValues = { ...currentValues };
+    
+    // Update All KPIs
+    setText('kpiAllMonthlyUSD', nfUSD.format(all.mUSD));
+    setText('kpiAllMonthlyEGP', 'EGP ' + nfINT.format(Math.round(all.mEGP)));
+    setText('kpiAllYearlyUSD', nfUSD.format(all.yUSD));
+    setText('kpiAllYearlyEGP', 'EGP ' + nfINT.format(Math.round(all.yEGP)));
+    setText('kpiFxSmall', Number(state.fx||0).toFixed(4));
+    
+    // Update Personal KPIs
+    setText('kpiPersonalMonthly', nfUSD.format(p.mUSD));
+    setText('kpiPersonalMonthlyEGP', 'EGP ' + nfINT.format(Math.round(p.mEGP)));
+    setText('kpiPersonalYearly', nfUSD.format(p.yUSD));
+    setText('kpiPersonalYearlyEGP', 'EGP ' + nfINT.format(Math.round(p.yEGP)));
+    
+    // Update Business KPIs
+    setText('kpiBizMonthly', nfUSD.format(b.mUSD));
+    setText('kpiBizMonthlyEGP', 'EGP ' + nfINT.format(Math.round(b.mEGP)));
+    setText('kpiBizYearly', nfUSD.format(b.yUSD));
+    setText('kpiBizYearlyEGP', 'EGP ' + nfINT.format(Math.round(b.yEGP)));
+    
+    // Update percentage bars
     const total = all.mUSD; 
     const sp = total > 0 ? Math.round((p.mUSD/total)*100) : 0; 
     const sb = total > 0 ? Math.round((b.mUSD/total)*100) : 0;
-      setText('sharePersonalVal', sp + '%'); setText('shareBizVal', sb + '%');
-      const ps=$('#sharePersonalBar'); if(ps) ps.style.width=sp+'%'; const bs=$('#shareBizBar'); if(bs) bs.style.width=sb+'%';
+    setText('sharePersonalVal', sp + '%'); 
+    setText('shareBizVal', sb + '%');
+    const ps=$('#sharePersonalBar'); if(ps) ps.style.width=sp+'%'; 
+    const bs=$('#shareBizBar'); if(bs) bs.style.width=sb+'%';
     
     // Update Income KPIs with lifetime totals
-    const lifetimeIncome = lifetimeIncomeTotals();
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
     setText('kpiIncomeAllMonthlyEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.monthlyEGP)));
     setText('kpiIncomeAllYearlyUSD', nfUSD.format(lifetimeIncome.yearlyUSD));
@@ -4687,21 +4690,21 @@ async function saveProfile({ fullName, file }) {
     setText('kpiIncomeFxSmall', Number(state.fx||0).toFixed(4));
     setText('kpiIncomeMonthlyCurrent', nfUSD.format(i.mUSD));
     setText('kpiIncomeMonthlyCurrentEGP', 'EGP ' + nfINT.format(Math.round(i.mEGP)));
-     setText('kpiIncomeMonthlyAvg', nfUSD.format(lifetimeIncome.monthlyUSD));
-     setText('kpiIncomeMonthlyAvgEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.monthlyEGP)));
+    setText('kpiIncomeMonthlyAvg', nfUSD.format(lifetimeIncome.monthlyUSD));
+    setText('kpiIncomeMonthlyAvgEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.monthlyEGP)));
     setText('kpiIncomeYearlyCurrent', nfUSD.format(i.yUSD));
     setText('kpiIncomeYearlyCurrentEGP', 'EGP ' + nfINT.format(Math.round(i.yEGP)));
-    setText('kpiIncomeYearlyTarget', nfUSD.format(lifetimeIncome.yearlyUSD * 1.2)); // 20% above lifetime as target
+    setText('kpiIncomeYearlyTarget', nfUSD.format(lifetimeIncome.yearlyUSD * 1.2));
     setText('kpiIncomeYearlyTargetEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.yearlyEGP * 1.2)));
     
-    // Update lifetime income breakdown (no progress bars)
+    // Update lifetime income breakdown
     setText('shareIncomeCompletedVal', nfUSD.format(lifetimeIncome.totalUSD));
     setText('shareIncomePendingVal', lifetimeIncome.totalEntries.toString());
     
-    // Update analytics content
+    // Update analytics content (only when values change)
     updateAnalytics();
     updateIncomeAnalytics();
-    }
+  }
     
     // Income Analytics function
     function updateIncomeAnalytics() {
@@ -7051,7 +7054,7 @@ async function saveProfile({ fullName, file }) {
            save('cost-input');
           // Live calculations as you type
            updateRowCalculations(div, row, isBiz);
-           renderKPIs();
+           // KPIs will be updated by updateRowCalculations
          });
          costDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
          const wrapper = costDiv.querySelector('.cost-input-wrapper');
@@ -7095,7 +7098,7 @@ async function saveProfile({ fullName, file }) {
            
            save('status-toggle');
            updateRowCalculations(div, row, isBiz);
-           renderKPIs();
+           // KPIs will be updated by updateRowCalculations
          });
          
          statusDiv.appendChild(statusToggle);
@@ -7131,7 +7134,7 @@ async function saveProfile({ fullName, file }) {
            
            save('billing-toggle');
            updateRowCalculations(div, row, isBiz);
-           renderKPIs();
+           // KPIs will be updated by updateRowCalculations
          });
          
          billingDiv.appendChild(billingToggle);
@@ -8611,10 +8614,10 @@ async function saveProfile({ fullName, file }) {
     // Refresh FX rate button
     $('#btnRefreshFx').addEventListener('click', () => refreshCurrencyRate(true));
     
-    // Auto-refresh currency every 10 seconds
+    // Auto-refresh currency every 5 minutes (reduced frequency to prevent KPI flickering)
     setInterval(() => {
       refreshCurrencyRate(false);
-    }, 10000);
+    }, 300000); // 5 minutes = 300,000ms
     
     // Enhanced Export/Import functionality - moved inside DOMContentLoaded
     setTimeout(() => {
@@ -9703,22 +9706,6 @@ async function saveProfile({ fullName, file }) {
       return count;
     }
 
-    // tiny tests
-    (function(){
-      function eq(a,b,msg){ if(Math.abs(a-b)>1e-6) console.error('TEST FAIL',msg,a,b); else console.log('TEST OK',msg); }
-      const sample=[{cost:120,billing:'Monthly',status:'Active'},{cost:1200,billing:'Annually',status:'Active'}];
-      // Ensure state.includeAnnualInMonthly is set for the test
-      const originalIncludeAnnual = state.includeAnnualInMonthly;
-      state.includeAnnualInMonthly = true;
-      
-      eq(rowMonthlyUSD(sample[0]),120,'mUSD monthly');
-      eq(rowMonthlyUSD(sample[1]),100,'mUSD annual');
-      eq(rowYearlyUSD(sample[0]),1440,'yUSD monthly');
-      eq(rowYearlyUSD(sample[1]),1200,'yUSD annual');
-      
-      // Restore original value
-      state.includeAnnualInMonthly = originalIncludeAnnual;
-    })();
   });
 
   // Custom Date Picker functionality
@@ -9739,17 +9726,6 @@ async function saveProfile({ fullName, file }) {
     const todayDateBtn = document.getElementById('todayDate');
     const datePickerDays = document.getElementById('datePickerDays');
     
-    // Debug: Check if elements exist
-    console.log('Elements found:', {
-      customDatePicker: !!customDatePicker,
-      monthSelect: !!monthSelect,
-      yearSelect: !!yearSelect,
-      prevMonthBtn: !!prevMonthBtn,
-      nextMonthBtn: !!nextMonthBtn,
-      clearDateBtn: !!clearDateBtn,
-      todayDateBtn: !!todayDateBtn,
-      datePickerDays: !!datePickerDays
-    });
     
     if (!customDatePicker) {
 
@@ -10014,12 +9990,6 @@ async function saveProfile({ fullName, file }) {
       // Get the actual date in YYYY-MM-DD format
       const actualDate = formatDateForInput(date);
       
-      console.log('Setting date:', {
-        input: currentDatePickerInput,
-        actualDate: actualDate,
-        originalDate: date
-      });
-      
       // Set the actual date value (this is what the form will use)
       currentDatePickerInput.value = actualDate;
       
@@ -10249,33 +10219,6 @@ async function saveProfile({ fullName, file }) {
   });
   
   
-  // Test function to manually open date picker
-  window.testDatePicker = function() {
-
-
-    
-    if (!customDatePicker) {
-
-      return;
-    }
-    
-    // Just show it directly
-    customDatePicker.style.display = 'block';
-    customDatePicker.classList.add('show');
-
-  };
-  
-  // Test function to manually set a date
-  window.testDateSelection = function() {
-    const testInput = document.querySelector('input[type="date"]');
-    if (testInput) {
-      const testDate = new Date(2025, 0, 15); // January 15, 2025
-
-      selectDate(testDate);
-    } else {
-
-    }
-  };
   
   // Also add a simple click handler to any date input
   window.addEventListener('load', function() {
