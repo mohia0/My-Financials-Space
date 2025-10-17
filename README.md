@@ -31,22 +31,6 @@
 
 ---
 
-## 🎯 **Live Demo**
-
-**[🌐 Try MY FINANCIALS Live](https://your-demo-url.com)** *(Replace with your actual demo URL)*
-
----
-
-## 📸 **Screenshots**
-
-<div align="center">
-  <img src="Images/screenshot-dashboard.png" alt="Dashboard View" width="300"/>
-  <img src="Images/screenshot-analytics.png" alt="Analytics View" width="300"/>
-  <img src="Images/screenshot-mobile.png" alt="Mobile View" width="200"/>
-</div>
-
----
-
 ## 🛠️ **Technology Stack**
 
 | Technology | Purpose | Version |
@@ -185,83 +169,6 @@ php -S localhost:8000
 
 ---
 
-## 📁 **Project Structure**
-
-```
-my-financials/
-├── 📄 index.html              # Main HTML file
-├── 🎨 style.css               # Custom CSS styles
-├── ⚡ script.js               # Core JavaScript functionality
-├── 📁 Images/                 # Logo and favicon assets
-│   ├── Logo.svg
-│   ├── Logo-mobile.svg
-│   └── Favicon.svg
-├── 📁 sync/                   # Synchronization system
-│   ├── sync-loader.js
-│   ├── sync_optimization.js
-│   ├── optimized_sync_integration.js
-│   └── README.md
-├── 📄 CNAME                   # Custom domain configuration
-└── 📄 README.md               # This file
-```
-
----
-
-## 🚀 **Deployment**
-
-### **GitHub Pages**
-1. Fork this repository
-2. Go to Settings > Pages
-3. Select source branch (usually `main`)
-4. Your site will be available at `https://yourusername.github.io/my-financials`
-
-### **Netlify**
-1. Connect your GitHub repository
-2. Build command: `echo "No build required"`
-3. Publish directory: `/`
-4. Deploy!
-
-### **Vercel**
-1. Import your GitHub repository
-2. Framework preset: Other
-3. Build command: `echo "No build required"`
-4. Deploy!
-
----
-
-## 🤝 **Contributing**
-
-We welcome contributions! Please follow these steps:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m 'Add some amazing feature'
-   ```
-4. **Push to the branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. **Open a Pull Request**
-
-### **Development Guidelines**
-- Follow existing code style
-- Add comments for complex logic
-- Test on multiple browsers
-- Ensure mobile responsiveness
-- Update documentation
-
----
-
-## 📝 **License**
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
----
 
 ## 🙏 **Acknowledgments**
 
@@ -273,28 +180,14 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## 📞 **Support & Contact**
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/my-financials/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/my-financials/discussions)
-- **Email**: your-email@example.com
+- **Email**: Info@mohihassan.com
 
 ---
-
-## 🔮 **Roadmap**
-
-- [ ] **Mobile App**: Native iOS/Android apps
-- [ ] **Advanced Reports**: PDF export and detailed reports
-- [ ] **Budget Planning**: Budget creation and tracking
-- [ ] **Investment Tracking**: Portfolio management
-- [ ] **Bill Reminders**: Automated bill notifications
-- [ ] **API Integration**: Bank account integration
-- [ ] **Team Collaboration**: Shared financial management
-- [ ] **Advanced Analytics**: Machine learning insights
 
 ---
 
 <div align="center">
-  <p>Made with ❤️ by <strong>Your Name</strong></p>
+  <p>Made with ❤️ by <strong>MOHI HASSAN</strong></p>
   <p>⭐ Star this repository if you found it helpful!</p>
 </div>
