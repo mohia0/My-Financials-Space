@@ -1686,9 +1686,9 @@ async function saveProfile({ fullName, file }) {
     async function loadAccountData() {
       if (currentUser) {
         try {
-          // Load user email (readonly)
-          $('#accountEmail').value = currentUser.email || '';
-          
+        // Load user email (readonly)
+        $('#accountEmail').value = currentUser.email || '';
+        
           // Load profile data from user_settings table
           const { row, avatarUrl } = await loadProfile();
           
@@ -1700,7 +1700,7 @@ async function saveProfile({ fullName, file }) {
             if (avatarUrl) {
               const preview = $('#profilePicPreview');
               preview.innerHTML = `<img src="${avatarUrl}" alt="Profile Picture">`;
-            } else {
+          } else {
               // Show placeholder if no avatar
               const preview = $('#profilePicPreview');
               preview.innerHTML = `
@@ -1718,10 +1718,10 @@ async function saveProfile({ fullName, file }) {
             $('#accountName').value = name;
             
             // Load profile picture from metadata as fallback
-            const profilePic = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic || '';
-            if (profilePic) {
-              const preview = $('#profilePicPreview');
-              preview.innerHTML = `<img src="${profilePic}" alt="Profile Picture">`;
+        const profilePic = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic || '';
+        if (profilePic) {
+          const preview = $('#profilePicPreview');
+          preview.innerHTML = `<img src="${profilePic}" alt="Profile Picture">`;
             } else {
               // Show placeholder if no avatar
               const preview = $('#profilePicPreview');
@@ -1841,14 +1841,14 @@ async function saveProfile({ fullName, file }) {
             // Fallback to user metadata
             const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'User';
             $('#userName').textContent = name;
-            
-            // Update profile picture in dropdown if available
-            const avatarUrl = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic;
-            if (avatarUrl) {
-              const userAvatar = $('#userAvatar');
-              if (userAvatar) {
-                userAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-8 h-8 rounded-full object-cover">`;
-              }
+        
+        // Update profile picture in dropdown if available
+        const avatarUrl = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic;
+        if (avatarUrl) {
+          const userAvatar = $('#userAvatar');
+          if (userAvatar) {
+            userAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-8 h-8 rounded-full object-cover">`;
+          }
             }
           }
         } catch (error) {
@@ -8513,8 +8513,8 @@ async function saveProfile({ fullName, file }) {
           
           if (showFeedback) {
           // Show success feedback
-          btn.style.background = '#6366f1';
-          btn.style.borderColor = '#6366f1';
+          btn.style.background = '#10b981';
+          btn.style.borderColor = '#10b981';
           setTimeout(() => {
             btn.style.background = '';
             btn.style.borderColor = '';
