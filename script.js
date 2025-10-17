@@ -5351,16 +5351,27 @@ async function saveProfile({ fullName, file }) {
         }
         
         // Top tool analysis
+        // For insights, we want to compare tools based on their true monthly equivalent cost
+        const getMonthlyEquivalentCost = (r) => {
+          if (r.status !== 'Active') return 0;
+          if (r.billing === 'Monthly') return Number(r.cost || 0);
+          if (r.billing === 'Annually') return Number(r.cost || 0) / 12;
+          return 0;
+        };
+        
         const sortedByCost = bizActive.sort((a, b) => {
-          const aCost = rowMonthlyUSD(a);
-          const bCost = rowMonthlyUSD(b);
+          const aCost = getMonthlyEquivalentCost(a);
+          const bCost = getMonthlyEquivalentCost(b);
           return bCost - aCost;
         });
         
         if (sortedByCost.length > 0) {
           const topTool = sortedByCost[0];
-          const topCost = rowMonthlyUSD(topTool);
-          const topPercentage = monthlyBiz > 0 ? (topCost / monthlyBiz) * 100 : 0;
+          const topCost = getMonthlyEquivalentCost(topTool);
+          
+          // Calculate total monthly equivalent cost for percentage calculation
+          const totalMonthlyEquivalent = bizActive.reduce((sum, r) => sum + getMonthlyEquivalentCost(r), 0);
+          const topPercentage = totalMonthlyEquivalent > 0 ? (topCost / totalMonthlyEquivalent) * 100 : 0;
           
           if (topCost > 0) {
             insights.push(`🔧 Most expensive tool: ${topTool.name || 'Unnamed'} at ${nfUSD.format(topCost)} (${Math.round(topPercentage)}% of total).`);
@@ -5699,22 +5710,28 @@ async function saveProfile({ fullName, file }) {
       const expensesBar = $('#analyticsExpensesBar'); if(expensesBar) expensesBar.style.width = expensesBarWidth + '%';
       
       // 2. Savings Rate Analysis
-      const savingsRateMonthly = incomeTotals.monthly > 0 ? Math.max(0, Math.min(100, (netCashFlow.mUSD / incomeTotals.monthly) * 100)) : 0;
-      const savingsRateYearly = incomeTotals.yearly > 0 ? Math.max(0, Math.min(100, (netCashFlow.yUSD / incomeTotals.yearly) * 100)) : 0;
+      const savingsRateMonthly = incomeTotals.monthly > 0 ? (netCashFlow.mUSD / incomeTotals.monthly) * 100 : 0;
+      const savingsRateYearly = incomeTotals.yearly > 0 ? (netCashFlow.yUSD / incomeTotals.yearly) * 100 : 0;
       
       setText('analyticsSavingsRateMonthly', savingsRateMonthly.toFixed(1) + '%');
       setText('analyticsSavingsRateYearly', savingsRateYearly.toFixed(1) + '%');
       
       // Savings status
-      const monthlyStatus = savingsRateMonthly >= 20 ? 'Excellent' : savingsRateMonthly >= 10 ? 'Good' : savingsRateMonthly >= 5 ? 'Fair' : 'Poor';
-      const yearlyStatus = savingsRateYearly >= 20 ? 'Excellent' : savingsRateYearly >= 10 ? 'Good' : savingsRateYearly >= 5 ? 'Fair' : 'Poor';
+      const monthlyStatus = savingsRateMonthly >= 20 ? 'Excellent' : 
+                           savingsRateMonthly >= 10 ? 'Good' : 
+                           savingsRateMonthly >= 5 ? 'Fair' : 
+                           savingsRateMonthly >= 0 ? 'Poor' : 'Deficit';
+      const yearlyStatus = savingsRateYearly >= 20 ? 'Excellent' : 
+                          savingsRateYearly >= 10 ? 'Good' : 
+                          savingsRateYearly >= 5 ? 'Fair' : 
+                          savingsRateYearly >= 0 ? 'Poor' : 'Deficit';
       
       setText('analyticsSavingsRateMonthlyStatus', monthlyStatus);
       setText('analyticsSavingsRateYearlyStatus', yearlyStatus);
       
       // Savings target progress
       const targetSavings = 20; // 20% target
-      const savingsProgress = Math.min(100, (savingsRateMonthly / targetSavings) * 100);
+      const savingsProgress = Math.min(100, Math.max(0, (savingsRateMonthly / targetSavings) * 100));
       setText('analyticsSavingsTarget', savingsRateMonthly.toFixed(1) + '%');
       
       const savingsProgressBar = $('#analyticsSavingsProgressBar'); 
@@ -5746,8 +5763,9 @@ async function saveProfile({ fullName, file }) {
       let healthGrade = 'F';
       
       if (incomeTotals.monthly > 0) {
-        // Base score from savings rate (0-40 points)
-        healthScore += Math.min(40, savingsRateMonthly * 2);
+        // Base score from savings rate (0-40 points, can go negative)
+        const savingsScore = Math.min(40, Math.max(-40, savingsRateMonthly * 2));
+        healthScore += savingsScore;
         
         // Cash flow bonus (0-20 points)
         if (netCashFlow.mUSD > 0) healthScore += 20;
