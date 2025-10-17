@@ -19,6 +19,147 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Make Supabase available globally
 window.supabaseClient = supabase;
 
+// Utility function to slugify file names
+function slugify(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '')
+    .substring(0, 80);
+}
+
+// Profile management functions
+async function loadProfile() {
+  try {
+    const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return { row: null, avatarUrl: null };
+    }
+    
+    if (!session) {
+      return { row: null, avatarUrl: null };
+    }
+    
+    const { data: row, error } = await window.supabaseClient
+      .from('user_settings')
+      .select('full_name, avatars_path')
+      .eq('user_id', session.user.id)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('Error loading profile:', error);
+      return { row: null, avatarUrl: null };
+    }
+    
+    let avatarUrl = null;
+    if (row && row.avatars_path) {
+      const { data: signedUrl, error: urlError } = await window.supabaseClient.storage
+        .from('avatars')
+        .createSignedUrl(row.avatars_path, 7 * 24 * 60 * 60); // 7 days
+      
+      if (!urlError && signedUrl) {
+        avatarUrl = signedUrl.signedUrl;
+      }
+    }
+    
+    return { row, avatarUrl };
+  } catch (error) {
+    console.error('loadProfile error:', error);
+    return { row: null, avatarUrl: null };
+  }
+}
+
+async function saveProfile({ fullName, file }) {
+  try {
+    const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+    
+    if (sessionError) {
+      throw new Error('Session error: ' + sessionError.message);
+    }
+    
+    if (!session) {
+      throw new Error('No active session. Please log in.');
+    }
+    
+    const user = session.user;
+    let avatarsPath = null;
+    
+    // Handle file upload if provided
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/avif'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Invalid file type. Please upload PNG, JPEG, WebP, or AVIF images only.');
+      }
+      
+      // Validate file size (5MB = 5 * 1024 * 1024 bytes)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File too large. Please upload images smaller than 5MB.');
+      }
+      
+      // Generate file path
+      const fileExt = file.name.split('.').pop().toLowerCase();
+      const baseName = file.name.replace(/\.[^/.]+$/, '');
+      const slugifiedName = slugify(baseName);
+      const timestamp = Date.now();
+      avatarsPath = `${user.id}/${timestamp}-${slugifiedName}.${fileExt}`;
+      
+      // Upload file to storage
+      const { data: uploadData, error: uploadError } = await window.supabaseClient.storage
+        .from('avatars')
+        .upload(avatarsPath, file, {
+          upsert: true,
+          cacheControl: '3600'
+        });
+      
+      if (uploadError) {
+        throw new Error('Upload failed: ' + uploadError.message);
+      }
+    }
+    
+    // Prepare data for upsert
+    const upsertData = {
+      user_id: user.id,
+      full_name: fullName
+    };
+    
+    if (avatarsPath) {
+      upsertData.avatars_path = avatarsPath;
+    }
+    
+    // Upsert user settings
+    const { data: row, error: upsertError } = await window.supabaseClient
+      .from('user_settings')
+      .upsert(upsertData, {
+        onConflict: 'user_id'
+      })
+      .select()
+      .single();
+    
+    if (upsertError) {
+      throw new Error('Failed to save profile: ' + upsertError.message);
+    }
+    
+    // Generate signed URL if a new file was uploaded
+    let avatarUrl = null;
+    if (avatarsPath) {
+      const { data: signedUrl, error: urlError } = await window.supabaseClient.storage
+        .from('avatars')
+        .createSignedUrl(avatarsPath, 7 * 24 * 60 * 60); // 7 days
+      
+      if (!urlError && signedUrl) {
+        avatarUrl = signedUrl.signedUrl;
+      }
+    }
+    
+    return { row, avatarUrl };
+  } catch (error) {
+    console.error('saveProfile error:', error);
+    throw error;
+  }
+}
+
   document.addEventListener('DOMContentLoaded', function(){
     const $ = (s, el)=> (el||document).querySelector(s);
     
@@ -808,6 +949,7 @@ window.supabaseClient = supabase;
           currentUser = session.user;
           updateAuthUI();
           loadUserData();
+          updateUserDisplay(); // Load profile data and update UI
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
           updateAuthUI();
@@ -1541,68 +1683,64 @@ window.supabaseClient = supabase;
     }
     
     // Function to load current user account data
-    function loadAccountData() {
+    async function loadAccountData() {
       if (currentUser) {
-        // Load user name (from metadata or display name)
-        const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
-        $('#accountName').value = name;
-        
-        // Load user email (readonly)
-        $('#accountEmail').value = currentUser.email || '';
-        
-        
-        // Date input focus handler
-        function handleDateFocus() {
-          // Allow full text selection for easier editing
-          setTimeout(() => {
-            this.select();
-          }, 100);
-        }
-        
-        // Date input click handler
-        function handleDateClick() {
-          // Allow both typing and calendar picker
-          this.focus();
-        }
-        
-        // Date input typing handler
-        function handleDateInput() {
-          // Validate the input as user types
-          const value = this.value;
-          if (value && !isValidDate(value)) {
-            // Show subtle validation feedback
-            this.style.borderColor = 'var(--error)';
+        try {
+          // Load user email (readonly)
+          $('#accountEmail').value = currentUser.email || '';
+          
+          // Load profile data from user_settings table
+          const { row, avatarUrl } = await loadProfile();
+          
+          if (row) {
+            // Load user name from user_settings
+            $('#accountName').value = row.full_name || '';
+            
+            // Load profile picture from signed URL
+            if (avatarUrl) {
+              const preview = $('#profilePicPreview');
+              preview.innerHTML = `<img src="${avatarUrl}" alt="Profile Picture">`;
+            } else {
+              // Show placeholder if no avatar
+              const preview = $('#profilePicPreview');
+              preview.innerHTML = `
+                <div class="profile-pic-placeholder">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+              `;
+            }
           } else {
-            this.style.borderColor = 'var(--stroke)';
-          }
-        }
-        
-        // Date input keydown handler for better UX
-        function handleDateKeydown(e) {
-          // Allow all typing, but help with format
-          if (e.key === 'Tab' || e.key === 'Enter') {
-            // Validate on tab or enter
-            if (this.value && !isValidDate(this.value)) {
-              e.preventDefault();
-              showAuthStatus('Please enter a valid date (YYYY-MM-DD)', 'error');
+            // Fallback to user metadata if no user_settings row
+            const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+            $('#accountName').value = name;
+            
+            // Load profile picture from metadata as fallback
+            const profilePic = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic || '';
+            if (profilePic) {
+              const preview = $('#profilePicPreview');
+              preview.innerHTML = `<img src="${profilePic}" alt="Profile Picture">`;
+            } else {
+              // Show placeholder if no avatar
+              const preview = $('#profilePicPreview');
+              preview.innerHTML = `
+                <div class="profile-pic-placeholder">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+              `;
             }
           }
-        }
-        
-        // Helper function to validate date format
-        function isValidDate(dateString) {
-          const regex = /^\d{4}-\d{2}-\d{2}$/;
-          if (!regex.test(dateString)) return false;
-          
-          const date = new Date(dateString);
-          return date instanceof Date && !isNaN(date) && dateString === date.toISOString().split('T')[0];
-        }
-        
-        // Load profile picture (from metadata)
-        const profilePic = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic || '';
-        if (profilePic) {
-          const preview = $('#profilePicPreview');
-          preview.innerHTML = `<img src="${profilePic}" alt="Profile Picture">`;
+        } catch (error) {
+          console.error('Error loading account data:', error);
+          // Fallback to basic data loading
+          const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+          $('#accountName').value = name;
+          $('#accountEmail').value = currentUser.email || '';
         }
       }
     }
@@ -1617,32 +1755,37 @@ window.supabaseClient = supabase;
         return;
       }
       
-      
       try {
         showAuthLoading(true);
         clearAuthStatus();
         
-        let avatarUrl = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic || '';
+        // Use the new saveProfile function
+        const { row, avatarUrl } = await saveProfile({
+          fullName: name,
+          file: profilePicFile
+        });
         
-        // Handle profile picture upload if a new file is selected
-        if (profilePicFile) {
-          // For now, we'll store the file as base64 in metadata
-          // In a real app, you'd upload to a storage service
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            avatarUrl = e.target.result;
-            await updateUserMetadata(name, avatarUrl);
-          };
-          reader.readAsDataURL(profilePicFile);
-          return; // Exit early, updateUserMetadata will be called in the reader callback
-        } else {
-          await updateUserMetadata(name, avatarUrl);
+        // Update the UI with the new avatar URL if provided
+        if (avatarUrl) {
+          const preview = $('#profilePicPreview');
+          preview.innerHTML = `<img src="${avatarUrl}" alt="Profile Picture">`;
         }
+        
+        // Update user display in the UI
+        updateUserDisplay();
+        
+        showAuthStatus('Profile updated successfully!', 'success');
+        showAuthLoading(false);
+        
+        // Auto-close modal after 2 seconds
+        setTimeout(() => {
+          closeAuthModal();
+        }, 2000);
         
       } catch (error) {
         console.error('Account update error:', error);
         showAuthLoading(false);
-        showAuthStatus('Failed to update account: ' + error.message, 'error');
+        showAuthStatus('Failed to update profile: ' + error.message, 'error');
       }
     }
     
@@ -1671,22 +1814,48 @@ window.supabaseClient = supabase;
     }
     
     // Function to update user display in the UI
-    function updateUserDisplay() {
+    async function updateUserDisplay() {
       if (currentUser) {
-        const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'User';
         const email = currentUser.email || '';
         
-        // Update dropdown display
-        $('#userName').textContent = name;
+        // Update email display
         $('#userEmail').textContent = email;
         
-        // Update profile picture in dropdown if available
-        const avatarUrl = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic;
-        if (avatarUrl) {
-          const userAvatar = $('#userAvatar');
-          if (userAvatar) {
-            userAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-8 h-8 rounded-full object-cover">`;
+        try {
+          // Load profile data from user_settings table
+          const { row, avatarUrl } = await loadProfile();
+          
+          if (row) {
+            // Use data from user_settings
+            const name = row.full_name || 'User';
+            $('#userName').textContent = name;
+            
+            // Update profile picture in dropdown if available
+            if (avatarUrl) {
+              const userAvatar = $('#userAvatar');
+              if (userAvatar) {
+                userAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-8 h-8 rounded-full object-cover">`;
+              }
+            }
+          } else {
+            // Fallback to user metadata
+            const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'User';
+            $('#userName').textContent = name;
+            
+            // Update profile picture in dropdown if available
+            const avatarUrl = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic;
+            if (avatarUrl) {
+              const userAvatar = $('#userAvatar');
+              if (userAvatar) {
+                userAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-8 h-8 rounded-full object-cover">`;
+              }
+            }
           }
+        } catch (error) {
+          console.error('Error updating user display:', error);
+          // Fallback to basic display
+          const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'User';
+          $('#userName').textContent = name;
         }
       }
     }
