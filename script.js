@@ -839,9 +839,43 @@ async function saveProfile({ fullName, file }) {
       renderAll();
     }
     
+    // Test sync performance function
+    function testSyncPerformance() {
+      if (window.getSyncMetrics) {
+        const metrics = window.getSyncMetrics();
+        console.log('📊 Sync Performance Metrics:', metrics);
+        return metrics;
+      } else {
+        console.log('⚠️ Sync metrics not available');
+        return null;
+      }
+    }
+    
+    // Check if optimized sync is active
+    function isOptimizedSyncActive() {
+      const isActive = window.syncSystemStatus?.ready && 
+                      window.saveOptimized && 
+                      window.instantSaveAllOptimized && 
+                      window.saveToSupabaseOptimized;
+      
+      console.log('🚀 Optimized Sync Status:', {
+        ready: window.syncSystemStatus?.ready,
+        functions: {
+          saveOptimized: !!window.saveOptimized,
+          instantSaveAllOptimized: !!window.instantSaveAllOptimized,
+          saveToSupabaseOptimized: !!window.saveToSupabaseOptimized
+        },
+        active: isActive
+      });
+      
+      return isActive;
+    }
+    
     // Make functions globally accessible
     window.addRow = addRow;
     window.removeYear = removeYear;
+    window.testSyncPerformance = testSyncPerformance;
+    window.isOptimizedSyncActive = isOptimizedSyncActive;
     window.addYearBefore = addYearBefore;
     window.saveImportedIncomeSequentially = saveImportedIncomeSequentially;
     window.saveAllRowsWithoutIds = saveAllRowsWithoutIds;
@@ -879,6 +913,11 @@ async function saveProfile({ fullName, file }) {
       if (window.supabaseClient) {
         supabaseReady = true;
         clearInterval(checkSupabase);
+        
+        // Check if sync system is ready
+        if (window.syncSystemStatus) {
+          console.log('🔄 Sync system status:', window.syncSystemStatus);
+        }
 
 
 
@@ -926,15 +965,35 @@ async function saveProfile({ fullName, file }) {
       checkPasswordResetToken();
       
       // Set up Supabase authentication state listener
-      window.supabaseClient.auth.onAuthStateChange((event, session) => {
+      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (session?.user) {
           currentUser = session.user;
           updateAuthUI();
           updateUserDisplay();
           loadUserData();
+          
+          // Initialize optimized sync system
+          if (window.initializeOptimizedSync && window.syncSystemStatus?.ready) {
+            try {
+              await window.initializeOptimizedSync();
+              console.log('🚀 Optimized sync system initialized');
+            } catch (error) {
+              console.warn('⚠️ Failed to initialize optimized sync, using fallback:', error);
+            }
+          }
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
           updateAuthUI();
+          
+          // Cleanup optimized sync system
+          if (window.cleanupOptimizedSync) {
+            try {
+              window.cleanupOptimizedSync();
+              console.log('🧹 Optimized sync system cleaned up');
+            } catch (error) {
+              console.warn('⚠️ Error cleaning up sync system:', error);
+            }
+          }
           
           // Clear all data when signed out
           state.personal = [];
@@ -2473,17 +2532,14 @@ async function saveProfile({ fullName, file }) {
           
           // Apply lock state after loading settings
           if (typeof updateLockIcon === 'function') {
-            updateLockIcon();
+          updateLockIcon();
           }
           if (typeof updateInputsLockState === 'function') {
-            updateInputsLockState();
+          updateInputsLockState();
           }
           
           // Ensure user settings exist with current lock state
           ensureUserSettingsExist();
-          
-          // Force save the current lock state to ensure it's persisted
-          saveToLocal();
         }
         
         // Process personal expenses
@@ -2591,6 +2647,16 @@ async function saveProfile({ fullName, file }) {
         
         renderAll();
         showSuccessNotification('Data loaded from cloud!');
+        
+        // Set up real-time subscriptions for live updates
+        if (window.handleRealtimeUpdate && window.syncSystemStatus?.ready) {
+          try {
+            // The real-time subscriptions are already set up in the optimized sync system
+            console.log('📡 Real-time subscriptions active');
+          } catch (error) {
+            console.warn('⚠️ Failed to set up real-time subscriptions:', error);
+          }
+        }
         
       } catch (error) {
         
@@ -2725,7 +2791,8 @@ async function saveProfile({ fullName, file }) {
 
           
           // Completely reset state to avoid merging
-          // Load the actual lock state from localStorage
+          // Preserve current lock state if it exists
+          const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
           state = {
             personal: parsed.personal || [],
             biz: parsed.biz || [],
@@ -2734,7 +2801,7 @@ async function saveProfile({ fullName, file }) {
             theme: parsed.theme || 'dark',
             autosave: parsed.autosave || 'on',
             includeAnnualInMonthly: parsed.includeAnnualInMonthly || true,
-            inputsLocked: parsed.inputsLocked !== undefined ? parsed.inputsLocked : false
+            inputsLocked: currentLockState
           };
           
           // Handle migration from old income structure to new year-based structure
@@ -2753,7 +2820,8 @@ async function saveProfile({ fullName, file }) {
       } else {
 
         // No local data - initialize with default empty state
-        // Default to unlocked state when no data exists
+        // Preserve current lock state if it exists
+        const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
         state = {
           personal: [],
           biz: [],
@@ -2767,7 +2835,7 @@ async function saveProfile({ fullName, file }) {
           theme: 'dark',
           autosave: 'on',
           includeAnnualInMonthly: true,
-          inputsLocked: false
+          inputsLocked: currentLockState
         };
       }
       
@@ -2785,14 +2853,6 @@ async function saveProfile({ fullName, file }) {
       
       // Initialize row order properties for existing rows
       initializeRowOrder();
-      
-      // Apply lock state after loading data
-      if (typeof updateLockIcon === 'function') {
-        updateLockIcon();
-      }
-      if (typeof updateInputsLockState === 'function') {
-        updateInputsLockState();
-      }
       
       renderAll();
     }
@@ -2825,6 +2885,11 @@ async function saveProfile({ fullName, file }) {
     
     
     async function saveToSupabase() {
+      // Use optimized sync if available, otherwise fallback to original
+      if (window.saveToSupabaseOptimized && window.syncSystemStatus?.ready) {
+        return await window.saveToSupabaseOptimized();
+      }
+      
       if (!currentUser || !supabaseReady) return;
       
       try {
@@ -3092,14 +3157,6 @@ async function saveProfile({ fullName, file }) {
               columnOrder = JSON.parse(savedColumnOrder);
             }
             
-            // Apply lock state after loading data
-            if (typeof updateLockIcon === 'function') {
-              updateLockIcon();
-            }
-            if (typeof updateInputsLockState === 'function') {
-              updateInputsLockState();
-            }
-            
             renderAll();
             return;
           }
@@ -3109,7 +3166,9 @@ async function saveProfile({ fullName, file }) {
       }
       
       // If no saved data, initialize with empty state
-      // Default to unlocked state when no data exists
+      // Preserve current lock state if it exists, otherwise default to false
+      const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
+
       state.personal = [];
       state.biz = [];
       state.income = {}; // Start with empty income object
@@ -3117,23 +3176,20 @@ async function saveProfile({ fullName, file }) {
       state.theme = 'dark';
       state.autosave = 'on';
       state.includeAnnualInMonthly = true;
-      state.inputsLocked = false;
+      state.inputsLocked = currentLockState;
       
       // Create year tabs (will create default years since income is empty)
       createYearTabsFromData(state.income);
-      
-      // Apply lock state after initializing data
-      if (typeof updateLockIcon === 'function') {
-        updateLockIcon();
-      }
-      if (typeof updateInputsLockState === 'function') {
-        updateInputsLockState();
-      }
       
       renderAll();
     }
     
     function save(source = 'general'){ 
+      // Use optimized sync if available, otherwise fallback to original
+      if (window.saveOptimized && window.syncSystemStatus?.ready) {
+        return window.saveOptimized(source);
+      }
+      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked && currentUser && supabaseReady) {
 
@@ -3859,6 +3915,11 @@ async function saveProfile({ fullName, file }) {
     let instantSaveInProgress = new Set();
     
     async function instantSaveAll(source = 'general') {
+      // Use optimized sync if available, otherwise fallback to original
+      if (window.instantSaveAllOptimized && window.syncSystemStatus?.ready) {
+        return await window.instantSaveAllOptimized(source);
+      }
+      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
 
@@ -10225,6 +10286,15 @@ async function saveProfile({ fullName, file }) {
     initCustomDatePicker();
     overrideDateInputs();
     applyDatePickerToNewInputs();
+    
+    
+    // Initialize lock state
+    if (typeof updateLockIcon === 'function') {
+    updateLockIcon();
+    }
+    if (typeof updateInputsLockState === 'function') {
+    updateInputsLockState();
+    }
     
     // Check database schema on load
     if (currentUser && supabaseReady) {
