@@ -8324,11 +8324,18 @@ async function saveProfile({ fullName, file }) {
         settingsCurrencyDisplay.textContent = state.currencySymbol || 'EGP';
       }
       
+      // Update last refresh time display
+      updateLastRefreshDisplay();
+      
+      // Test API connection and log available currencies
+      testCurrencyAPI();
+      
       $('#settings').showModal(); 
     });
     
     // Click outside to close modal
     $('#settings').addEventListener('click', (e) => {
+      // Only close if clicking on the backdrop (the dialog element itself)
       if (e.target === $('#settings')) {
         $('#settings').close();
       }
@@ -8909,37 +8916,114 @@ async function saveProfile({ fullName, file }) {
       const originalContent = btn.innerHTML;
       
       if (showFeedback) {
-      btn.innerHTML = '<svg class="w-3 h-3 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.364-6.364"/></svg>';
-      btn.disabled = true;
+        btn.innerHTML = '<svg class="w-3 h-3 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.364-6.364"/></svg>';
+        btn.disabled = true;
+        btn.title = 'Fetching latest rates...';
       }
       
       try {
-        // Try to fetch live USD rate for the currently selected currency
-        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-        const data = await response.json();
         const selectedCurrency = state.selectedCurrency || 'EGP';
-        const newRate = data.rates[selectedCurrency];
-        if (newRate && newRate > 0) {
+        
+        // Create dynamic API endpoints based on selected currency
+        // All APIs fetch USD rates and we extract the selected currency from USD
+        const apiEndpoints = [
+          `https://api.exchangerate-api.com/v4/latest/USD`,
+          `https://api.fxratesapi.com/latest?base=USD`,
+          `https://api.currencyapi.com/v3/latest?apikey=free&currencies=${selectedCurrency}&base_currency=USD`,
+          `https://api.exchangerate.host/latest?base=USD&symbols=${selectedCurrency}`,
+          `https://api.fixer.io/latest?access_key=free&base=USD&symbols=${selectedCurrency}`
+        ];
+        
+        let data = null;
+        let lastError = null;
+        let newRate = null;
+        
+        // Try each API endpoint
+        for (const endpoint of apiEndpoints) {
+          try {
+            const response = await fetch(endpoint, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+              },
+              // Add timeout to prevent hanging
+              signal: AbortSignal.timeout(8000) // 8 second timeout per endpoint
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            data = await response.json();
+            
+            // Check if data has the expected structure and extract rate
+            if (data && data.rates && data.rates[selectedCurrency]) {
+              newRate = data.rates[selectedCurrency];
+              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              break; // Success, exit the loop
+            } else if (data && data.data && data.data[selectedCurrency]) {
+              newRate = data.data[selectedCurrency].value;
+              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              break; // Success, exit the loop
+            } else if (data && data.result && data.result[selectedCurrency]) {
+              newRate = data.result[selectedCurrency];
+              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              break; // Success, exit the loop
+            } else if (data && data.quotes && data.quotes[`USD${selectedCurrency}`]) {
+              newRate = data.quotes[`USD${selectedCurrency}`];
+              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              break; // Success, exit the loop
+            } else {
+              // Log available currencies for debugging
+              const availableCurrencies = data?.rates ? Object.keys(data.rates) : 
+                                        data?.data ? Object.keys(data.data) : 
+                                        data?.result ? Object.keys(data.result) : 
+                                        data?.quotes ? Object.keys(data.quotes) : 'none';
+              console.warn(`Currency ${selectedCurrency} not found. Available:`, availableCurrencies);
+              throw new Error(`Currency ${selectedCurrency} not found in API response`);
+            }
+          } catch (error) {
+            lastError = error;
+            console.warn(`API endpoint failed: ${endpoint}`, error);
+            continue; // Try next endpoint
+          }
+        }
+        
+        if (!newRate) {
+          throw lastError || new Error(`All API endpoints failed to fetch ${selectedCurrency} rate`);
+        }
+        
+        // Validate the rate
+        if (newRate > 0) {
           $('#inputFx').value = newRate.toFixed(4);
           state.fx = newRate;
           state.currencyRate = newRate;
           
           if (showFeedback) {
-          // Show success feedback
-          btn.style.background = '#10b981';
-          btn.style.borderColor = '#10b981';
-          setTimeout(() => {
-            btn.style.background = '';
-            btn.style.borderColor = '';
-          }, 2000);
+            // Show success feedback
+            btn.style.background = '#10b981';
+            btn.style.borderColor = '#10b981';
+            btn.title = `Updated! Rate: ${newRate.toFixed(4)}`;
+            setTimeout(() => {
+              btn.style.background = '';
+              btn.style.borderColor = '';
+              btn.title = 'Refresh from live rate';
+            }, 3000);
           }
           
           // Update currency system and save
           updateCurrency(state.selectedCurrency);
           save();
+          
+          // Show notification
+          showNotification(`Currency rate updated to ${newRate.toFixed(4)} ${state.currencySymbol}`);
+          
+          // Store last successful refresh time
+          localStorage.setItem('lastCurrencyRefresh', new Date().toISOString());
+          
           return true;
         } else {
-          throw new Error('Invalid rate received');
+          throw new Error('Invalid rate received from API');
         }
       } catch (error) {
         console.warn('Currency API failed, using fallback rate:', error);
@@ -8961,28 +9045,91 @@ async function saveProfile({ fullName, file }) {
         state.currencyRate = fallbackRate;
         
         if (showFeedback) {
-        btn.style.background = '#f59e0b';
-        btn.style.borderColor = '#f59e0b';
-        setTimeout(() => {
-          btn.style.background = '';
-          btn.style.borderColor = '';
-        }, 2000);
+          btn.style.background = '#f59e0b';
+          btn.style.borderColor = '#f59e0b';
+          btn.title = `API failed, using fallback rate: ${fallbackRate.toFixed(4)}`;
+          setTimeout(() => {
+            btn.style.background = '';
+            btn.style.borderColor = '';
+            btn.title = 'Refresh from live rate';
+          }, 3000);
         }
         
         // Update currency system and save
         updateCurrency(state.selectedCurrency);
         save();
+        
+        // Show warning notification
+        showNotification(`API unavailable, using fallback rate: ${fallbackRate.toFixed(4)} ${state.currencySymbol}`, 'warning');
         return false;
       } finally {
         if (showFeedback) {
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
+          btn.innerHTML = originalContent;
+          btn.disabled = false;
+        }
       }
+    }
+    
+    // Function to test currency API and show available currencies
+    async function testCurrencyAPI() {
+      try {
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await response.json();
+        
+        if (data && data.rates) {
+          const availableCurrencies = Object.keys(data.rates);
+          console.log('Available currencies from API:', availableCurrencies);
+          
+          // Check if our supported currencies are available
+          const supportedCurrencies = ['EGP', 'KWD', 'SAR', 'AED', 'QAR', 'BHD', 'EUR'];
+          const availableSupported = supportedCurrencies.filter(currency => 
+            availableCurrencies.includes(currency)
+          );
+          
+          console.log('Supported currencies available in API:', availableSupported);
+          return availableSupported;
+        }
+      } catch (error) {
+        console.warn('Currency API test failed:', error);
+        return [];
+      }
+    }
+    
+    // Function to update last refresh time display
+    function updateLastRefreshDisplay() {
+      const lastRefresh = localStorage.getItem('lastCurrencyRefresh');
+      const refreshBtn = $('#btnRefreshFx');
+      
+      if (lastRefresh && refreshBtn) {
+        const refreshDate = new Date(lastRefresh);
+        const now = new Date();
+        const diffMinutes = Math.floor((now - refreshDate) / (1000 * 60));
+        
+        let timeText = '';
+        if (diffMinutes < 1) {
+          timeText = 'Just now';
+        } else if (diffMinutes < 60) {
+          timeText = `${diffMinutes}m ago`;
+        } else if (diffMinutes < 1440) {
+          const hours = Math.floor(diffMinutes / 60);
+          timeText = `${hours}h ago`;
+        } else {
+          const days = Math.floor(diffMinutes / 1440);
+          timeText = `${days}d ago`;
+        }
+        
+        // Update button title to show last refresh time
+        refreshBtn.title = `Refresh from live rate (Last: ${timeText})`;
       }
     }
     
     // Refresh FX rate button
-    $('#btnRefreshFx').addEventListener('click', () => refreshCurrencyRate(true));
+    $('#btnRefreshFx').addEventListener('click', () => {
+      refreshCurrencyRate(true).then(() => {
+        // Update display after successful refresh
+        updateLastRefreshDisplay();
+      });
+    });
     
     // Settings currency selector
     const settingsCurrencySelect = document.getElementById('settingsCurrencySelect');
@@ -10418,7 +10565,7 @@ async function saveProfile({ fullName, file }) {
   function overrideDateInputs() {
     // Prevent default date input behavior more aggressively
     document.addEventListener('click', (e) => {
-      if (e.target.type === 'date') {
+      if (e.target.type === 'date' && e.target.tagName !== 'SELECT') {
         e.preventDefault();
         e.stopPropagation();
         showCustomDatePicker(e.target);
@@ -10428,7 +10575,7 @@ async function saveProfile({ fullName, file }) {
 
     // Handle focus events
     document.addEventListener('focus', (e) => {
-      if (e.target.type === 'date') {
+      if (e.target.type === 'date' && e.target.tagName !== 'SELECT') {
         e.preventDefault();
         e.stopPropagation();
         showCustomDatePicker(e.target);
@@ -10438,7 +10585,7 @@ async function saveProfile({ fullName, file }) {
 
     // Handle mousedown events
     document.addEventListener('mousedown', (e) => {
-      if (e.target.type === 'date') {
+      if (e.target.type === 'date' && e.target.tagName !== 'SELECT') {
         e.preventDefault();
         e.stopPropagation();
         showCustomDatePicker(e.target);
@@ -10448,7 +10595,7 @@ async function saveProfile({ fullName, file }) {
 
     // Handle touch events for mobile
     document.addEventListener('touchstart', (e) => {
-      if (e.target.type === 'date') {
+      if (e.target.type === 'date' && e.target.tagName !== 'SELECT') {
         e.preventDefault();
         e.stopPropagation();
         showCustomDatePicker(e.target);

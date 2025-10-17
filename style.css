@@ -630,6 +630,19 @@ html,body{ font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Robo
   border-color: #6366f1;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
+
+/* Ensure select dropdown works properly */
+.settings-currency-select {
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* Ensure the select container doesn't interfere */
+.settings-modal .relative {
+  position: relative;
+  z-index: 10;
+}
 /* number input: remove spinners, friendlier mobile keypad */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; }
@@ -5390,6 +5403,18 @@ header img:hover {
   }
 }
 
+/* Settings Modal Centering */
+.settings-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
 /* Settings Modal Mobile Responsiveness */
 @media (max-width: 768px) {
   .settings-modal {
@@ -5398,6 +5423,11 @@ header img:hover {
     margin: 0 !important;
     max-height: 90vh !important;
     border-radius: 16px !important;
+    /* Maintain centering on mobile */
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
   }
   
   .settings-modal-content {
@@ -5531,6 +5561,11 @@ header img:hover {
     height: 100vh !important;
     max-height: 100vh !important;
     border-radius: 0 !important;
+    /* Maintain centering on extra small screens */
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
   }
   
   .settings-modal-content {
