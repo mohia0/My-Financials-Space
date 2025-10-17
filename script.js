@@ -2473,14 +2473,17 @@ async function saveProfile({ fullName, file }) {
           
           // Apply lock state after loading settings
           if (typeof updateLockIcon === 'function') {
-          updateLockIcon();
+            updateLockIcon();
           }
           if (typeof updateInputsLockState === 'function') {
-          updateInputsLockState();
+            updateInputsLockState();
           }
           
           // Ensure user settings exist with current lock state
           ensureUserSettingsExist();
+          
+          // Force save the current lock state to ensure it's persisted
+          saveToLocal();
         }
         
         // Process personal expenses
@@ -2722,8 +2725,7 @@ async function saveProfile({ fullName, file }) {
 
           
           // Completely reset state to avoid merging
-          // Preserve current lock state if it exists
-          const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
+          // Load the actual lock state from localStorage
           state = {
             personal: parsed.personal || [],
             biz: parsed.biz || [],
@@ -2732,7 +2734,7 @@ async function saveProfile({ fullName, file }) {
             theme: parsed.theme || 'dark',
             autosave: parsed.autosave || 'on',
             includeAnnualInMonthly: parsed.includeAnnualInMonthly || true,
-            inputsLocked: currentLockState
+            inputsLocked: parsed.inputsLocked !== undefined ? parsed.inputsLocked : false
           };
           
           // Handle migration from old income structure to new year-based structure
@@ -2751,8 +2753,7 @@ async function saveProfile({ fullName, file }) {
       } else {
 
         // No local data - initialize with default empty state
-        // Preserve current lock state if it exists
-        const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
+        // Default to unlocked state when no data exists
         state = {
           personal: [],
           biz: [],
@@ -2766,7 +2767,7 @@ async function saveProfile({ fullName, file }) {
           theme: 'dark',
           autosave: 'on',
           includeAnnualInMonthly: true,
-          inputsLocked: currentLockState
+          inputsLocked: false
         };
       }
       
@@ -2784,6 +2785,14 @@ async function saveProfile({ fullName, file }) {
       
       // Initialize row order properties for existing rows
       initializeRowOrder();
+      
+      // Apply lock state after loading data
+      if (typeof updateLockIcon === 'function') {
+        updateLockIcon();
+      }
+      if (typeof updateInputsLockState === 'function') {
+        updateInputsLockState();
+      }
       
       renderAll();
     }
@@ -3083,6 +3092,14 @@ async function saveProfile({ fullName, file }) {
               columnOrder = JSON.parse(savedColumnOrder);
             }
             
+            // Apply lock state after loading data
+            if (typeof updateLockIcon === 'function') {
+              updateLockIcon();
+            }
+            if (typeof updateInputsLockState === 'function') {
+              updateInputsLockState();
+            }
+            
             renderAll();
             return;
           }
@@ -3092,9 +3109,7 @@ async function saveProfile({ fullName, file }) {
       }
       
       // If no saved data, initialize with empty state
-      // Preserve current lock state if it exists, otherwise default to false
-      const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
-
+      // Default to unlocked state when no data exists
       state.personal = [];
       state.biz = [];
       state.income = {}; // Start with empty income object
@@ -3102,10 +3117,18 @@ async function saveProfile({ fullName, file }) {
       state.theme = 'dark';
       state.autosave = 'on';
       state.includeAnnualInMonthly = true;
-      state.inputsLocked = currentLockState;
+      state.inputsLocked = false;
       
       // Create year tabs (will create default years since income is empty)
       createYearTabsFromData(state.income);
+      
+      // Apply lock state after initializing data
+      if (typeof updateLockIcon === 'function') {
+        updateLockIcon();
+      }
+      if (typeof updateInputsLockState === 'function') {
+        updateInputsLockState();
+      }
       
       renderAll();
     }
@@ -10202,15 +10225,6 @@ async function saveProfile({ fullName, file }) {
     initCustomDatePicker();
     overrideDateInputs();
     applyDatePickerToNewInputs();
-    
-    
-    // Initialize lock state
-    if (typeof updateLockIcon === 'function') {
-    updateLockIcon();
-    }
-    if (typeof updateInputsLockState === 'function') {
-    updateInputsLockState();
-    }
     
     // Check database schema on load
     if (currentUser && supabaseReady) {

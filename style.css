@@ -3784,7 +3784,27 @@ header img:hover {
   
   /* Add bottom padding to main content to account for mobile nav */
   #mainContent {
-    padding-bottom: 4rem;
+    padding-bottom: 6rem; /* Increased from 4rem to 6rem for better spacing */
+  }
+  
+  /* Add extra spacing after total rows on mobile */
+  .row-sum {
+    margin-bottom: 2rem !important; /* Extra space after total rows */
+  }
+  
+  /* Add extra spacing to the last table container on each page */
+  .table-container:last-child {
+    margin-bottom: 3rem !important; /* Extra space after last table */
+  }
+  
+  /* Ensure page content has proper bottom spacing */
+  .page-content {
+    padding-bottom: 1rem;
+  }
+  
+  /* Specific spacing for analytics page sections */
+  .analytics-section:last-child {
+    margin-bottom: 3rem !important; /* Extra space after last analytics section */
   }
 }
 
