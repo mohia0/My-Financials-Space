@@ -1232,15 +1232,8 @@ async function saveProfile({ fullName, file }) {
         if (photoURL) {
           userPhoto.src = photoURL;
           userPhoto.style.display = 'block';
-          if (dropdownUserPhoto) {
-            dropdownUserPhoto.src = photoURL;
-            dropdownUserPhoto.style.display = 'block';
-          }
         } else {
           userPhoto.style.display = 'none';
-          if (dropdownUserPhoto) {
-            dropdownUserPhoto.style.display = 'none';
-          }
         }
         
 
@@ -1828,9 +1821,10 @@ async function saveProfile({ fullName, file }) {
             
             // Update profile picture in dropdown if available
             if (avatarUrl) {
-              const userAvatar = $('#userAvatar');
-              if (userAvatar) {
-                userAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-8 h-8 rounded-full object-cover">`;
+              const userPhoto = $('#userPhoto');
+              if (userPhoto) {
+                userPhoto.src = avatarUrl;
+                userPhoto.style.display = 'block';
               }
             }
           } else {
@@ -1841,11 +1835,12 @@ async function saveProfile({ fullName, file }) {
         // Update profile picture in dropdown if available
         const avatarUrl = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.profile_pic;
         if (avatarUrl) {
-          const userAvatar = $('#userAvatar');
-          if (userAvatar) {
-            userAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-8 h-8 rounded-full object-cover">`;
+          const userPhoto = $('#userPhoto');
+          if (userPhoto) {
+            userPhoto.src = avatarUrl;
+            userPhoto.style.display = 'block';
           }
-            }
+        }
           }
         } catch (error) {
 

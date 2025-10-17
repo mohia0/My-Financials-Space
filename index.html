@@ -764,15 +764,12 @@
     </div>
 
   <!-- Settings Modal -->
-  <dialog id="settings" class="backdrop:bg-black/60 rounded-2xl w-full max-w-xl p-0">
-    <form method="dialog" class="card p-5 space-y-4">
+  <dialog id="settings" class="backdrop:bg-black/60 rounded-2xl w-full max-w-xl p-0 settings-modal">
+    <form method="dialog" class="card p-5 space-y-4 settings-modal-content">
       <header class="flex items-start justify-between">
-        <div class="flex items-center gap-3">
-          <img src="Images/Logo.svg" class="settings-modal-logo" alt="Logo">
-          <div>
-            <h3 class="text-lg font-semibold">Settings</h3>
-            <p class="text-xs" style="color:var(--muted)">FX override. Saved locally.</p>
-          </div>
+        <div>
+          <h3 class="text-lg font-semibold">Settings</h3>
+          <p class="text-xs" style="color:var(--muted)">FX override. Saved locally.</p>
         </div>
         <button class="btn btn-ghost" value="cancel">Close</button>
       </header>
@@ -850,10 +847,7 @@
   <dialog id="iconPicker" class="backdrop:bg-black/60 rounded-2xl w-full max-w-3xl p-0">
     <form method="dialog" class="card p-6 space-y-4" style="background:var(--card); border:1px solid var(--stroke);">
       <header class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <img src="Images/Logo.svg" class="icon-picker-modal-logo" alt="Logo">
-          <h3 class="text-xl font-semibold">Choose Icon</h3>
-        </div>
+        <h3 class="text-xl font-semibold">Choose Icon</h3>
         <button class="btn btn-ghost" value="cancel">×</button>
       </header>
       
@@ -909,7 +903,6 @@
     <div class="auth-modal-content">
       <div class="auth-modal-header">
         <div class="auth-modal-brand">
-          <img src="Images/Logo.svg" class="auth-modal-logo" alt="Logo">
           <h2 id="authModalTitle" class="auth-modal-title">Welcome to Financial Tool</h2>
         </div>
         <p id="authModalSubtitle" class="auth-modal-subtitle">Sign in to sync your data across devices</p>
