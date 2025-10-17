@@ -474,19 +474,23 @@ function mapSupabaseToLocal(supabaseData, type) {
 
 // Replace the current save function
 function saveOptimized(source = 'general') {
+  console.log('🚀 saveOptimized called:', { source, hasSmartSync: !!smartSyncManager });
+  
   // Check if lock is active - if so, only save locally, not to cloud
   if (state.inputsLocked && currentUser && supabaseReady) {
     console.log('Lock is active - saving locally only, not to cloud');
     saveToLocal();
-    return;
+    return Promise.resolve();
   }
   
   // If user is signed in, use optimized instant save
   if (currentUser && supabaseReady && smartSyncManager) {
-    instantSaveAllOptimized(source);
+    return instantSaveAllOptimized(source);
   } else {
+    console.log('⚠️ No smart sync manager, using local save');
     // Fallback to local save
     saveToLocal();
+    return Promise.resolve();
   }
 }
 

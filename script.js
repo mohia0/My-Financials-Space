@@ -926,15 +926,21 @@ async function saveProfile({ fullName, file }) {
       checkPasswordResetToken();
       
       // Set up Supabase authentication state listener
-      window.supabaseClient.auth.onAuthStateChange((event, session) => {
+      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (session?.user) {
           currentUser = session.user;
           updateAuthUI();
           updateUserDisplay();
           loadUserData();
+          
+          // Initialize basic sync system for cloud saves
+          console.log('✅ User signed in, cloud sync enabled');
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
           updateAuthUI();
+          
+          // User signed out
+          console.log('👋 User signed out, cloud sync disabled');
           
           // Clear all data when signed out
           state.personal = [];
@@ -2816,7 +2822,18 @@ async function saveProfile({ fullName, file }) {
     
     
     async function saveToSupabase() {
-      if (!currentUser || !supabaseReady) return;
+      console.log('💾 saveToSupabase called:', { 
+        hasUser: !!currentUser, 
+        supabaseReady,
+        personalCount: state.personal.length,
+        bizCount: state.biz.length,
+        incomeYears: Object.keys(state.income).length
+      });
+      
+      if (!currentUser || !supabaseReady) {
+        console.log('❌ Cannot save to Supabase: no user or not ready');
+        return;
+      }
       
       try {
         // Get all available years from income data
@@ -3006,9 +3023,10 @@ async function saveProfile({ fullName, file }) {
         
 
         
+        console.log('✅ Supabase save completed successfully');
         showSaveIndicator();
       } catch (error) {
-
+        console.error('❌ Supabase save failed:', error);
         showSaveError();
       }
     }
@@ -3111,17 +3129,27 @@ async function saveProfile({ fullName, file }) {
     }
     
     function save(source = 'general'){ 
+      console.log('💾 save() called:', { 
+        source, 
+        inputsLocked: state.inputsLocked, 
+        hasUser: !!currentUser, 
+        supabaseReady,
+        hasOptimizedSave: typeof window.saveOptimized === 'function'
+      });
+      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked && currentUser && supabaseReady) {
-
+        console.log('🔒 Inputs locked, saving locally only');
         saveToLocal();
         return;
       }
       
-      // If user is signed in, use instant save for 0ms cloud sync
+      // If user is signed in, use instant save for fast cloud sync
       if (currentUser && supabaseReady) {
+        console.log('🚀 Using instant save for cloud sync');
         instantSaveAll(source);
       } else {
+        console.log('💾 Using local save only');
         // Fallback to regular live save for local storage
         liveSave(source);
       }
@@ -3786,65 +3814,106 @@ async function saveProfile({ fullName, file }) {
     let isSaving = false;
     let saveQueue = new Set(); // Track what needs saving
     let lastSaveTime = 0;
-    const MIN_SAVE_INTERVAL = 200; // Minimum 200ms between saves
-    const MAX_DEBOUNCE_TIME = 1000; // Maximum 1 second debounce
+    const MIN_SAVE_INTERVAL = 100; // Reduced to 100ms for faster saves
+    const MAX_DEBOUNCE_TIME = 500; // Reduced to 500ms for faster response
 
     function liveSave(source = 'unknown') {
-
-      
       // Add to save queue
       saveQueue.add(source);
       
       // Skip if already saving
       if (isSaving) {
-
         return;
       }
       
-      // Save immediately - 0ms delay for instant cloud sync
+      // Clear any existing timeout for better batching
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+      
+      // Use instant save for fast cloud sync
+      const shouldSaveToCloud = currentUser && supabaseReady && !state.inputsLocked;
+      
+      if (shouldSaveToCloud) {
+        // Use instant save for cloud with minimal delay for batching
+        saveTimeout = setTimeout(() => {
           isSaving = true;
           updateSyncStatus('syncing');
-
           
-          // Check if lock is active - if so, only save locally, not to cloud
-          const shouldSaveToCloud = currentUser && supabaseReady && !state.inputsLocked;
-          const savePromise = shouldSaveToCloud ? saveToSupabase() : saveToLocal();
+          const saveStartTime = performance.now();
+          console.log('🔄 Using instant save for:', source);
           
-          savePromise.then(() => {
-        lastSaveTime = Date.now();
+          instantSaveAll(source).then(() => {
+            const saveDuration = performance.now() - saveStartTime;
+            lastSaveTime = Date.now();
             updateSyncStatus('success');
-        // Don't show save notifications for every keystroke
-        // showNotification('Data saved instantly', 'success', 800);
+            
+            // Log performance for debugging
+            if (saveDuration > 1000) {
+              console.warn(`⚠️ Slow save detected: ${saveDuration.toFixed(2)}ms`);
+            } else {
+              console.log(`⚡ Fast save: ${saveDuration.toFixed(2)}ms`);
+            }
+            
             setTimeout(() => {
               updateSyncStatus('');
               isSaving = false;
-          saveQueue.clear();
-        }, 800);
+              saveQueue.clear();
+            }, 300); // Reduced delay
           }).catch((error) => {
-
+            console.error('Save error:', error);
             updateSyncStatus('error');
-            showNotification('Save failed', 'error', 2000);
+            showNotification('Save failed', 'error', 1500);
             setTimeout(() => {
               updateSyncStatus('');
               isSaving = false;
-          saveQueue.clear();
-            }, 2000);
+              saveQueue.clear();
+            }, 1500);
           });
-        }
+        }, 50); // Very short delay for batching multiple changes
+      } else {
+        // Fallback to local save
+        isSaving = true;
+        updateSyncStatus('syncing');
+        
+        const fallbackStartTime = performance.now();
+        saveToLocal();
+        
+        const fallbackDuration = performance.now() - fallbackStartTime;
+        lastSaveTime = Date.now();
+        updateSyncStatus('success');
+        
+        // Log performance for debugging
+        console.log(`💾 Local save: ${fallbackDuration.toFixed(2)}ms`);
+        
+        setTimeout(() => {
+          updateSyncStatus('');
+          isSaving = false;
+          saveQueue.clear();
+        }, 300);
+      }
+    }
     
     // Instant save function for all inputs - 0ms delay
     let instantSaveInProgress = new Set();
     
     async function instantSaveAll(source = 'general') {
+      console.log('⚡ instantSaveAll called:', { 
+        source, 
+        inputsLocked: state.inputsLocked, 
+        hasUser: !!currentUser, 
+        supabaseReady 
+      });
+      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
-
+        console.log('🔒 Inputs locked, saving locally only');
         saveToLocal();
         return;
       }
       
       if (!currentUser || !supabaseReady) {
-
+        console.log('❌ No user or Supabase not ready, saving locally only');
         saveToLocal();
         return;
       }
@@ -3853,18 +3922,20 @@ async function saveProfile({ fullName, file }) {
       
       // Prevent duplicate saves
       if (instantSaveInProgress.has(saveKey)) {
+        console.log('⏳ Save already in progress, skipping');
         return;
       }
       
       instantSaveInProgress.add(saveKey);
       
       try {
-
+        console.log('🔄 Starting cloud save...');
         updateSyncStatus('syncing');
         
-        // Save to cloud immediately
+        // Always use the regular saveToSupabase function for reliability
         await saveToSupabase();
         
+        console.log('✅ Cloud save successful');
         updateSyncStatus('success');
         // Only show sync notifications for important operations
         // showNotification('Synced to cloud instantly', 'success', 1000);
@@ -3873,7 +3944,7 @@ async function saveProfile({ fullName, file }) {
         saveToLocal();
         
       } catch (error) {
-
+        console.error('❌ Cloud save failed:', error);
         updateSyncStatus('error');
         showNotification('Cloud sync failed', 'error', 2000);
         
@@ -3895,15 +3966,25 @@ async function saveProfile({ fullName, file }) {
     let expenseSaveInProgress = new Set();
     
     async function instantSaveExpenseRow(expenseRow, isBiz) {
+      console.log('💾 instantSaveExpenseRow called:', { 
+        name: expenseRow.name, 
+        cost: expenseRow.cost, 
+        isBiz, 
+        hasId: !!expenseRow.id,
+        inputsLocked: state.inputsLocked,
+        hasUser: !!currentUser,
+        supabaseReady
+      });
+      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
-
+        console.log('🔒 Inputs locked, saving locally only');
         saveToLocal();
         return;
       }
       
       if (!currentUser || !supabaseReady) {
-
+        console.log('❌ No user or Supabase not ready, saving locally only');
         saveToLocal();
         return;
       }
@@ -10266,4 +10347,5 @@ async function saveProfile({ fullName, file }) {
 
   // Make duplicate check function globally available
   window.checkAndFixDuplicates = checkAndFixDuplicates;
+
 
