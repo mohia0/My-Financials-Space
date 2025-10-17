@@ -9120,6 +9120,11 @@ async function saveProfile({ fullName, file }) {
      document.addEventListener('click', (e) => {
        const kpiCard = e.target.closest('.kpi[data-analytics]');
        if (kpiCard && !e.target.closest('.analytics-close') && !e.target.closest('.analytics-content')) {
+         // Disable expansion on analytics page
+         if (currentPage === 'analytics') {
+           return;
+         }
+         
          // Close any other expanded cards
          document.querySelectorAll('.kpi.expanded').forEach(card => {
            if (card !== kpiCard) {
