@@ -156,6 +156,99 @@ async function saveProfile({ fullName, file }) {
   }
 }
 
+// Function to check and fix duplicates in the database
+async function checkAndFixDuplicates() {
+  if (!window.currentUser || !window.supabaseReady) return;
+  
+  try {
+    // Check for duplicate personal expenses
+    const { data: personalData } = await window.supabaseClient
+      .from('personal_expenses')
+      .select('*')
+      .eq('user_id', window.currentUser.id);
+      
+    if (personalData) {
+      const seen = new Set();
+      const duplicates = [];
+      
+      personalData.forEach(expense => {
+        const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+        if (seen.has(key)) {
+          duplicates.push(expense.id);
+        } else {
+          seen.add(key);
+        }
+      });
+      
+      if (duplicates.length > 0) {
+        await window.supabaseClient
+          .from('personal_expenses')
+          .delete()
+          .in('id', duplicates);
+      }
+    }
+    
+    // Check for duplicate business expenses
+    const { data: businessData } = await window.supabaseClient
+      .from('business_expenses')
+      .select('*')
+      .eq('user_id', window.currentUser.id);
+      
+    if (businessData) {
+      const seen = new Set();
+      const duplicates = [];
+      
+      businessData.forEach(expense => {
+        const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+        if (seen.has(key)) {
+          duplicates.push(expense.id);
+        } else {
+          seen.add(key);
+        }
+      });
+      
+      if (duplicates.length > 0) {
+        await window.supabaseClient
+          .from('business_expenses')
+          .delete()
+          .in('id', duplicates);
+      }
+    }
+    
+    // Check for duplicate income
+    const { data: incomeData } = await window.supabaseClient
+      .from('income')
+      .select('*')
+      .eq('user_id', window.currentUser.id);
+      
+    if (incomeData) {
+      const seen = new Set();
+      const duplicates = [];
+      
+      incomeData.forEach(income => {
+        const key = `${income.name}_${income.date}_${income.all_payment}`;
+        if (seen.has(key)) {
+          duplicates.push(income.id);
+        } else {
+          seen.add(key);
+        }
+      });
+      
+      if (duplicates.length > 0) {
+        await window.supabaseClient
+          .from('income')
+          .delete()
+          .in('id', duplicates);
+      }
+    }
+  } catch (error) {
+    // Silent error handling
+  }
+}
+
+// Make function globally available
+window.checkAndFixDuplicates = checkAndFixDuplicates;
+
   document.addEventListener('DOMContentLoaded', function(){
     const $ = (s, el)=> (el||document).querySelector(s);
     
@@ -1186,7 +1279,7 @@ async function saveProfile({ fullName, file }) {
         
         // Test database connection
         const { data, error } = await window.supabaseClient.from('backups').select('count').limit(1);
-
+        
         
 
       } catch (error) {
@@ -2621,103 +2714,6 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
-    // Function to check and fix duplicates in the database
-    async function checkAndFixDuplicates() {
-      if (!currentUser || !supabaseReady) return;
-      
-
-      
-      try {
-        // Check for duplicate personal expenses
-        const { data: personalData } = await window.supabaseClient
-          .from('personal_expenses')
-          .select('*')
-          .eq('user_id', currentUser.id);
-          
-        if (personalData) {
-          const seen = new Set();
-          const duplicates = [];
-          
-          personalData.forEach(expense => {
-            const key = `${expense.name}_${expense.cost}_${expense.billing}`;
-            if (seen.has(key)) {
-              duplicates.push(expense.id);
-            } else {
-              seen.add(key);
-            }
-          });
-          
-          if (duplicates.length > 0) {
-
-            await window.supabaseClient
-              .from('personal_expenses')
-              .delete()
-              .in('id', duplicates);
-          }
-        }
-        
-        // Check for duplicate business expenses
-        const { data: businessData } = await window.supabaseClient
-          .from('business_expenses')
-          .select('*')
-          .eq('user_id', currentUser.id);
-          
-        if (businessData) {
-          const seen = new Set();
-          const duplicates = [];
-          
-          businessData.forEach(expense => {
-            const key = `${expense.name}_${expense.cost}_${expense.billing}`;
-            if (seen.has(key)) {
-              duplicates.push(expense.id);
-            } else {
-              seen.add(key);
-            }
-          });
-          
-          if (duplicates.length > 0) {
-
-            await window.supabaseClient
-              .from('business_expenses')
-              .delete()
-              .in('id', duplicates);
-          }
-        }
-        
-        // Check for duplicate income
-        const { data: incomeData } = await window.supabaseClient
-          .from('income')
-          .select('*')
-          .eq('user_id', currentUser.id);
-          
-        if (incomeData) {
-          const seen = new Set();
-          const duplicates = [];
-          
-          incomeData.forEach(income => {
-            const key = `${income.name}_${income.date}_${income.all_payment}`;
-            if (seen.has(key)) {
-              duplicates.push(income.id);
-            } else {
-              seen.add(key);
-            }
-          });
-          
-          if (duplicates.length > 0) {
-
-            await window.supabaseClient
-              .from('income')
-              .delete()
-              .in('id', duplicates);
-          }
-        }
-        
-
-        
-      } catch (error) {
-
-      }
-    }
     
     function loadLocalData() {
 
@@ -10255,6 +10251,4 @@ async function saveProfile({ fullName, file }) {
   });
   }
 
-  // Make duplicate check function globally available
-  window.checkAndFixDuplicates = checkAndFixDuplicates;
 
