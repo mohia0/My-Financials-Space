@@ -33,7 +33,6 @@ async function loadProfile() {
     const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
     
     if (sessionError) {
-      console.error('Session error:', sessionError);
       return { row: null, avatarUrl: null };
     }
     
@@ -48,7 +47,6 @@ async function loadProfile() {
       .single();
     
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error loading profile:', error);
       return { row: null, avatarUrl: null };
     }
     
@@ -65,7 +63,6 @@ async function loadProfile() {
     
     return { row, avatarUrl };
   } catch (error) {
-    console.error('loadProfile error:', error);
     return { row: null, avatarUrl: null };
   }
 }
@@ -155,7 +152,6 @@ async function saveProfile({ fullName, file }) {
     
     return { row, avatarUrl };
   } catch (error) {
-    console.error('saveProfile error:', error);
     throw error;
   }
 }
@@ -194,7 +190,6 @@ async function saveProfile({ fullName, file }) {
           btn.addEventListener('click', (e) => {
             e.preventDefault();
             const page = btn.getAttribute('data-page');
-            console.log('Mobile nav button clicked:', page);
             showPage(page);
           });
         });
@@ -271,7 +266,6 @@ async function saveProfile({ fullName, file }) {
     
     // Mobile navigation function (called from HTML onclick)
     function switchPage(page) {
-      console.log('Mobile nav clicked:', page);
       showPage(page);
     }
     
@@ -286,13 +280,11 @@ async function saveProfile({ fullName, file }) {
         // Set current year as active
         currentYearTab.classList.add('active');
         currentYear = currentYearString;
-        console.log('Ensured current year is selected:', currentYear);
         
         // Update income data for the current year
         updateIncomeForYear(currentYear);
       } else {
         // If current year tab doesn't exist, create it and set as active
-        console.log('Current year tab not found, creating it:', currentYearString);
         createYearTab(currentYearString);
         switchYear(currentYearString);
       }
@@ -323,19 +315,19 @@ async function saveProfile({ fullName, file }) {
         // Set current year as active
         currentYearTab.classList.add('active');
         currentYear = currentYearString;
-        console.log('Set current year as default:', currentYear);
+
       } else {
         // If current year tab doesn't exist, use the first available tab
         if (yearTabs.length > 0) {
           yearTabs[0].classList.add('active');
           currentYear = yearTabs[0].getAttribute('data-year');
-          console.log('Current year tab not found, using first available:', currentYear);
+
         }
       }
     }
     
     function switchYear(year) {
-      console.log('Switching to year:', year);
+
       
       // Remove active class from all year tabs
       document.querySelectorAll('.year-tab').forEach(tab => {
@@ -347,7 +339,7 @@ async function saveProfile({ fullName, file }) {
       if (selectedTab) {
         selectedTab.classList.add('active');
         currentYear = year;
-        console.log('Current year set to:', currentYear);
+
         
         // Update income data for selected year
         if (currentPage === 'income') {
@@ -420,9 +412,9 @@ async function saveProfile({ fullName, file }) {
             .eq('year', parseInt(year));
           
           if (error) throw error;
-          console.log(`Deleted all income records for year ${year} from Supabase`);
+
         } catch (error) {
-          console.error('Error deleting year data from Supabase:', error);
+
         }
       }
       
@@ -435,7 +427,7 @@ async function saveProfile({ fullName, file }) {
       // Close dialog
       closeYearConfirmDialog();
       
-      console.log(`Removed year ${year} from income data and Supabase`);
+
     }
     
     function closeYearConfirmDialog() {
@@ -569,7 +561,7 @@ async function saveProfile({ fullName, file }) {
       
       addYearToTabs(newYear);
       refreshYearManagementPanel();
-      console.log(`Added year ${newYear} before ${year}`);
+
     }
     
     function addYearAfter(year) {
@@ -588,7 +580,7 @@ async function saveProfile({ fullName, file }) {
       
       addYearToTabs(newYear);
       refreshYearManagementPanel();
-      console.log(`Added year ${newYear} after ${year}`);
+
     }
     
     function addYearBetween(year1, year2) {
@@ -607,7 +599,7 @@ async function saveProfile({ fullName, file }) {
       
       addYearToTabs(newYear);
       refreshYearManagementPanel();
-      console.log(`Added year ${newYear} between ${year1} and ${year2}`);
+
     }
     
     function createYearTabsFromData(incomeData) {
@@ -627,11 +619,11 @@ async function saveProfile({ fullName, file }) {
       if (dataYears.length === 0) {
         const currentYearNum = new Date().getFullYear();
         years = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
-        console.log('No data years found, creating default years:', years);
+
       } else {
         // Use only the years that have data
         years = dataYears;
-        console.log('Using data years:', years);
+
       }
       
       // Sort years chronologically
@@ -660,10 +652,10 @@ async function saveProfile({ fullName, file }) {
         }
       }
       
-      console.log(`Created year tabs:`, years);
+
       
       // Save years to Supabase to ensure they're persisted
-        console.log('Saving years to Supabase:', years);
+
         save(); // This will update available_years in user_settings
     }
     
@@ -702,7 +694,7 @@ async function saveProfile({ fullName, file }) {
       // Save changes locally and to Supabase
       save();
       
-      console.log(`Added year ${newYear} to income data and synced with Supabase`);
+
     }
     
     function updateIncomeForYear(year) {
@@ -760,7 +752,7 @@ async function saveProfile({ fullName, file }) {
 
     // Add row function
     function addRow(group){
-      console.log('addRow called for group:', group);
+
       
       // Check if inputs are locked
       if (state.inputsLocked) {
@@ -778,7 +770,7 @@ async function saveProfile({ fullName, file }) {
         // Set order to be at the end
         newRow.order = state.biz.length;
         state.biz.push(newRow);
-        console.log('Added business row, total business rows:', state.biz.length);
+
       }
       else if(group==='income') {
         // Ensure we have the correct current year from the active tab
@@ -790,15 +782,15 @@ async function saveProfile({ fullName, file }) {
         // Fallback to current year if no tab is active
         if (!currentYear) {
           currentYear = new Date().getFullYear().toString();
-          console.warn('No active year tab found, defaulting to:', currentYear);
+
         }
         
-        console.log('Adding income row for year:', currentYear);
+
         
         // Ensure the current year exists in the income data structure
         if (!state.income[currentYear]) {
           state.income[currentYear] = [];
-          console.log('Created new year array for:', currentYear);
+
         }
         
         // Set default date with current year
@@ -821,7 +813,7 @@ async function saveProfile({ fullName, file }) {
         // Set order to be at the end
         newIncome.order = state.income[currentYear].length;
         state.income[currentYear].push(newIncome);
-        console.log('Added income row to year:', currentYear, 'Total rows for this year:', state.income[currentYear].length);
+
         
         // Instantly save the new income row to Supabase
         setTimeout(() => {
@@ -838,7 +830,7 @@ async function saveProfile({ fullName, file }) {
         // Set order to be at the end
         newRow.order = state.personal.length;
         state.personal.push(newRow);
-        console.log('Added personal row, total personal rows:', state.personal.length);
+
       }
       
       // Save and re-render
@@ -887,10 +879,10 @@ async function saveProfile({ fullName, file }) {
       if (window.supabaseClient) {
         supabaseReady = true;
         clearInterval(checkSupabase);
-        console.log('Supabase is ready!');
-        console.log('Current domain:', window.location.hostname);
-        console.log('Current protocol:', window.location.protocol);
-        console.log('Supabase URL:', SUPABASE_URL);
+
+
+
+
         initializeAuth();
       }
     }, 100);
@@ -898,7 +890,7 @@ async function saveProfile({ fullName, file }) {
     // Timeout after 10 seconds
     setTimeout(() => {
       if (!supabaseReady) {
-        console.error('Supabase failed to load after 10 seconds');
+
         showNotification('Supabase connection failed. Using local storage only.', 'error');
         loadLocalData();
       }
@@ -907,26 +899,26 @@ async function saveProfile({ fullName, file }) {
     // Test Supabase connection
     async function testSupabaseConnection() {
       try {
-        console.log('Testing Supabase connection...');
+
         const { data, error } = await window.supabaseClient
           .from('user_settings')
           .select('count')
           .limit(1);
         
         if (error) {
-          console.error('Supabase connection test failed:', error);
+
           showNotification(`Database connection error: ${error.message}`, 'error');
         } else {
-          console.log('Supabase connection test successful!');
+
         }
       } catch (error) {
-        console.error('Supabase connection test error:', error);
+
         showNotification(`Connection test failed: ${error.message}`, 'error');
       }
     }
     
     function initializeAuth() {
-      console.log('Initializing Supabase Auth...');
+
       console.log('Environment check:', {
         hostname: window.location.hostname,
         protocol: window.location.protocol,
@@ -943,13 +935,11 @@ async function saveProfile({ fullName, file }) {
       
       // Set up Supabase authentication state listener
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
-        console.log('Supabase auth state changed:', event, session ? 'User signed in' : 'User signed out');
-        console.log('Session details:', session);
         if (session?.user) {
           currentUser = session.user;
           updateAuthUI();
+          updateUserDisplay();
           loadUserData();
-          updateUserDisplay(); // Load profile data and update UI
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
           updateAuthUI();
@@ -979,7 +969,7 @@ async function saveProfile({ fullName, file }) {
           // No session (not signed in) - load local data if available
           currentUser = null;
           updateAuthUI();
-          console.log('No user session - loading local data');
+
           loadLocalData();
         }
       });
@@ -993,27 +983,27 @@ async function saveProfile({ fullName, file }) {
       
       if (loginBtn) {
         loginBtn.addEventListener('click', openAuthModal);
-        console.log('Login button event listener added');
+
       }
       
       if (signInBtn) {
         signInBtn.addEventListener('click', openAuthModal);
-        console.log('Sign In button event listener added');
+
       }
       
       if (logoutBtn) {
         logoutBtn.addEventListener('click', signOut);
-        console.log('Logout button event listener added');
+
       }
       
       if (userMenuBtn) {
         userMenuBtn.addEventListener('click', toggleUserDropdown);
-        console.log('User menu button event listener added');
+
       }
       
       if (accountMenuBtn) {
         accountMenuBtn.addEventListener('click', toggleAccountDropdown);
-        console.log('Account menu button event listener added');
+
       }
       
       // Modal event listeners
@@ -1025,27 +1015,27 @@ async function saveProfile({ fullName, file }) {
       
       if (emailSignInBtn) {
         emailSignInBtn.addEventListener('click', signInWithEmail);
-        console.log('Email sign-in button event listener added');
+
       }
       
       if (emailSignUpBtn) {
         emailSignUpBtn.addEventListener('click', signUpWithEmail);
-        console.log('Email sign-up button event listener added');
+
       }
       
       if (forgotPasswordBtn) {
         forgotPasswordBtn.addEventListener('click', showForgotPasswordForm);
-        console.log('Forgot password button event listener added');
+
       }
       
       if (sendResetBtn) {
         sendResetBtn.addEventListener('click', sendPasswordReset);
-        console.log('Send reset button event listener added');
+
       }
       
       if (backToSignInBtn) {
         backToSignInBtn.addEventListener('click', showSignInForm);
-        console.log('Back to sign-in button event listener added');
+
       }
       
       const updatePasswordBtn = $('#updatePasswordBtn');
@@ -1056,12 +1046,12 @@ async function saveProfile({ fullName, file }) {
       
       if (updatePasswordBtn) {
         updatePasswordBtn.addEventListener('click', updatePassword);
-        console.log('Update password button event listener added');
+
       }
       
       if (cancelResetBtn) {
         cancelResetBtn.addEventListener('click', showSignInForm);
-        console.log('Cancel reset button event listener added');
+
       }
       
       if (changePasswordBtn) {
@@ -1070,7 +1060,7 @@ async function saveProfile({ fullName, file }) {
           openAuthModal();
           showChangePasswordForm();
         });
-        console.log('Change password button event listener added');
+
       }
       
       // Account button event listener
@@ -1081,18 +1071,18 @@ async function saveProfile({ fullName, file }) {
           openAuthModal();
           showAccountForm();
         });
-        console.log('Account button event listener added');
+
       }
       
       
       if (savePasswordBtn) {
         savePasswordBtn.addEventListener('click', changePassword);
-        console.log('Save password button event listener added');
+
       }
       
       if (cancelChangeBtn) {
         cancelChangeBtn.addEventListener('click', closeAuthModal);
-        console.log('Cancel change button event listener added');
+
       }
       
       // Account form event listeners
@@ -1103,19 +1093,19 @@ async function saveProfile({ fullName, file }) {
       
       if (saveAccountBtn) {
         saveAccountBtn.addEventListener('click', saveAccountData);
-        console.log('Save account button event listener added');
+
       }
       
       if (cancelAccountBtn) {
         cancelAccountBtn.addEventListener('click', closeAuthModal);
-        console.log('Cancel account button event listener added');
+
       }
       
       if (uploadProfilePicBtn) {
         uploadProfilePicBtn.addEventListener('click', () => {
           accountProfilePic.click();
         });
-        console.log('Upload profile pic button event listener added');
+
       }
       
       if (accountProfilePic) {
@@ -1130,7 +1120,7 @@ async function saveProfile({ fullName, file }) {
             reader.readAsDataURL(file);
           }
         });
-        console.log('Profile pic input event listener added');
+
       }
       
       
@@ -1189,18 +1179,18 @@ async function saveProfile({ fullName, file }) {
     
     async function testSupabaseConnection() {
       try {
-        console.log('Testing Supabase connection...');
+
         // Try to get current user
         const { data: { user } } = await window.supabaseClient.auth.getUser();
-        console.log('Current user:', user);
+
         
         // Test database connection
         const { data, error } = await window.supabaseClient.from('backups').select('count').limit(1);
-        console.log('Database connection test:', data, error);
+
         
-        console.log('Supabase connection test successful!');
+
       } catch (error) {
-        console.error('Supabase connection test failed:', error);
+
       }
     }
     
@@ -1250,13 +1240,13 @@ async function saveProfile({ fullName, file }) {
           }
         }
         
-        console.log('Auth UI updated for user:', { displayName, email, photoURL });
+
       } else {
         loginBtn.style.display = 'flex';
         if (signInBtn) signInBtn.style.display = 'flex';
         if (accountMenuBtn) accountMenuBtn.style.display = 'none';
         userInfo.style.display = 'none';
-        console.log('Auth UI updated - no user');
+
       }
     }
     
@@ -1340,7 +1330,7 @@ async function saveProfile({ fullName, file }) {
         // Ensure sign-in form is shown by default
         showSignInForm();
         
-        console.log('Auth modal opened');
+
       }
     }
     
@@ -1628,11 +1618,11 @@ async function saveProfile({ fullName, file }) {
       const refreshToken = urlParams.get('refresh_token');
       const type = urlParams.get('type');
       
-      console.log('URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+
       
       // If this is a password recovery flow
       if (type === 'recovery' && accessToken && refreshToken) {
-        console.log('Password reset token detected, showing reset form');
+
         
         // Set the session with the tokens
         window.supabaseClient.auth.setSession({
@@ -1640,7 +1630,7 @@ async function saveProfile({ fullName, file }) {
           refresh_token: refreshToken
         }).then(({ data, error }) => {
           if (error) {
-            console.error('Error setting session:', error);
+
             showAuthStatus('Invalid or expired reset link. Please request a new one.', 'error');
             return;
           }
@@ -1650,7 +1640,7 @@ async function saveProfile({ fullName, file }) {
             openAuthModal();
             showPasswordResetForm();
             showAuthStatus('Password reset link verified! Please enter your NEW password below.', 'success');
-            console.log('Showing password reset form (no current password required)');
+
           }
         });
         
@@ -1736,7 +1726,7 @@ async function saveProfile({ fullName, file }) {
             }
           }
         } catch (error) {
-          console.error('Error loading account data:', error);
+
           // Fallback to basic data loading
           const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
           $('#accountName').value = name;
@@ -1783,7 +1773,7 @@ async function saveProfile({ fullName, file }) {
         }, 2000);
         
       } catch (error) {
-        console.error('Account update error:', error);
+
         showAuthLoading(false);
         showAuthStatus('Failed to update profile: ' + error.message, 'error');
       }
@@ -1852,7 +1842,7 @@ async function saveProfile({ fullName, file }) {
             }
           }
         } catch (error) {
-          console.error('Error updating user display:', error);
+
           // Fallback to basic display
           const name = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'User';
           $('#userName').textContent = name;
@@ -1866,7 +1856,7 @@ async function saveProfile({ fullName, file }) {
       forms.forEach(formId => {
         const form = document.getElementById(formId);
         if (form) {
-          console.log(`${formId}: display=${form.style.display}, hidden=${form.classList.contains('hidden')}`);
+
         }
       });
     }
@@ -1898,7 +1888,7 @@ async function saveProfile({ fullName, file }) {
         }, 3000);
         
       } catch (error) {
-        console.error('Password reset error:', error);
+
         showAuthLoading(false);
         showAuthStatus('Failed to send reset link: ' + error.message, 'error');
       }
@@ -1946,7 +1936,7 @@ async function saveProfile({ fullName, file }) {
         }, 3000);
         
       } catch (error) {
-        console.error('Password update error:', error);
+
         showAuthLoading(false);
         showAuthStatus('Failed to update password: ' + error.message, 'error');
       }
@@ -1995,7 +1985,7 @@ async function saveProfile({ fullName, file }) {
         }, 2000);
         
       } catch (error) {
-        console.error('Password change error:', error);
+
         showAuthLoading(false);
         showAuthStatus('Failed to change password: ' + error.message, 'error');
       }
@@ -2041,7 +2031,7 @@ async function saveProfile({ fullName, file }) {
         showAuthLoading(false);
         closeAuthModal();
       } catch (error) {
-        console.error('Email sign in error:', error);
+
         showAuthLoading(false);
         showAuthStatus('Sign in failed: ' + error.message, 'error');
       }
@@ -2075,7 +2065,7 @@ async function saveProfile({ fullName, file }) {
         showAuthStatus('Account created! Please check your email to confirm.', 'success');
         showAuthLoading(false);
       } catch (error) {
-        console.error('Email sign up error:', error);
+
         showAuthLoading(false);
         showAuthStatus('Sign up failed: ' + error.message, 'error');
       }
@@ -2095,14 +2085,14 @@ async function saveProfile({ fullName, file }) {
         }, 1000);
         
       } catch (error) {
-        console.error('Sign out error:', error);
+
         showErrorNotification('Sign out failed. Please try again.');
       }
     }
     
     async function createUserDocument(user) {
       // Supabase automatically creates user profiles, no need to manually create
-      console.log('User document created automatically by Supabase:', user);
+
     }
     
     // Check if storage bucket exists (can't create from client due to RLS)
@@ -2110,30 +2100,30 @@ async function saveProfile({ fullName, file }) {
       try {
         const { data: buckets, error } = await window.supabaseClient.storage.listBuckets();
         if (error) {
-          console.error('Error listing buckets:', error);
+
           return false;
         }
         
         const customIconsBucket = buckets.find(bucket => bucket.id === 'custom-icons');
         if (customIconsBucket) {
-          console.log('custom-icons bucket exists:', customIconsBucket);
+
           return true;
         } else {
-          console.error('custom-icons bucket does not exist. Please create it in Supabase dashboard.');
+
           return false;
         }
       } catch (error) {
-        console.error('Error checking storage bucket:', error);
+
         return false;
       }
     }
     
     // Upload image to Supabase storage
     async function uploadImageToSupabase(imageData) {
-      console.log('Starting image upload to Supabase...');
+
       
       if (!supabaseReady || !currentUser) {
-        console.error('Supabase not ready or user not authenticated:', { supabaseReady, currentUser: !!currentUser });
+
         throw new Error('Supabase not ready or user not authenticated');
       }
       
@@ -2147,18 +2137,18 @@ async function saveProfile({ fullName, file }) {
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 15);
       const filename = `custom-icons/${currentUser.id}/${timestamp}_${randomId}.svg`;
-      console.log('Generated filename:', filename);
+
       
       // Convert data URL to blob
       const response = await fetch(imageData);
       const blob = await response.blob();
-      console.log('Blob created:', { size: blob.size, type: blob.type });
+
       
       // Upload to Supabase storage
-      console.log('Uploading to Supabase storage...');
-      console.log('Bucket: custom-icons');
-      console.log('Filename:', filename);
-      console.log('Blob size:', blob.size, 'Blob type:', blob.type);
+
+
+
+
       
       const { data, error } = await window.supabaseClient.storage
         .from('custom-icons')
@@ -2168,23 +2158,23 @@ async function saveProfile({ fullName, file }) {
         });
       
       if (error) {
-        console.error('Storage upload error:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
+
+
         throw error;
       }
       
-      console.log('Storage upload successful:', data);
-      console.log('Uploaded file path:', data.path);
+
+
       
       // Get public URL
       const { data: urlData } = window.supabaseClient.storage
         .from('custom-icons')
         .getPublicUrl(filename);
       
-      console.log('Public URL generated:', urlData.publicUrl);
+
       
       // Save to user_settings instead of separate table
-      console.log('Saving to user_settings...');
+
       
       // First, get ALL existing user settings
       const { data: existingSettings, error: fetchError } = await window.supabaseClient
@@ -2194,7 +2184,7 @@ async function saveProfile({ fullName, file }) {
         .single();
       
       if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error fetching user settings:', fetchError);
+
         throw fetchError;
       }
       
@@ -2202,9 +2192,9 @@ async function saveProfile({ fullName, file }) {
       if (existingSettings && existingSettings.custom_icons) {
         try {
           customIcons = JSON.parse(existingSettings.custom_icons);
-          console.log('Found existing custom icons:', customIcons.length);
+
         } catch (e) {
-          console.log('Error parsing existing custom icons, starting fresh');
+
           customIcons = [];
         }
       }
@@ -2219,7 +2209,7 @@ async function saveProfile({ fullName, file }) {
       };
       
       customIcons.push(newIcon);
-      console.log('Updated custom icons array:', customIcons);
+
       
       // Try to update first, if that fails, try to insert
       let { error: dbError } = await window.supabaseClient
@@ -2231,7 +2221,7 @@ async function saveProfile({ fullName, file }) {
       
       // If update fails (no existing record), try to insert
       if (dbError) {
-        console.log('Update failed, trying to insert new record:', dbError.message);
+
         const { error: insertError } = await window.supabaseClient
           .from('user_settings')
           .insert({
@@ -2245,13 +2235,13 @@ async function saveProfile({ fullName, file }) {
           });
         
         if (insertError) {
-          console.error('Database insert error:', insertError);
+
           throw insertError;
         } else {
-          console.log('Custom icon saved to user_settings (new record) successfully');
+
         }
       } else {
-        console.log('Custom icon saved to user_settings (updated existing) successfully');
+
       }
       
       return urlData.publicUrl;
@@ -2271,24 +2261,24 @@ async function saveProfile({ fullName, file }) {
           .single();
         
         if (error) {
-          console.error('Error loading custom icons from user_settings:', error);
+
           return [];
         }
         
         if (data && data.custom_icons) {
           try {
             const customIcons = JSON.parse(data.custom_icons);
-            console.log('Loaded custom icons from user_settings:', customIcons);
+
             return customIcons;
           } catch (e) {
-            console.error('Error parsing custom icons:', e);
+
             return [];
           }
         }
         
         return [];
       } catch (error) {
-        console.error('Error loading custom icons:', error);
+
         return [];
       }
     }
@@ -2349,7 +2339,7 @@ async function saveProfile({ fullName, file }) {
           return 'black';
         }
       } catch (error) {
-        console.error('Error analyzing SVG color:', error);
+
         return 'black'; // Default fallback
       }
     }
@@ -2361,9 +2351,9 @@ async function saveProfile({ fullName, file }) {
       try {
         const svgType = await analyzeSVGColor(imgElement.src);
         imgElement.setAttribute('data-svg-type', svgType);
-        console.log('Applied SVG type:', svgType, 'to image:', imgElement.src);
+
       } catch (error) {
-        console.error('Error applying smart SVG inversion:', error);
+
         // Fallback to default behavior
         imgElement.setAttribute('data-svg-type', 'black');
       }
@@ -2373,23 +2363,23 @@ async function saveProfile({ fullName, file }) {
     let isLoadingData = false;
     
     async function loadUserData() {
-      console.log('🔍 DEBUG: loadUserData called');
-      console.log('🔍 DEBUG: currentUser:', currentUser);
-      console.log('🔍 DEBUG: supabaseReady:', supabaseReady);
+
+
+
       
       // Prevent multiple simultaneous loads
       if (isLoadingData) {
-        console.log('🔄 Data loading already in progress, skipping duplicate call');
+
         return;
       }
       
       if (!currentUser) {
-        console.log('❌ No current user, skipping data load');
+
         return;
       }
       
       if (!supabaseReady) {
-        console.error('❌ Supabase not ready, cannot load user data');
+
         showNotification('Database connection not ready. Using local data only.', 'error');
         loadLocalData();
         return;
@@ -2407,14 +2397,14 @@ async function saveProfile({ fullName, file }) {
           .limit(1);
           
         if (testError && (testError.message.includes('CORS') || testError.message.includes('Failed to fetch') || testError.message.includes('431'))) {
-          console.warn('🚨 CORS/Header size error detected, falling back to local data');
+
           showNotification('Cloud sync unavailable. Using local data only.', 'warning');
           loadLocalData();
           return;
         }
       } catch (error) {
         if (error.message.includes('CORS') || error.message.includes('Failed to fetch') || error.message.includes('431')) {
-          console.warn('🚨 CORS/Header size error detected, falling back to local data');
+
           showNotification('Cloud sync unavailable. Using local data only.', 'warning');
           loadLocalData();
           return;
@@ -2422,12 +2412,12 @@ async function saveProfile({ fullName, file }) {
       }
       
       try {
-        console.log('Loading user data with parallel requests for maximum speed...');
-        console.log('User ID:', currentUser.id);
-        console.log('Supabase ready:', supabaseReady);
+
+
+
         
         // CRITICAL: Clear existing data to prevent duplication
-        console.log('🧹 Clearing existing data before loading from cloud...');
+
         state.personal = [];
         state.biz = [];
         state.income = {};
@@ -2436,7 +2426,7 @@ async function saveProfile({ fullName, file }) {
         loadCustomIcons();
         
         // Start all requests in parallel for maximum speed
-        console.log('🔍 DEBUG: Starting parallel data requests...');
+
         const [settingsResult, personalResult, businessResult, incomeResult] = await Promise.allSettled([
         // Load user settings
           window.supabaseClient
@@ -2471,11 +2461,11 @@ async function saveProfile({ fullName, file }) {
             .order('created_at', { ascending: true })
         ]);
         
-        console.log('🔍 DEBUG: All requests completed');
-        console.log('🔍 DEBUG: Settings result:', settingsResult);
-        console.log('🔍 DEBUG: Personal result:', personalResult);
-        console.log('🔍 DEBUG: Business result:', businessResult);
-        console.log('🔍 DEBUG: Income result:', incomeResult);
+
+
+
+
+
         
         // Process settings
         if (settingsResult.status === 'fulfilled' && settingsResult.value.data) {
@@ -2606,7 +2596,7 @@ async function saveProfile({ fullName, file }) {
         showSuccessNotification('Data loaded from cloud!');
         
       } catch (error) {
-        console.error('Error loading user data:', error);
+
         console.error('Error details:', {
           message: error.message,
           code: error.code,
@@ -2635,7 +2625,7 @@ async function saveProfile({ fullName, file }) {
     async function checkAndFixDuplicates() {
       if (!currentUser || !supabaseReady) return;
       
-      console.log('🔍 Checking for duplicates in database...');
+
       
       try {
         // Check for duplicate personal expenses
@@ -2658,7 +2648,7 @@ async function saveProfile({ fullName, file }) {
           });
           
           if (duplicates.length > 0) {
-            console.log(`🔄 Found ${duplicates.length} duplicate personal expenses, removing...`);
+
             await window.supabaseClient
               .from('personal_expenses')
               .delete()
@@ -2686,7 +2676,7 @@ async function saveProfile({ fullName, file }) {
           });
           
           if (duplicates.length > 0) {
-            console.log(`🔄 Found ${duplicates.length} duplicate business expenses, removing...`);
+
             await window.supabaseClient
               .from('business_expenses')
               .delete()
@@ -2714,7 +2704,7 @@ async function saveProfile({ fullName, file }) {
           });
           
           if (duplicates.length > 0) {
-            console.log(`🔄 Found ${duplicates.length} duplicate income records, removing...`);
+
             await window.supabaseClient
               .from('income')
               .delete()
@@ -2722,15 +2712,15 @@ async function saveProfile({ fullName, file }) {
           }
         }
         
-        console.log('✅ Duplicate check completed');
+
         
       } catch (error) {
-        console.error('Error checking for duplicates:', error);
+
       }
     }
     
     function loadLocalData() {
-      console.log('Loading local data...');
+
       
       // Load custom icons from localStorage
       loadCustomIcons();
@@ -2740,7 +2730,7 @@ async function saveProfile({ fullName, file }) {
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          console.log('Found local data:', parsed);
+
           
           // Completely reset state to avoid merging
           state = {
@@ -2764,10 +2754,10 @@ async function saveProfile({ fullName, file }) {
             }
           }
         } catch (e) {
-          console.error('Error parsing local data:', e);
+
         }
       } else {
-        console.log('No local data found - initializing with default state');
+
         // No local data - initialize with default empty state
         state = {
           personal: [],
@@ -2795,7 +2785,7 @@ async function saveProfile({ fullName, file }) {
         };
       }
       
-      console.log('Final state after loading:', state);
+
       
       // Initialize row order properties for existing rows
       initializeRowOrder();
@@ -2826,7 +2816,7 @@ async function saveProfile({ fullName, file }) {
       // Re-render with empty data
       renderAll();
       
-      console.log('All data cleared - showing empty tables');
+
     }
     
     
@@ -2836,7 +2826,7 @@ async function saveProfile({ fullName, file }) {
       try {
         // Get all available years from income data
         const availableYears = Object.keys(state.income).map(year => parseInt(year)).sort((a, b) => a - b);
-        console.log('Calculated available years for Supabase:', availableYears);
+
         
         // Save user settings
         console.log('Saving settings to Supabase:', {
@@ -2957,16 +2947,16 @@ async function saveProfile({ fullName, file }) {
         }
         
         // Save income data for all years
-        console.log('Saving income data for years:', Object.keys(state.income));
+
         let incomeSaveCount = 0;
         let incomeErrorCount = 0;
         
         for (const [year, incomeData] of Object.entries(state.income)) {
-          console.log(`Saving ${incomeData.length} income records for year ${year}`);
+
           
           for (const income of incomeData) {
             try {
-              console.log('Saving income record:', income);
+
               
               if (income.id) {
                 // Update existing income
@@ -2986,10 +2976,10 @@ async function saveProfile({ fullName, file }) {
                   .eq('id', income.id);
                 
                 if (updateError) {
-                  console.error('Error updating income record:', updateError);
+
                   incomeErrorCount++;
                 } else {
-                  console.log('Successfully updated income record:', income.id);
+
                   incomeSaveCount++;
                 }
               } else {
@@ -3013,26 +3003,26 @@ async function saveProfile({ fullName, file }) {
                   .single();
                 
                 if (insertError) {
-                  console.error('Error creating income record:', insertError);
+
                   incomeErrorCount++;
                 } else if (newIncome) {
                   income.id = newIncome.id;
-                  console.log('Successfully created income record:', newIncome.id);
+
                   incomeSaveCount++;
                 }
               }
             } catch (error) {
-              console.error('Unexpected error saving income record:', error);
+
               incomeErrorCount++;
             }
           }
         }
         
-        console.log(`Income save completed: ${incomeSaveCount} successful, ${incomeErrorCount} errors`);
+
         
         showSaveIndicator();
       } catch (error) {
-        console.error('Error saving to Supabase:', error);
+
         showSaveError();
       }
     }
@@ -3043,7 +3033,7 @@ async function saveProfile({ fullName, file }) {
         localStorage.setItem('columnOrder', JSON.stringify(columnOrder));
         showSaveIndicator();
       } catch (error) {
-        console.error('Failed to save data locally:', error);
+
         showSaveError();
       }
     }
@@ -3077,7 +3067,7 @@ async function saveProfile({ fullName, file }) {
     
     // Enhanced local data loading with sample data
     function loadLocalData() {
-      console.log('🔄 Loading local data...');
+
       
       // Try to load from localStorage first
       const saved = localStorage.getItem('finance-notion-v6');
@@ -3085,7 +3075,7 @@ async function saveProfile({ fullName, file }) {
         try {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object') {
-            console.log('✅ Loaded data from localStorage');
+
             state.personal = parsed.personal || [];
             state.biz = parsed.biz || [];
             const currentYear = new Date().getFullYear();
@@ -3110,12 +3100,12 @@ async function saveProfile({ fullName, file }) {
             return;
           }
         } catch (error) {
-          console.warn('Failed to parse saved data:', error);
+
         }
       }
       
       // If no saved data, initialize with empty state
-      console.log('📝 Initializing with empty state');
+
       state.personal = [];
       state.biz = [];
       state.income = {}; // Start with empty income object
@@ -3134,7 +3124,7 @@ async function saveProfile({ fullName, file }) {
     function save(source = 'general'){ 
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked && currentUser && supabaseReady) {
-        console.log('Lock is active - saving locally only, not to cloud');
+
         saveToLocal();
         return;
       }
@@ -3428,7 +3418,7 @@ async function saveProfile({ fullName, file }) {
     // Allow important types
     smartNotifications.allowTypes(['error', 'warning', 'success']);
     
-    console.log('🧠 Smart notification system initialized');
+
   }
   
   // Call initialization when script loads
@@ -3753,9 +3743,9 @@ async function saveProfile({ fullName, file }) {
             onConflict: 'user_id'
           });
         
-        console.log('Lock state saved to cloud:', state.inputsLocked);
+
       } catch (error) {
-        console.error('Error saving lock state to cloud:', error);
+
         showNotification('Failed to sync lock state to cloud', 'error', 3000);
       }
     }
@@ -3769,21 +3759,21 @@ async function saveProfile({ fullName, file }) {
     const MAX_DEBOUNCE_TIME = 1000; // Maximum 1 second debounce
 
     function liveSave(source = 'unknown') {
-      console.log('Live save triggered from:', source);
+
       
       // Add to save queue
       saveQueue.add(source);
       
       // Skip if already saving
       if (isSaving) {
-        console.log('Save already in progress, queuing...');
+
         return;
       }
       
       // Save immediately - 0ms delay for instant cloud sync
           isSaving = true;
           updateSyncStatus('syncing');
-      console.log('Executing live save instantly for sources:', Array.from(saveQueue));
+
           
           // Check if lock is active - if so, only save locally, not to cloud
           const shouldSaveToCloud = currentUser && supabaseReady && !state.inputsLocked;
@@ -3800,7 +3790,7 @@ async function saveProfile({ fullName, file }) {
           saveQueue.clear();
         }, 800);
           }).catch((error) => {
-            console.error('Save error:', error);
+
             updateSyncStatus('error');
             showNotification('Save failed', 'error', 2000);
             setTimeout(() => {
@@ -3817,13 +3807,13 @@ async function saveProfile({ fullName, file }) {
     async function instantSaveAll(source = 'general') {
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
-        console.log('Lock is active - saving locally only, not to cloud');
+
         saveToLocal();
         return;
       }
       
       if (!currentUser || !supabaseReady) {
-        console.log('Supabase not ready, falling back to local save');
+
         saveToLocal();
         return;
       }
@@ -3838,7 +3828,7 @@ async function saveProfile({ fullName, file }) {
       instantSaveInProgress.add(saveKey);
       
       try {
-        console.log('Instant save to cloud:', source);
+
         updateSyncStatus('syncing');
         
         // Save to cloud immediately
@@ -3852,7 +3842,7 @@ async function saveProfile({ fullName, file }) {
         saveToLocal();
         
       } catch (error) {
-        console.error('Instant save error:', error);
+
         updateSyncStatus('error');
         showNotification('Cloud sync failed', 'error', 2000);
         
@@ -3876,13 +3866,13 @@ async function saveProfile({ fullName, file }) {
     async function instantSaveExpenseRow(expenseRow, isBiz) {
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
-        console.log('Lock is active - saving expense row locally only, not to cloud');
+
         saveToLocal();
         return;
       }
       
       if (!currentUser || !supabaseReady) {
-        console.log('Supabase not ready, falling back to local save');
+
         saveToLocal();
         return;
       }
@@ -3917,7 +3907,7 @@ async function saveProfile({ fullName, file }) {
             .eq('id', expenseRow.id);
             
           if (error) throw error;
-          console.log('Expense row updated in cloud instantly:', expenseRow.id);
+
         } else {
           // Create new row - 0ms delay
           const { data, error } = await window.supabaseClient
@@ -3941,14 +3931,14 @@ async function saveProfile({ fullName, file }) {
           
           // Update the local row with the new ID
           expenseRow.id = data.id;
-          console.log('Expense row created in cloud instantly:', data.id);
+
         }
         
         // Also save locally as backup
         saveToLocal();
         
       } catch (error) {
-        console.error('Error saving expense row to cloud:', error);
+
         // Fallback to local save
         saveToLocal();
       } finally {
@@ -3960,13 +3950,13 @@ async function saveProfile({ fullName, file }) {
     async function instantSaveIncomeRow(incomeRow, year) {
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
-        console.log('Lock is active - saving income row locally only, not to cloud');
+
         saveToLocal();
         return;
       }
       
       if (!currentUser || !supabaseReady) {
-        console.log('Supabase not ready, falling back to local save');
+
         saveToLocal();
         return;
       }
@@ -4013,7 +4003,7 @@ async function saveProfile({ fullName, file }) {
               updateError = error;
             } catch (schemaError) {
               // If paid_egp field doesn't exist, fallback to without it
-              console.warn('paid_egp field not found, falling back to standard fields:', schemaError);
+
               const { error } = await window.supabaseClient
                 .from('income')
                 .update({
@@ -4033,7 +4023,7 @@ async function saveProfile({ fullName, file }) {
             }
             
             if (updateError) {
-              console.error('Error updating income row:', updateError);
+
               showNotification('Failed to save changes, retrying...', 'error', 2000);
               
               // Retry once after a short delay
@@ -4084,11 +4074,11 @@ async function saveProfile({ fullName, file }) {
               .single();
             
             if (insertError) {
-              console.error('Error creating income record:', insertError);
+
               showNotification('Failed to save income', 'error', 2000);
               throw insertError;
             } else {
-              console.log('Successfully created income record:', newIncome);
+
               // Update the local row with the new ID
               if (newIncome) {
                 incomeRow.id = newIncome.id;
@@ -4102,7 +4092,7 @@ async function saveProfile({ fullName, file }) {
           saveToLocal();
           
         } catch (error) {
-          console.error('Error in instant save income:', error);
+
           showNotification('Failed to save income', 'error', 2000);
           // Fallback to local save
           saveToLocal();
@@ -4118,7 +4108,7 @@ async function saveProfile({ fullName, file }) {
     async function saveIncomeRowDirectly(incomeRow, year) {
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
-        console.log('Lock is active - saving income row locally only, not to cloud');
+
         saveToLocal();
         return;
       }
@@ -4146,7 +4136,7 @@ async function saveProfile({ fullName, file }) {
             updateError = error;
           } catch (schemaError) {
             // If paid_egp field doesn't exist, fallback to tags only
-            console.warn('paid_egp field not found, falling back to tags only:', schemaError);
+
             const { error } = await window.supabaseClient
               .from('income')
               .update({
@@ -4168,7 +4158,7 @@ async function saveProfile({ fullName, file }) {
           instantSaveIncomeRow(incomeRow, year);
         }
       } catch (error) {
-        console.error('Error syncing changes:', error);
+
         showNotification(`Failed to sync changes: ${error.message}`, 'error', 3000);
       }
     }
@@ -4381,13 +4371,13 @@ async function saveProfile({ fullName, file }) {
         
         // Verify sync was successful
         if (currentUser && supabaseReady) {
-          console.log('Cloud sync completed successfully');
+
           return true;
         } else {
           throw new Error('Sync verification failed');
         }
       } catch (error) {
-        console.error('Cloud sync error:', error);
+
         throw error;
       }
     }
@@ -6471,7 +6461,7 @@ async function saveProfile({ fullName, file }) {
             // Save merged icons back to localStorage
             localStorage.setItem(CUSTOM_ICONS_KEY, JSON.stringify(customIcons));
           } catch (error) {
-            console.error('Error loading custom icons from Supabase:', error);
+
           }
         }
       } catch (e) {
@@ -6484,7 +6474,7 @@ async function saveProfile({ fullName, file }) {
       try {
         localStorage.setItem(CUSTOM_ICONS_KEY, JSON.stringify(customIcons));
       } catch (e) {
-        console.error('Failed to save custom icons:', e);
+
       }
     }
     
@@ -6494,7 +6484,7 @@ async function saveProfile({ fullName, file }) {
         // Find the custom icon
         const customIcon = customIcons.find(icon => icon.id === customId);
         if (!customIcon) {
-          console.error('Custom icon not found:', customId);
+
           return;
         }
         
@@ -6512,9 +6502,9 @@ async function saveProfile({ fullName, file }) {
               .remove([fullPath]);
             
             if (storageError) {
-              console.error('Error deleting from storage:', storageError);
+
             } else {
-              console.log('Deleted from Supabase storage:', fullPath);
+
             }
             
             // Update user_settings to remove the icon
@@ -6527,12 +6517,12 @@ async function saveProfile({ fullName, file }) {
               .eq('user_id', currentUser.id);
             
             if (dbError) {
-              console.error('Error updating user_settings:', dbError);
+
             } else {
-              console.log('Updated user_settings successfully');
+
             }
           } catch (error) {
-            console.error('Error deleting from Supabase:', error);
+
           }
         }
         
@@ -6547,7 +6537,7 @@ async function saveProfile({ fullName, file }) {
         
         showNotification('Custom icon deleted successfully!', 'success');
       } catch (error) {
-        console.error('Error deleting custom icon:', error);
+
         showNotification('Failed to delete custom icon', 'error');
       }
     }
@@ -6791,16 +6781,16 @@ async function saveProfile({ fullName, file }) {
       if (customImageData && iconPickCtx) {
         const { arr, idx } = iconPickCtx;
         
-        console.log('Apply custom image clicked');
-        console.log('Supabase ready:', supabaseReady);
-        console.log('Current user:', currentUser);
-        console.log('Image data length:', customImageData.length);
+
+
+
+
         
         try {
           // Upload image to Supabase
-          console.log('Attempting to upload to Supabase...');
+
           const imageId = await uploadImageToSupabase(customImageData);
-          console.log('Upload successful, image ID:', imageId);
+
           
           arr[idx].icon = `custom-image:${imageId}`;
         
@@ -6822,8 +6812,8 @@ async function saveProfile({ fullName, file }) {
           
           showNotification('Image uploaded successfully!', 'success');
         } catch (error) {
-          console.error('Error uploading image:', error);
-          console.error('Error details:', error.message);
+
+
           
           // Show specific error message
           if (error.message.includes('storage bucket does not exist')) {
@@ -6835,7 +6825,7 @@ async function saveProfile({ fullName, file }) {
           }
           
           // Fallback to local storage
-          console.log('Falling back to local storage...');
+
           arr[idx].icon = `custom-image:${customImageData}`;
           addCustomIcon(customImageData, 'image', 'Custom Image');
           
@@ -7208,11 +7198,11 @@ async function saveProfile({ fullName, file }) {
                 .eq('id', row.id);
               
               if (error) {
-                console.error(`Error deleting ${tableName} record:`, error);
+
                 showNotification(`Failed to delete ${isBiz ? 'business' : 'personal'} expense`, 'error', 2000);
                 return; // Don't delete locally if Supabase delete failed
               } else {
-                console.log(`Successfully deleted ${tableName} record:`, row.id);
+
                 showNotification(`🗑️ ${isBiz ? 'Business' : 'Personal'} expense deleted`, 'success', 1500, { force: true });
               }
             }
@@ -7340,7 +7330,7 @@ async function saveProfile({ fullName, file }) {
       nameInput.style.padding = '0.4rem 0.6rem';
       nameInput.style.borderRadius = '8px';
       nameInput.addEventListener('input', function() {
-        console.log('Income name input changed:', this.value);
+
         row.name = this.value;
         saveInputValue('projectName', this.value);
         instantSaveIncomeRow(row, currentYear);
@@ -7440,7 +7430,7 @@ async function saveProfile({ fullName, file }) {
       allPaymentInput.style.padding = '0.5rem 0.75rem';
       allPaymentInput.style.borderRadius = '8px';
       allPaymentInput.addEventListener('input', function() {
-        console.log('All payment input changed:', this.value);
+
         row.allPayment = Number(this.value) || 0;
         instantSaveIncomeRow(row, currentYear);
         updateIncomeRowCalculations(div, row);
@@ -7466,7 +7456,7 @@ async function saveProfile({ fullName, file }) {
       paidUsdInput.style.padding = '0.5rem 0.75rem';
       paidUsdInput.style.borderRadius = '8px';
       paidUsdInput.addEventListener('input', function() {
-        console.log('Paid USD input changed:', this.value);
+
         row.paidUsd = Number(this.value) || 0;
         instantSaveIncomeRow(row, currentYear);
         updateIncomeRowCalculations(div, row);
@@ -7664,10 +7654,10 @@ async function saveProfile({ fullName, file }) {
               .eq('id', row.id)
               .then(({ error }) => {
                 if (error) {
-                  console.error('Error deleting income record:', error);
+
                   showNotification('Failed to delete income', 'error', 2000);
                 } else {
-                  console.log('Successfully deleted income record:', row.id);
+
                   showNotification('🗑️ Income deleted', 'success', 1500, { force: true });
                 }
               });
@@ -7752,7 +7742,7 @@ async function saveProfile({ fullName, file }) {
           try {
             saveIncomeRowDirectly(row, currentYear);
           } catch (error) {
-            console.warn('Cloud save failed, saving locally:', error);
+
             saveToLocal();
             showNotification('Saved locally (cloud sync failed)', 'warning', 2000);
           }
@@ -8283,7 +8273,7 @@ async function saveProfile({ fullName, file }) {
 
     // Enhanced function to ensure all inputs have instant cloud sync
     function ensureLiveSaveOnAllInputs() {
-      console.log('Ensuring instant cloud sync on all inputs...');
+
       
       // Add live save to any input that might not have it
       const allInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]');
@@ -8310,7 +8300,7 @@ async function saveProfile({ fullName, file }) {
         
         // Add event listener for instant cloud sync
         input.addEventListener('input', function() {
-          console.log('Instant sync triggered from input:', source, this.value);
+
           
           // Update the corresponding data based on context
           const rowElement = input.closest('.row, .row-biz, .row-income');
@@ -8358,12 +8348,12 @@ async function saveProfile({ fullName, file }) {
         input.setAttribute('data-live-save', 'true');
       });
       
-      console.log('Instant cloud sync ensured on all inputs');
+
     }
     
     // Ensure all toggles (status, billing) have instant cloud sync
     function ensureInstantSyncOnToggles() {
-      console.log('Ensuring instant cloud sync on all toggles...');
+
       
       // Find all status and billing toggles
       const statusToggles = document.querySelectorAll('[data-status-toggle]:not([data-instant-sync])');
@@ -8371,7 +8361,7 @@ async function saveProfile({ fullName, file }) {
       
       statusToggles.forEach(toggle => {
         toggle.addEventListener('click', function() {
-          console.log('Instant sync triggered from status toggle');
+
           const rowElement = this.closest('.row, .row-biz');
           if (rowElement) {
             const rowIndex = Array.from(rowElement.parentNode.children).indexOf(rowElement) - 1;
@@ -8387,7 +8377,7 @@ async function saveProfile({ fullName, file }) {
       
       billingToggles.forEach(toggle => {
         toggle.addEventListener('click', function() {
-          console.log('Instant sync triggered from billing toggle');
+
           const rowElement = this.closest('.row, .row-biz');
           if (rowElement) {
             const rowIndex = Array.from(rowElement.parentNode.children).indexOf(rowElement) - 1;
@@ -8401,7 +8391,7 @@ async function saveProfile({ fullName, file }) {
         toggle.setAttribute('data-instant-sync', 'true');
       });
       
-      console.log(`Instant sync ensured on ${statusToggles.length} status toggles and ${billingToggles.length} billing toggles`);
+
     }
     
     // Performance optimization: Debounced rendering
@@ -8461,7 +8451,7 @@ async function saveProfile({ fullName, file }) {
       const includeAnnualSelect = document.getElementById('inputIncludeAnnual');
       if (includeAnnualSelect) {
         includeAnnualSelect.value = state.includeAnnualInMonthly ? 'true' : 'false';
-        console.log('Updated Include Annual setting in UI:', state.includeAnnualInMonthly);
+
       }
       
       // Update calculations without re-rendering inputs
@@ -8528,7 +8518,7 @@ async function saveProfile({ fullName, file }) {
           throw new Error('Invalid rate received');
         }
       } catch (error) {
-        console.log('Failed to fetch live rate, using fallback');
+
         // Fallback to a reasonable rate if API fails
         $('#inputFx').value = '48.1843';
         state.fx = 48.1843;
@@ -8567,22 +8557,22 @@ async function saveProfile({ fullName, file }) {
       
       if (exportBtn) {
         exportBtn.addEventListener('click', ()=>{
-          console.log('Export button clicked');
+
           showExportOptions();
         });
-        console.log('Export button event listener added');
+
       } else {
-        console.error('Export button not found!');
+
       }
       
       if (importBtn) {
         importBtn.addEventListener('click', ()=>{
-          console.log('Import button clicked');
+
           showImportOptions();
         });
-        console.log('Import button event listener added');
+
       } else {
-        console.error('Import button not found!');
+
       }
     }, 100);
     
@@ -8822,7 +8812,7 @@ async function saveProfile({ fullName, file }) {
               
               // Run deduplication after import to clean up any duplicates
               if (window.deduplicateAllData) {
-                console.log('🧹 Running deduplication after import...');
+
                 window.deduplicateAllData();
               }
               
@@ -8885,7 +8875,7 @@ async function saveProfile({ fullName, file }) {
           
           showNotification('All cloud data deleted', 'success', 3000);
         } catch (error) {
-          console.error('Error clearing Supabase data:', error);
+
           showNotification('Error clearing cloud data', 'error', 3000);
         }
       } else {
@@ -8934,7 +8924,7 @@ async function saveProfile({ fullName, file }) {
         personalAddBtn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('Personal add row clicked');
+
           addRow('personal');
         });
       }
@@ -8945,7 +8935,7 @@ async function saveProfile({ fullName, file }) {
         bizAddBtn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('Business add row clicked');
+
           addRow('biz');
         });
       }
@@ -8956,7 +8946,7 @@ async function saveProfile({ fullName, file }) {
         incomeAddBtn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('Income add row clicked for year:', currentYear);
+
           addRow('income');
         });
       }
@@ -9673,7 +9663,7 @@ async function saveProfile({ fullName, file }) {
   let datePickerTimeout = null;
 
   function initCustomDatePicker() {
-    console.log('Initializing custom date picker...');
+
     customDatePicker = document.getElementById('customDatePicker');
     const monthSelect = document.getElementById('monthSelect');
     const yearSelect = document.getElementById('yearSelect');
@@ -9696,15 +9686,15 @@ async function saveProfile({ fullName, file }) {
     });
     
     if (!customDatePicker) {
-      console.error('Custom date picker element not found!');
+
       return;
     }
     if (!monthSelect || !yearSelect) {
-      console.error('Month or year select elements not found!');
+
       return;
     }
     
-    console.log('Custom date picker initialized successfully');
+
 
     // Populate month select
     const months = [
@@ -9782,16 +9772,16 @@ async function saveProfile({ fullName, file }) {
   }
 
   function showCustomDatePicker(inputElement) {
-    console.log('showCustomDatePicker called with:', inputElement);
+
     
     // Prevent rapid opening/closing
     if (isDatePickerOpen) {
-      console.log('Date picker already open, ignoring');
+
       return;
     }
     
     if (!customDatePicker) {
-      console.error('Custom date picker not initialized!');
+
       return;
     }
     
@@ -9836,7 +9826,7 @@ async function saveProfile({ fullName, file }) {
       
       datePickerModal.classList.add('show');
       isDatePickerOpen = true;
-      console.log('Date picker should now be visible in center of screen');
+
       
       // Prevent body scroll when date picker is open
       document.body.style.overflow = 'hidden';
@@ -9952,7 +9942,7 @@ async function saveProfile({ fullName, file }) {
   }
 
   function selectDate(date) {
-    console.log('selectDate called with:', date);
+
     
     if (currentDatePickerInput) {
       // Get the actual date in YYYY-MM-DD format
@@ -9973,7 +9963,7 @@ async function saveProfile({ fullName, file }) {
       // Also trigger input event for real-time updates
       currentDatePickerInput.dispatchEvent(new Event('input', { bubbles: true }));
       
-      console.log('Date set successfully:', currentDatePickerInput.value);
+
     }
     hideCustomDatePicker();
   }
@@ -10159,14 +10149,14 @@ async function saveProfile({ fullName, file }) {
         .limit(1);
       
       if (error && error.code === 'PGRST116') {
-        console.warn('paid_egp field does not exist in database schema');
+
         return false;
       }
       
-      console.log('paid_egp field exists in database');
+
       return true;
     } catch (error) {
-      console.error('Error checking database schema:', error);
+
       return false;
     }
   }
@@ -10195,18 +10185,18 @@ async function saveProfile({ fullName, file }) {
   
   // Test function to manually open date picker
   window.testDatePicker = function() {
-    console.log('Testing date picker...');
-    console.log('customDatePicker element:', customDatePicker);
+
+
     
     if (!customDatePicker) {
-      console.error('Date picker not initialized!');
+
       return;
     }
     
     // Just show it directly
     customDatePicker.style.display = 'block';
     customDatePicker.classList.add('show');
-    console.log('Date picker should be visible now');
+
   };
   
   // Test function to manually set a date
@@ -10214,10 +10204,10 @@ async function saveProfile({ fullName, file }) {
     const testInput = document.querySelector('input[type="date"]');
     if (testInput) {
       const testDate = new Date(2025, 0, 15); // January 15, 2025
-      console.log('Testing date selection with:', testDate);
+
       selectDate(testDate);
     } else {
-      console.log('No date input found for testing');
+
     }
   };
   
@@ -10225,11 +10215,11 @@ async function saveProfile({ fullName, file }) {
   window.addEventListener('load', function() {
     setTimeout(() => {
       const dateInputs = document.querySelectorAll('input[type="date"]');
-      console.log('Found date inputs:', dateInputs.length);
+
       
       dateInputs.forEach((input, index) => {
         input.addEventListener('click', function(e) {
-          console.log('Date input clicked:', index);
+
           e.preventDefault();
           showCustomDatePicker(input);
         });
