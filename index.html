@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MY FINANCIALS — USD · EGP</title>
+  <title id="pageTitle">MY FINANCIALS — USD · EGP</title>
   <link rel="icon" type="image/svg+xml" href="Images/Favicon.svg">
   <link rel="alternate icon" href="Images/Favicon.svg">
   <link rel="apple-touch-icon" href="Images/Favicon.svg">
@@ -71,6 +71,50 @@
           </svg>
           <span id="syncStatus" class="sync-status"></span>
         </button>
+        
+        <!-- Currency Selector -->
+        <div class="relative">
+          <button id="btnCurrency" class="icon-btn size-8 rounded-xl border hover:bg-white/5 transition" title="Select Currency" style="border-color:var(--stroke); min-width: 60px; padding: 0 8px;">
+            <span id="currencySymbol" class="text-xs font-semibold">EGP</span>
+          </button>
+          
+          <!-- Currency Dropdown Menu -->
+          <div id="currencyDropdown" class="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-50" style="display: none; background:var(--bg); border: 1px solid var(--stroke);">
+            <div class="p-2">
+              <div class="text-xs font-medium mb-2 px-2" style="color:var(--muted)">Select Currency</div>
+              <div class="space-y-1">
+                <button class="currency-option w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-white/5 transition rounded text-sm" data-currency="EGP" data-symbol="EGP" data-rate="48.1843">
+                  <span class="text-xs font-semibold">EGP</span>
+                  <span class="text-xs" style="color:var(--muted)">Egyptian Pound</span>
+                </button>
+                <button class="currency-option w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-white/5 transition rounded text-sm" data-currency="KWD" data-symbol="KWD" data-rate="0.31">
+                  <span class="text-xs font-semibold">KWD</span>
+                  <span class="text-xs" style="color:var(--muted)">Kuwaiti Dinar</span>
+                </button>
+                <button class="currency-option w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-white/5 transition rounded text-sm" data-currency="SAR" data-symbol="SAR" data-rate="3.75">
+                  <span class="text-xs font-semibold">SAR</span>
+                  <span class="text-xs" style="color:var(--muted)">Saudi Riyal</span>
+                </button>
+                <button class="currency-option w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-white/5 transition rounded text-sm" data-currency="AED" data-symbol="AED" data-rate="3.67">
+                  <span class="text-xs font-semibold">AED</span>
+                  <span class="text-xs" style="color:var(--muted)">UAE Dirham</span>
+                </button>
+                <button class="currency-option w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-white/5 transition rounded text-sm" data-currency="QAR" data-symbol="QAR" data-rate="3.64">
+                  <span class="text-xs font-semibold">QAR</span>
+                  <span class="text-xs" style="color:var(--muted)">Qatari Riyal</span>
+                </button>
+                <button class="currency-option w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-white/5 transition rounded text-sm" data-currency="BHD" data-symbol="BHD" data-rate="0.38">
+                  <span class="text-xs font-semibold">BHD</span>
+                  <span class="text-xs" style="color:var(--muted)">Bahraini Dinar</span>
+                </button>
+                <button class="currency-option w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-white/5 transition rounded text-sm" data-currency="EUR" data-symbol="€" data-rate="0.92">
+                  <span class="text-xs font-semibold">EUR</span>
+                  <span class="text-xs" style="color:var(--muted)">Euro</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         <button id="btnLock" class="icon-btn size-8 rounded-xl border hover:bg-white/5 transition" title="Lock/Unlock all inputs" style="border-color:var(--stroke)">
           <svg id="iconLock" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
             <path d="M12 15v2"/>
@@ -81,12 +125,6 @@
         <button id="btnTheme" class="icon-btn size-8 rounded-xl border hover:bg-white/5 transition" title="Toggle theme" style="border-color:var(--stroke)">
           <svg id="iconTheme" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
             <path d="M12 3v1m0 16v1m9-9h1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-          </svg>
-        </button>
-        <button id="btnSettings" class="icon-btn size-8 rounded-xl border hover:bg-white/5 transition" title="Settings" style="border-color:var(--stroke)">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
         
@@ -152,6 +190,14 @@
                       <span>Change Password</span>
                     </button>
                     
+                    <button id="btnSettings" class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/5 transition rounded text-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                      </svg>
+                      <span>Settings</span>
+                    </button>
+                    
                     <button id="btnLogout" class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/5 transition rounded text-sm text-red-400">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -210,12 +256,12 @@
           <div>
             <div class="text-[11px]" style="color:var(--muted)">Monthly</div>
             <div class="value" id="kpiAllMonthlyUSD">$0.00</div>
-            <div class="sub" id="kpiAllMonthlyEGP">EGP 0</div>
+            <div class="sub" id="kpiAllMonthlyEGP">0</div>
           </div>
           <div class="text-right">
             <div class="text-[11px]" style="color:var(--muted)">Yearly</div>
             <div class="value" id="kpiAllYearlyUSD">$0.00</div>
-            <div class="sub" id="kpiAllYearlyEGP">EGP 0</div>
+            <div class="sub" id="kpiAllYearlyEGP">0</div>
           </div>
         </div>
         <!-- Skeleton Loading -->
@@ -235,7 +281,7 @@
           </div>
         </div>
         <div class="mt-2 flex items-center justify-between text-xs">
-          <span style="color:var(--muted)">FX (USD→EGP)</span>
+          <span id="kpiFxLabel" style="color:var(--muted)">FX (USD→EGP)</span>
           <span class="font-semibold" id="kpiFxSmall">—</span>
         </div>
         <div class="mt-2 grid grid-cols-2 gap-4 text-xs">
@@ -256,8 +302,8 @@
       <div class="kpi" data-analytics="personal">
         <h3>Personal</h3>
         <div class="grid grid-cols-2 gap-4">
-          <div><div class="text-[11px]" style="color:var(--muted)">Monthly</div><div class="value" id="kpiPersonalMonthly">$0.00</div><div class="sub" id="kpiPersonalMonthlyEGP">EGP 0</div></div>
-          <div><div class="text-[11px]" style="color:var(--muted)">Yearly</div><div class="value" id="kpiPersonalYearly">$0.00</div><div class="sub" id="kpiPersonalYearlyEGP">EGP 0</div></div>
+          <div><div class="text-[11px]" style="color:var(--muted)">Monthly</div><div class="value" id="kpiPersonalMonthly">$0.00</div><div class="sub" id="kpiPersonalMonthlyEGP">0</div></div>
+          <div><div class="text-[11px]" style="color:var(--muted)">Yearly</div><div class="value" id="kpiPersonalYearly">$0.00</div><div class="sub" id="kpiPersonalYearlyEGP">0</div></div>
         </div>
         <!-- Skeleton Loading -->
         <div class="card-skeleton hidden" id="kpiPersonalSkeleton">
@@ -289,8 +335,8 @@
       <div class="kpi" data-analytics="biz">
         <h3>Biz</h3>
         <div class="grid grid-cols-2 gap-4">
-          <div><div class="text-[11px]" style="color:var(--muted)">Monthly</div><div class="value" id="kpiBizMonthly">$0.00</div><div class="sub" id="kpiBizMonthlyEGP">EGP 0</div></div>
-          <div><div class="text-[11px]" style="color:var(--muted)">Yearly</div><div class="value" id="kpiBizYearly">$0.00</div><div class="sub" id="kpiBizYearlyEGP">EGP 0</div></div>
+          <div><div class="text-[11px]" style="color:var(--muted)">Monthly</div><div class="value" id="kpiBizMonthly">$0.00</div><div class="sub" id="kpiBizMonthlyEGP">0</div></div>
+          <div><div class="text-[11px]" style="color:var(--muted)">Yearly</div><div class="value" id="kpiBizYearly">$0.00</div><div class="sub" id="kpiBizYearlyEGP">0</div></div>
         </div>
         <!-- Skeleton Loading -->
         <div class="card-skeleton hidden" id="kpiBizSkeleton">
@@ -327,7 +373,7 @@
       <div class="table-container">
         <div class="table">
           <div class="row row-head">
-            <div></div><div></div><div>Name</div><div>Cost USD</div><div>Status</div><div>Billing</div><div class="draggable-header financial-column" data-column="monthly" draggable="true">Monthly USD</div><div class="draggable-header financial-column" data-column="yearly" draggable="true">Yearly USD</div><div class="draggable-header financial-column" data-column="monthly-egp" draggable="true">Monthly EGP</div><div class="draggable-header financial-column" data-column="yearly-egp" draggable="true">Yearly EGP</div><div></div>
+            <div></div><div></div><div>Name</div><div>Cost USD</div><div>Status</div><div>Billing</div><div class="draggable-header financial-column" data-column="monthly" draggable="true">Monthly USD</div><div class="draggable-header financial-column" data-column="yearly" draggable="true">Yearly USD</div><div class="draggable-header financial-column" data-column="monthly-egp" draggable="true" id="headerMonthlyEGP">Monthly EGP</div><div class="draggable-header financial-column" data-column="yearly-egp" draggable="true" id="headerYearlyEGP">Yearly EGP</div><div></div>
           </div>
           <!-- Loading Skeleton -->
           <div id="loading-skeleton" class="loading-skeleton">
@@ -386,7 +432,7 @@
       <div class="table-container">
         <div class="table">
           <div class="row row-head row-biz">
-            <div></div><div></div><div>Name</div><div>Cost USD</div><div>Status</div><div>Billing</div><div>DATE</div><div class="draggable-header financial-column" data-column="monthly" draggable="true">Monthly USD</div><div class="draggable-header financial-column" data-column="yearly" draggable="true">Yearly USD</div><div class="draggable-header financial-column" data-column="monthly-egp" draggable="true">Monthly EGP</div><div class="draggable-header financial-column" data-column="yearly-egp" draggable="true">Yearly EGP</div><div></div>
+            <div></div><div></div><div>Name</div><div>Cost USD</div><div>Status</div><div>Billing</div><div>DATE</div><div class="draggable-header financial-column" data-column="monthly" draggable="true">Monthly USD</div><div class="draggable-header financial-column" data-column="yearly" draggable="true">Yearly USD</div><div class="draggable-header financial-column" data-column="monthly-egp" draggable="true" id="headerBizMonthlyEGP">Monthly EGP</div><div class="draggable-header financial-column" data-column="yearly-egp" draggable="true" id="headerBizYearlyEGP">Yearly EGP</div><div></div>
           </div>
           <!-- Loading Skeleton for Business -->
           <div id="loading-skeleton-biz" class="loading-skeleton">
@@ -453,12 +499,12 @@
             <div>
               <div class="text-[11px]" style="color:var(--muted)">Per Month</div>
               <div class="value" id="kpiIncomeAllMonthlyUSD">$0.00</div>
-              <div class="sub" id="kpiIncomeAllMonthlyEGP">EGP 0</div>
+              <div class="sub" id="kpiIncomeAllMonthlyEGP">0</div>
             </div>
             <div class="text-right">
               <div class="text-[11px]" style="color:var(--muted)">Per Year</div>
               <div class="value" id="kpiIncomeAllYearlyUSD">$0.00</div>
-              <div class="sub" id="kpiIncomeAllYearlyEGP">EGP 0</div>
+              <div class="sub" id="kpiIncomeAllYearlyEGP">0</div>
             </div>
           </div>
           <!-- Skeleton Loading -->
@@ -478,8 +524,8 @@
             </div>
           </div>
           <div class="mt-2 flex items-center justify-between text-xs">
-            <span style="color:var(--muted)">FX (USD→EGP)</span>
-            <span class="font-semibold" id="kpiIncomeFxSmall">â€”</span>
+            <span id="kpiIncomeFxLabel" style="color:var(--muted)">FX (USD→EGP)</span>
+            <span class="font-semibold" id="kpiIncomeFxSmall">â€"</span>
           </div>
           <div class="mt-2 grid grid-cols-2 gap-4 text-xs">
             <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Lifetime Total</span><span id="shareIncomeCompletedVal">$0.00</span></div></div>
@@ -502,12 +548,12 @@
             <div>
               <div class="text-[11px]" style="color:var(--muted)">This Month</div>
               <div class="value" id="kpiIncomeMonthlyCurrent">$0.00</div>
-              <div class="sub" id="kpiIncomeMonthlyCurrentEGP">EGP 0</div>
+              <div class="sub" id="kpiIncomeMonthlyCurrentEGP">0</div>
             </div>
             <div class="text-right">
               <div class="text-[11px]" style="color:var(--muted)">Average</div>
               <div class="value" id="kpiIncomeMonthlyAvg">$0.00</div>
-              <div class="sub" id="kpiIncomeMonthlyAvgEGP">EGP 0</div>
+              <div class="sub" id="kpiIncomeMonthlyAvgEGP">0</div>
             </div>
           </div>
           <!-- Skeleton Loading -->
@@ -543,12 +589,12 @@
             <div>
               <div class="text-[11px]" style="color:var(--muted)">This Year</div>
               <div class="value" id="kpiIncomeYearlyCurrent">$0.00</div>
-              <div class="sub" id="kpiIncomeYearlyCurrentEGP">EGP 0</div>
+              <div class="sub" id="kpiIncomeYearlyCurrentEGP">0</div>
             </div>
             <div class="text-right">
               <div class="text-[11px]" style="color:var(--muted)">Target</div>
               <div class="value" id="kpiIncomeYearlyTarget">$0.00</div>
-              <div class="sub" id="kpiIncomeYearlyTargetEGP">EGP 0</div>
+              <div class="sub" id="kpiIncomeYearlyTargetEGP">0</div>
             </div>
           </div>
           <!-- Skeleton Loading -->
@@ -597,7 +643,7 @@
         <div class="table-container">
           <div class="table">
             <div class="row row-head row-income">
-              <div></div><div></div><div>Project Name</div><div>Tags</div><div>Date</div><div>All Payment</div><div>Paid USD</div><div>Paid EGP</div><div>Method</div><div></div>
+              <div></div><div></div><div>Project Name</div><div>Tags</div><div>Date</div><div>All Payment</div><div>Paid USD</div><div id="headerPaidEGP">Paid EGP</div><div>Method</div><div></div>
             </div>
             <div id="list-income"></div>
             <button class="btn w-full justify-start text-xs py-3 mx-0 my-3" data-add-row="income" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row</button>
@@ -618,12 +664,12 @@
             <div>
               <div class="text-[11px]" style="color:var(--muted)">Monthly</div>
               <div class="value" id="analyticsCashFlowMonthlyUSD">$0.00</div>
-              <div class="sub" id="analyticsCashFlowMonthlyEGP">EGP 0</div>
+              <div class="sub" id="analyticsCashFlowMonthlyEGP">0</div>
             </div>
             <div class="text-right">
               <div class="text-[11px]" style="color:var(--muted)">Yearly</div>
               <div class="value" id="analyticsCashFlowYearlyUSD">$0.00</div>
-              <div class="sub" id="analyticsCashFlowYearlyEGP">EGP 0</div>
+              <div class="sub" id="analyticsCashFlowYearlyEGP">0</div>
             </div>
           </div>
           <div class="mt-2 flex items-center justify-between text-xs">
@@ -776,7 +822,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="text-xs" style="color:var(--muted)">USD → EGP Rate</label>
+          <label id="fxRateLabel" class="text-xs" style="color:var(--muted)">USD → EGP Rate</label>
           <div class="flex gap-2 items-center">
             <div class="settings-input-wrapper flex-1">
               <span class="settings-symbol">$</span>

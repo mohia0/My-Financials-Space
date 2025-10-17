@@ -5614,3 +5614,35 @@ header img:hover {
     padding: 0.4rem 0;
   }
 }
+
+/* Currency Dropdown Styles */
+#currencyDropdown {
+  animation: fadeIn 0.2s ease-out;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.currency-option {
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.currency-option:hover {
+  background: var(--glass) !important;
+  transform: translateX(2px);
+}
+
+.currency-option:active {
+  transform: translateX(0);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -2791,6 +2791,9 @@ async function saveProfile({ fullName, file }) {
       // Initialize row order properties for existing rows
       initializeRowOrder();
       
+      // Initialize currency system before rendering
+      initializeCurrencySystem();
+      
       renderAll();
     }
     
@@ -3054,6 +3057,10 @@ async function saveProfile({ fullName, file }) {
       theme: 'dark',
         includeAnnualInMonthly: false,
       inputsLocked: false,
+      // Currency system
+      selectedCurrency: 'EGP',
+      currencySymbol: 'EGP',
+      currencyRate: 48.1843, // Rate from USD to selected currency
       personal: [],
       biz: [],
       income: {
@@ -3101,6 +3108,9 @@ async function saveProfile({ fullName, file }) {
               columnOrder = JSON.parse(savedColumnOrder);
             }
             
+            // Initialize currency system before rendering
+            initializeCurrencySystem();
+            
             renderAll();
             return;
           }
@@ -3124,6 +3134,9 @@ async function saveProfile({ fullName, file }) {
       
       // Create year tabs (will create default years since income is empty)
       createYearTabsFromData(state.income);
+      
+      // Initialize currency system before rendering
+      initializeCurrencySystem();
       
       renderAll();
     }
@@ -4528,11 +4541,166 @@ async function saveProfile({ fullName, file }) {
 
     // Manual refresh button
     $('#btnRefresh').addEventListener('click', refreshData);
+    
+    // Currency dropdown functionality
+    const currencyBtn = document.getElementById('btnCurrency');
+    const currencyDropdown = document.getElementById('currencyDropdown');
+    
+    currencyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currencyDropdown.style.display = currencyDropdown.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!currencyBtn.contains(e.target) && !currencyDropdown.contains(e.target)) {
+        currencyDropdown.style.display = 'none';
+      }
+    });
+    
+    // Currency option selection
+    document.querySelectorAll('.currency-option').forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.preventDefault();
+        const currency = option.dataset.currency;
+        const symbol = option.dataset.symbol;
+        const rate = parseFloat(option.dataset.rate);
+        
+        updateCurrency(currency);
+        currencyDropdown.style.display = 'none';
+        
+        // Save to localStorage
+        localStorage.setItem('selectedCurrency', currency);
+      });
+    });
+    
+    // Load saved currency on startup (moved after function definitions)
 
     // Numbers
     const nfUSD = new Intl.NumberFormat('en-US',{style:'currency', currency:'USD', maximumFractionDigits:0});
     const nfINT = new Intl.NumberFormat('en-US');
     const usdToEgp = (usd)=> usd * Number(state.fx || 0);
+    
+    // Currency conversion system - rates from USD to each currency
+    const currencyRates = {
+      'EGP': 48.1843,  // 1 USD = 48.18 EGP
+      'KWD': 0.31,     // 1 USD = 0.31 KWD
+      'SAR': 3.75,     // 1 USD = 3.75 SAR
+      'AED': 3.67,     // 1 USD = 3.67 AED
+      'QAR': 3.64,     // 1 USD = 3.64 QAR
+      'BHD': 0.38,     // 1 USD = 0.38 BHD
+      'EUR': 0.92      // 1 USD = 0.92 EUR
+    };
+    
+    const currencySymbols = {
+      'EGP': 'EGP',
+      'KWD': 'KWD',
+      'SAR': 'SAR',
+      'AED': 'AED',
+      'QAR': 'QAR',
+      'BHD': 'BHD',
+      'EUR': '€'
+    };
+    
+    // Convert USD to selected currency
+    const usdToSelectedCurrency = (usd) => {
+      if (!usd || isNaN(usd)) return 0;
+      const rate = currencyRates[state.selectedCurrency] || currencyRates['EGP'] || 48.1843;
+      const result = usd * rate;
+      if (isNaN(result)) {
+        console.warn('Currency conversion failed:', { usd, selectedCurrency: state.selectedCurrency, rate, result });
+        return 0;
+      }
+      return result;
+    };
+    
+    // Format currency with selected currency symbol
+    const formatCurrency = (amount, currency = state.selectedCurrency) => {
+      if (!amount || isNaN(amount)) return `${currencySymbols[currency] || currency} 0`;
+      const symbol = currencySymbols[currency] || currency;
+      const formatted = nfINT.format(Math.round(amount));
+      return `${symbol} ${formatted}`;
+    };
+    
+    // Initialize currency system
+    const initializeCurrencySystem = () => {
+      try {
+        const savedCurrency = localStorage.getItem('selectedCurrency');
+        if (savedCurrency && currencyRates && currencyRates[savedCurrency]) {
+          state.selectedCurrency = savedCurrency;
+          state.currencySymbol = currencySymbols[savedCurrency] || savedCurrency;
+          state.currencyRate = currencyRates[savedCurrency];
+          updateCurrency(savedCurrency);
+        } else {
+          // Initialize with default EGP
+          state.selectedCurrency = 'EGP';
+          state.currencySymbol = 'EGP';
+          state.currencyRate = 48.1843;
+          updateCurrency('EGP');
+        }
+        console.log('Currency system initialized:', { 
+          selectedCurrency: state.selectedCurrency, 
+          currencySymbol: state.currencySymbol, 
+          currencyRate: state.currencyRate 
+        });
+      } catch (error) {
+        console.warn('Currency initialization failed:', error);
+        // Fallback to EGP
+        state.selectedCurrency = 'EGP';
+        state.currencySymbol = 'EGP';
+        state.currencyRate = 48.1843;
+      }
+    };
+
+    // Update currency conversion
+    const updateCurrency = (currency) => {
+      state.selectedCurrency = currency;
+      state.currencySymbol = currencySymbols[currency] || currency;
+      state.currencyRate = currencyRates[currency] || 1;
+      
+      // Update UI
+      document.getElementById('currencySymbol').textContent = state.currencySymbol;
+      
+      // Update table headers
+      const currencyText = state.currencySymbol;
+      setText('headerMonthlyEGP', `Monthly ${currencyText}`);
+      setText('headerYearlyEGP', `Yearly ${currencyText}`);
+      setText('headerBizMonthlyEGP', `Monthly ${currencyText}`);
+      setText('headerBizYearlyEGP', `Yearly ${currencyText}`);
+      setText('headerPaidEGP', `Paid ${currencyText}`);
+      
+      // Update page title
+      setText('pageTitle', `MY FINANCIALS — USD · ${currencyText}`);
+      
+      // Update settings label
+      setText('fxRateLabel', `USD → ${currencyText} Rate`);
+      
+      // Update FX labels in KPI cards
+      setText('kpiFxLabel', `FX (USD→${currencyText})`);
+      setText('kpiIncomeFxLabel', `FX (USD→${currencyText})`);
+      
+      // Update FX rate based on selected currency
+      // Use the direct rate from USD to selected currency
+      const newFxRate = state.currencyRate;
+      const fxInput = document.getElementById('inputFx');
+      if (fxInput) {
+        fxInput.value = newFxRate.toFixed(4);
+      }
+      
+      // Recalculate and update all displays
+      renderKPIs();
+      renderTables();
+      updateAnalyticsPage();
+    };
+    
+    // Function to render all tables
+    function renderTables() {
+      renderList('list-personal', state.personal, false);
+      renderList('list-biz', state.biz, true);
+      const currentYearData = state.income[currentYear] || [];
+      renderIncomeList('list-income', currentYearData);
+    };
+    
     const rowMonthlyUSD = (r)=> {
       if (r.status !== 'Active') return 0;
       if (r.billing === 'Monthly') return Number(r.cost||0);
@@ -4542,7 +4710,18 @@ async function saveProfile({ fullName, file }) {
       return 0;
     };
     const rowYearlyUSD  = (r)=> r.status==='Active' ? (r.billing==='Monthly' ? Number(r.cost||0)*12 : Number(r.cost||0)) : 0;
-    function totals(arr){ const mUSD=arr.reduce((s,r)=>s+rowMonthlyUSD(r),0); const yUSD=arr.reduce((s,r)=>s+rowYearlyUSD(r),0); return { mUSD, yUSD, mEGP: usdToEgp(mUSD), yEGP: usdToEgp(yUSD) }; }
+    function totals(arr){ 
+      const mUSD=arr.reduce((s,r)=>s+rowMonthlyUSD(r),0); 
+      const yUSD=arr.reduce((s,r)=>s+rowYearlyUSD(r),0); 
+      return { 
+        mUSD, 
+        yUSD, 
+        mEGP: usdToEgp(mUSD), 
+        yEGP: usdToEgp(yUSD),
+        mSelected: usdToSelectedCurrency(mUSD),
+        ySelected: usdToSelectedCurrency(yUSD)
+      }; 
+    }
     
     // Income calculation functions
     // For income, each entry is a single payment, not a recurring amount
@@ -4566,6 +4745,7 @@ async function saveProfile({ fullName, file }) {
     function lifetimeIncomeTotals() {
       let totalUSD = 0;
       let totalEGP = 0;
+      let totalSelected = 0;
       let totalEntries = 0;
       let earliestDate = null;
       let latestDate = null;
@@ -4577,6 +4757,7 @@ async function saveProfile({ fullName, file }) {
           const usdAmount = Number(r.paidUsd || 0);
           totalUSD += usdAmount;
           totalEGP += usdAmount * Number(state.fx || 0); // Calculate EGP from USD
+          totalSelected += usdToSelectedCurrency(usdAmount); // Calculate selected currency
           totalEntries++;
           
           // Track date range for accurate time calculations
@@ -4611,6 +4792,7 @@ async function saveProfile({ fullName, file }) {
         // Totals
         totalUSD,
         totalEGP,
+        totalSelected,
         totalEntries,
         
         // Time-based calculations (based on actual earning period)
@@ -4629,6 +4811,14 @@ async function saveProfile({ fullName, file }) {
         minutelyEGP: totalEGP / totalMinutes,
         secondlyEGP: totalEGP / totalSeconds,
         
+        // Selected currency equivalents
+        yearlySelected: totalSelected / yearsSpan,
+        monthlySelected: totalSelected / monthsSpan,
+        dailySelected: totalSelected / totalDays,
+        hourlySelected: totalSelected / totalHours,
+        minutelySelected: totalSelected / totalMinutes,
+        secondlySelected: totalSelected / totalSeconds,
+        
         // Additional info
         yearsSpan,
         monthsSpan,
@@ -4641,7 +4831,14 @@ async function saveProfile({ fullName, file }) {
     function incomeTotals(arr) { 
       const mUSD = arr.reduce((s, r) => s + rowIncomeMonthlyUSD(r), 0); 
       const yUSD = arr.reduce((s, r) => s + rowIncomeYearlyUSD(r), 0); 
-      return { mUSD, yUSD, mEGP: usdToEgp(mUSD), yEGP: usdToEgp(yUSD) }; 
+      return { 
+        mUSD, 
+        yUSD, 
+        mEGP: usdToEgp(mUSD), 
+        yEGP: usdToEgp(yUSD),
+        mSelected: usdToSelectedCurrency(mUSD),
+        ySelected: usdToSelectedCurrency(yUSD)
+      }; 
     }
 
     function setText(id,val){ const el=document.getElementById(id); if(el) el.textContent=val; }
@@ -4711,21 +4908,35 @@ async function saveProfile({ fullName, file }) {
     const all = { mUSD:p.mUSD + b.mUSD, yUSD:p.yUSD + b.yUSD };
     all.mEGP = usdToEgp(all.mUSD); 
     all.yEGP = usdToEgp(all.yUSD);
+    all.mSelected = usdToSelectedCurrency(all.mUSD);
+    all.ySelected = usdToSelectedCurrency(all.yUSD);
     const lifetimeIncome = lifetimeIncomeTotals();
     
     // Create current values object for comparison
     const currentValues = {
       allMonthlyUSD: all.mUSD,
       allYearlyUSD: all.yUSD,
+      allMonthlySelected: all.mSelected,
+      allYearlySelected: all.ySelected,
       personalMonthly: p.mUSD,
       personalYearly: p.yUSD,
+      personalMonthlySelected: p.mSelected,
+      personalYearlySelected: p.ySelected,
       bizMonthly: b.mUSD,
       bizYearly: b.yUSD,
+      bizMonthlySelected: b.mSelected,
+      bizYearlySelected: b.ySelected,
       fx: state.fx,
+      currencyRate: state.currencyRate,
+      selectedCurrency: state.selectedCurrency,
       incomeMonthly: i.mUSD,
       incomeYearly: i.yUSD,
+      incomeMonthlySelected: i.mSelected,
+      incomeYearlySelected: i.ySelected,
       lifetimeMonthly: lifetimeIncome.monthlyUSD,
-      lifetimeYearly: lifetimeIncome.yearlyUSD
+      lifetimeYearly: lifetimeIncome.yearlyUSD,
+      lifetimeMonthlySelected: lifetimeIncome.monthlySelected,
+      lifetimeYearlySelected: lifetimeIncome.yearlySelected
     };
     
     // Only update if values have actually changed
@@ -4737,22 +4948,22 @@ async function saveProfile({ fullName, file }) {
     
     // Update All KPIs
     setText('kpiAllMonthlyUSD', nfUSD.format(all.mUSD));
-    setText('kpiAllMonthlyEGP', 'EGP ' + nfINT.format(Math.round(all.mEGP)));
+    setText('kpiAllMonthlyEGP', formatCurrency(all.mSelected));
     setText('kpiAllYearlyUSD', nfUSD.format(all.yUSD));
-    setText('kpiAllYearlyEGP', 'EGP ' + nfINT.format(Math.round(all.yEGP)));
-    setText('kpiFxSmall', Number(state.fx||0).toFixed(4));
+    setText('kpiAllYearlyEGP', formatCurrency(all.ySelected));
+    setText('kpiFxSmall', Number(state.currencyRate||0).toFixed(4));
     
     // Update Personal KPIs
     setText('kpiPersonalMonthly', nfUSD.format(p.mUSD));
-    setText('kpiPersonalMonthlyEGP', 'EGP ' + nfINT.format(Math.round(p.mEGP)));
+    setText('kpiPersonalMonthlyEGP', formatCurrency(p.mSelected));
     setText('kpiPersonalYearly', nfUSD.format(p.yUSD));
-    setText('kpiPersonalYearlyEGP', 'EGP ' + nfINT.format(Math.round(p.yEGP)));
+    setText('kpiPersonalYearlyEGP', formatCurrency(p.ySelected));
     
     // Update Business KPIs
     setText('kpiBizMonthly', nfUSD.format(b.mUSD));
-    setText('kpiBizMonthlyEGP', 'EGP ' + nfINT.format(Math.round(b.mEGP)));
+    setText('kpiBizMonthlyEGP', formatCurrency(b.mSelected));
     setText('kpiBizYearly', nfUSD.format(b.yUSD));
-    setText('kpiBizYearlyEGP', 'EGP ' + nfINT.format(Math.round(b.yEGP)));
+    setText('kpiBizYearlyEGP', formatCurrency(b.ySelected));
     
     // Update percentage bars
     const total = all.mUSD; 
@@ -4765,18 +4976,18 @@ async function saveProfile({ fullName, file }) {
     
     // Update Income KPIs with lifetime totals
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
-    setText('kpiIncomeAllMonthlyEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.monthlyEGP)));
+    setText('kpiIncomeAllMonthlyEGP', formatCurrency(lifetimeIncome.monthlySelected));
     setText('kpiIncomeAllYearlyUSD', nfUSD.format(lifetimeIncome.yearlyUSD));
-    setText('kpiIncomeAllYearlyEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.yearlyEGP)));
-    setText('kpiIncomeFxSmall', Number(state.fx||0).toFixed(4));
+    setText('kpiIncomeAllYearlyEGP', formatCurrency(lifetimeIncome.yearlySelected));
+    setText('kpiIncomeFxSmall', Number(state.currencyRate||0).toFixed(4));
     setText('kpiIncomeMonthlyCurrent', nfUSD.format(i.mUSD));
-    setText('kpiIncomeMonthlyCurrentEGP', 'EGP ' + nfINT.format(Math.round(i.mEGP)));
+    setText('kpiIncomeMonthlyCurrentEGP', formatCurrency(i.mSelected));
     setText('kpiIncomeMonthlyAvg', nfUSD.format(lifetimeIncome.monthlyUSD));
-    setText('kpiIncomeMonthlyAvgEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.monthlyEGP)));
+    setText('kpiIncomeMonthlyAvgEGP', formatCurrency(lifetimeIncome.monthlySelected));
     setText('kpiIncomeYearlyCurrent', nfUSD.format(i.yUSD));
-    setText('kpiIncomeYearlyCurrentEGP', 'EGP ' + nfINT.format(Math.round(i.yEGP)));
+    setText('kpiIncomeYearlyCurrentEGP', formatCurrency(i.ySelected));
     setText('kpiIncomeYearlyTarget', nfUSD.format(lifetimeIncome.yearlyUSD * 1.2));
-    setText('kpiIncomeYearlyTargetEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.yearlyEGP * 1.2)));
+    setText('kpiIncomeYearlyTargetEGP', formatCurrency(lifetimeIncome.yearlySelected * 1.2));
     
     // Update lifetime income breakdown
     setText('shareIncomeCompletedVal', nfUSD.format(lifetimeIncome.totalUSD));
@@ -4891,30 +5102,30 @@ async function saveProfile({ fullName, file }) {
         </div>
 
         <div class="analytics-section">
-          <div class="section-title">💰 EGP Breakdown</div>
+          <div class="section-title">💰 ${state.currencySymbol} Breakdown</div>
           <div class="analytics-grid-3">
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.totalEGP))}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.totalSelected)}</div>
               <div class="metric-label">Total Lifetime</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.monthlyEGP))}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.monthlySelected)}</div>
               <div class="metric-label">Per Month</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.dailyEGP))}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.dailySelected)}</div>
               <div class="metric-label">Per Day</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.hourlyEGP))}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.hourlySelected)}</div>
               <div class="metric-label">Per Hour</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${Math.round(lifetimeIncome.minutelyEGP * 100) / 100}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.minutelySelected)}</div>
               <div class="metric-label">Per Minute</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${Math.round(lifetimeIncome.secondlyEGP * 10000) / 10000}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.secondlySelected)}</div>
               <div class="metric-label">Per Second</div>
             </div>
           </div>
@@ -5068,8 +5279,8 @@ async function saveProfile({ fullName, file }) {
               <div class="metric-label">Months Tracked</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.monthlyEGP))}</div>
-              <div class="metric-label">Monthly EGP</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.monthlySelected)}</div>
+              <div class="metric-label">Monthly ${state.currencySymbol}</div>
             </div>
           </div>
         </div>
@@ -5199,18 +5410,18 @@ async function saveProfile({ fullName, file }) {
         </div>
 
         <div class="analytics-section">
-          <div class="section-title">💰 EGP Yearly Breakdown</div>
+          <div class="section-title">💰 ${state.currencySymbol} Yearly Breakdown</div>
           <div class="analytics-grid">
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.yearlyEGP))}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.yearlySelected)}</div>
               <div class="metric-label">Per Year</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.monthlyEGP))}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.monthlySelected)}</div>
               <div class="metric-label">Per Month</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">EGP ${nfINT.format(Math.round(lifetimeIncome.dailyEGP))}</div>
+              <div class="metric-value">${formatCurrency(lifetimeIncome.dailySelected)}</div>
               <div class="metric-label">Per Day</div>
             </div>
             <div class="metric-item">
@@ -5686,13 +5897,15 @@ async function saveProfile({ fullName, file }) {
         mUSD: incomeTotals.monthly - allExpenses.mUSD,
         yUSD: incomeTotals.yearly - allExpenses.yUSD,
         mEGP: usdToEgp(incomeTotals.monthly - allExpenses.mUSD),
-        yEGP: usdToEgp(incomeTotals.yearly - allExpenses.yUSD)
+        yEGP: usdToEgp(incomeTotals.yearly - allExpenses.yUSD),
+        mSelected: usdToSelectedCurrency(incomeTotals.monthly - allExpenses.mUSD),
+        ySelected: usdToSelectedCurrency(incomeTotals.yearly - allExpenses.yUSD)
       };
       
       setText('analyticsCashFlowMonthlyUSD', nfUSD.format(netCashFlow.mUSD));
-      setText('analyticsCashFlowMonthlyEGP', 'EGP ' + nfINT.format(Math.round(netCashFlow.mEGP)));
+      setText('analyticsCashFlowMonthlyEGP', formatCurrency(netCashFlow.mSelected));
       setText('analyticsCashFlowYearlyUSD', nfUSD.format(netCashFlow.yUSD));
-      setText('analyticsCashFlowYearlyEGP', 'EGP ' + nfINT.format(Math.round(netCashFlow.yEGP)));
+      setText('analyticsCashFlowYearlyEGP', formatCurrency(netCashFlow.ySelected));
       
       // Cash flow status
       const cashFlowStatus = netCashFlow.mUSD > 0 ? 'Positive' : netCashFlow.mUSD < 0 ? 'Negative' : 'Neutral';
@@ -7066,6 +7279,7 @@ async function saveProfile({ fullName, file }) {
       
       sortedArr.forEach((row,idx)=>{
         const mUSD=rowMonthlyUSD(row), yUSD=rowYearlyUSD(row), mEGP=usdToEgp(mUSD), yEGP=usdToEgp(yUSD);
+        const mSelected=usdToSelectedCurrency(mUSD), ySelected=usdToSelectedCurrency(yUSD);
         const div=document.createElement('div'); 
         div.className=isBiz?'row row-biz row-draggable row-drop-zone':'row row-draggable row-drop-zone';
         div.setAttribute('data-row-index', idx);
@@ -7294,20 +7508,20 @@ async function saveProfile({ fullName, file }) {
         
         const mEGPd=document.createElement('div'); 
         mEGPd.className='financial-input-wrapper'; 
-        mEGPd.innerHTML='<span class="financial-symbol">EGP</span><span class="financial-value">' + Math.round(mEGP).toLocaleString() + '</span>';
+        mEGPd.innerHTML='<span class="financial-symbol">' + state.currencySymbol + '</span><span class="financial-value">' + Math.round(mSelected).toLocaleString() + '</span>';
         mEGPd.setAttribute('data-field', 'monthlyEGP');
         mEGPd.setAttribute('data-row-index', idx);
         mEGPd.setAttribute('data-type', 'egp');
-        mEGPd.setAttribute('data-original', Math.round(mEGP));
+        mEGPd.setAttribute('data-original', Math.round(mSelected));
         mEGPd.addEventListener('click', function() { makeEditable(this, row, isBiz, div); });
         
         const yEGPd=document.createElement('div'); 
         yEGPd.className='financial-input-wrapper'; 
-        yEGPd.innerHTML='<span class="financial-symbol">EGP</span><span class="financial-value">' + Math.round(yEGP).toLocaleString() + '</span>';
+        yEGPd.innerHTML='<span class="financial-symbol">' + state.currencySymbol + '</span><span class="financial-value">' + Math.round(ySelected).toLocaleString() + '</span>';
         yEGPd.setAttribute('data-field', 'yearlyEGP');
         yEGPd.setAttribute('data-row-index', idx);
         yEGPd.setAttribute('data-type', 'egp');
-        yEGPd.setAttribute('data-original', Math.round(yEGP));
+        yEGPd.setAttribute('data-original', Math.round(ySelected));
         yEGPd.addEventListener('click', function() { makeEditable(this, row, isBiz, div); });
         div.append(mUSDd,yUSDd,mEGPd,yEGPd);
         // delete
@@ -7382,8 +7596,8 @@ async function saveProfile({ fullName, file }) {
       // computed sum cells
       sumHTML += '<div class="font-semibold">$'+nfINT.format(t.mUSD)+'</div>';
       sumHTML += '<div class="font-semibold">$'+nfINT.format(t.yUSD)+'</div>';
-      sumHTML += '<div class="font-semibold">EGP '+nfINT.format(Math.round(t.mEGP))+'</div>';
-      sumHTML += '<div class="font-semibold">EGP '+nfINT.format(Math.round(t.yEGP))+'</div>';
+      sumHTML += '<div class="font-semibold">'+state.currencySymbol+' '+nfINT.format(Math.round(t.mSelected))+'</div>';
+      sumHTML += '<div class="font-semibold">'+state.currencySymbol+' '+nfINT.format(Math.round(t.ySelected))+'</div>';
       // delete column spacer
       sumHTML += '<div></div>';
       sumEl.innerHTML=sumHTML;
@@ -7407,6 +7621,8 @@ async function saveProfile({ fullName, file }) {
       const yUSD = rowIncomeYearlyUSD(row);
       const mEGP = usdToEgp(mUSD);
       const yEGP = usdToEgp(yUSD);
+      const mSelected = usdToSelectedCurrency(mUSD);
+      const ySelected = usdToSelectedCurrency(yUSD);
       
       const div = document.createElement('div');
       div.className = 'row row-income row-draggable row-drop-zone';
@@ -7608,7 +7824,9 @@ async function saveProfile({ fullName, file }) {
       // Paid EGP (calculated)
       const paidEgpDiv = document.createElement('div');
       paidEgpDiv.className = 'paid-egp-cell editable-value';
-      paidEgpDiv.textContent = 'EGP ' + nfINT.format(Math.round((row.paidEgp || (row.paidUsd || 0) * state.fx)));
+      const paidEgpValue = row.paidEgp || (row.paidUsd || 0) * state.fx;
+      const paidSelectedValue = usdToSelectedCurrency(row.paidUsd || 0);
+      paidEgpDiv.textContent = state.currencySymbol + ' ' + nfINT.format(Math.round(paidSelectedValue));
       paidEgpDiv.setAttribute('data-field', 'paidEgp');
       paidEgpDiv.setAttribute('data-row-id', row.id || '');
       paidEgpDiv.setAttribute('data-year', currentYear);
@@ -7911,6 +8129,7 @@ async function saveProfile({ fullName, file }) {
       const totalAllPayment = arr.reduce((sum, r) => sum + (Number(r.allPayment) || 0), 0);
       const totalPaidUsd = arr.reduce((sum, r) => sum + (Number(r.paidUsd) || 0), 0);
       const totalPaidEgp = totalPaidUsd * state.fx;
+      const totalPaidSelected = usdToSelectedCurrency(totalPaidUsd);
       
       let sumHTML = '';
       sumHTML += '<div></div>'; // drag handle
@@ -7920,7 +8139,7 @@ async function saveProfile({ fullName, file }) {
       sumHTML += '<div></div>'; // date
       sumHTML += `<div class="font-semibold">$${nfINT.format(totalAllPayment)}</div>`; // all payment
       sumHTML += `<div class="font-semibold">$${nfINT.format(totalPaidUsd)}</div>`; // paid usd
-      sumHTML += `<div class="font-semibold">EGP ${nfINT.format(Math.round(totalPaidEgp))}</div>`; // paid egp
+      sumHTML += `<div class="font-semibold">${state.currencySymbol} ${nfINT.format(Math.round(totalPaidSelected))}</div>`; // paid selected currency
       sumHTML += '<div></div>'; // method
       sumHTML += '<div></div>'; // delete
       sumEl.innerHTML = sumHTML;
@@ -7949,30 +8168,30 @@ async function saveProfile({ fullName, file }) {
     
     // Update current year income KPIs
     setText('kpiIncomeMonthlyCurrent', nfUSD.format(i.mUSD));
-    setText('kpiIncomeMonthlyCurrentEGP', 'EGP ' + nfINT.format(Math.round(i.mEGP)));
+    setText('kpiIncomeMonthlyCurrentEGP', formatCurrency(i.mSelected));
     setText('kpiIncomeYearlyCurrent', nfUSD.format(i.yUSD));
-    setText('kpiIncomeYearlyCurrentEGP', 'EGP ' + nfINT.format(Math.round(i.yEGP)));
+    setText('kpiIncomeYearlyCurrentEGP', formatCurrency(i.ySelected));
     
     // Update lifetime income KPIs
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
-    setText('kpiIncomeAllMonthlyEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.monthlyEGP)));
+    setText('kpiIncomeAllMonthlyEGP', formatCurrency(lifetimeIncome.monthlySelected));
     setText('kpiIncomeAllYearlyUSD', nfUSD.format(lifetimeIncome.yearlyUSD));
-    setText('kpiIncomeAllYearlyEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.yearlyEGP)));
+    setText('kpiIncomeAllYearlyEGP', formatCurrency(lifetimeIncome.yearlySelected));
     
     // Update average calculations
     setText('kpiIncomeMonthlyAvg', nfUSD.format(lifetimeIncome.monthlyUSD));
-    setText('kpiIncomeMonthlyAvgEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.monthlyEGP)));
+    setText('kpiIncomeMonthlyAvgEGP', formatCurrency(lifetimeIncome.monthlySelected));
     
     // Update yearly target (20% above lifetime)
     setText('kpiIncomeYearlyTarget', nfUSD.format(lifetimeIncome.yearlyUSD * 1.2));
-    setText('kpiIncomeYearlyTargetEGP', 'EGP ' + nfINT.format(Math.round(lifetimeIncome.yearlyEGP * 1.2)));
+    setText('kpiIncomeYearlyTargetEGP', formatCurrency(lifetimeIncome.yearlySelected * 1.2));
     
     // Update lifetime income breakdown
     setText('shareIncomeCompletedVal', nfUSD.format(lifetimeIncome.totalUSD));
     setText('shareIncomePendingVal', lifetimeIncome.totalEntries.toString());
     
     // Update FX rate display
-    setText('kpiIncomeFxSmall', Number(state.fx||0).toFixed(4));
+    setText('kpiIncomeFxSmall', Number(state.currencyRate||0).toFixed(4));
   }
 
   function renderAll(){
@@ -8037,7 +8256,7 @@ async function saveProfile({ fullName, file }) {
 
     // Settings modal
     $('#btnSettings').addEventListener('click', ()=>{ 
-      $('#inputFx').value = state.fx; 
+      $('#inputFx').value = state.currencyRate; 
       $('#inputIncludeAnnual').value = state.includeAnnualInMonthly ? 'true' : 'false';
       $('#inputDeleteConfirm').value = '';
       $('#btnDeleteAll').disabled = true;
@@ -8071,7 +8290,10 @@ async function saveProfile({ fullName, file }) {
     
     $('#btnSaveSettings').addEventListener('click', (e)=>{ 
       e.preventDefault(); 
-      state.fx = Number($('#inputFx').value||state.fx); 
+      // Update the selected currency rate
+      state.currencyRate = Number($('#inputFx').value||state.currencyRate);
+      // Update the base EGP rate for backward compatibility
+      state.fx = state.currencyRate / (currencyRates[state.selectedCurrency] || 1) * 48.1843;
       state.includeAnnualInMonthly = $('#inputIncludeAnnual').value === 'true';
       updateAutosaveStatus();
       save(); 
@@ -8084,8 +8306,8 @@ async function saveProfile({ fullName, file }) {
     function updateRowCalculations(rowElement, row, isBiz) {
       const mUSD = rowMonthlyUSD(row);
       const yUSD = rowYearlyUSD(row);
-      const mEGP = mUSD * state.fx;
-      const yEGP = yUSD * state.fx;
+      const mSelected = usdToSelectedCurrency(mUSD);
+      const ySelected = usdToSelectedCurrency(yUSD);
       
       // Update the calculated columns in this row using new wrapper structure
       const financialWrappers = rowElement.querySelectorAll('.financial-input-wrapper');
@@ -8104,18 +8326,18 @@ async function saveProfile({ fullName, file }) {
           financialWrappers[1].setAttribute('data-original', Math.round(yUSD));
         }
         
-        // Monthly EGP - update value span
-        const mEGPValue = financialWrappers[2].querySelector('.financial-value');
-        if (mEGPValue) {
-          mEGPValue.textContent = Math.round(mEGP).toLocaleString();
-          financialWrappers[2].setAttribute('data-original', Math.round(mEGP));
+        // Monthly Selected Currency - update value span
+        const mSelectedValue = financialWrappers[2].querySelector('.financial-value');
+        if (mSelectedValue) {
+          mSelectedValue.textContent = Math.round(mSelected).toLocaleString();
+          financialWrappers[2].setAttribute('data-original', Math.round(mSelected));
         }
         
-        // Yearly EGP - update value span
-        const yEGPValue = financialWrappers[3].querySelector('.financial-value');
-        if (yEGPValue) {
-          yEGPValue.textContent = Math.round(yEGP).toLocaleString();
-          financialWrappers[3].setAttribute('data-original', Math.round(yEGP));
+        // Yearly Selected Currency - update value span
+        const ySelectedValue = financialWrappers[3].querySelector('.financial-value');
+        if (ySelectedValue) {
+          ySelectedValue.textContent = Math.round(ySelected).toLocaleString();
+          financialWrappers[3].setAttribute('data-original', Math.round(ySelected));
         }
       }
       
@@ -8223,20 +8445,20 @@ async function saveProfile({ fullName, file }) {
           newBaseCost = yearlyUSD;
         }
       } else if (field === 'monthlyEGP') {
-        // Store the exact EGP value the user typed
+        // Store the exact selected currency value the user typed
         row.monthlyEGP = Math.max(0, newValue);
-        const monthlyEGP = row.monthlyEGP;
-        const monthlyUSD = monthlyEGP / state.fx;
+        const monthlySelected = row.monthlyEGP;
+        const monthlyUSD = monthlySelected / state.currencyRate;
         if (row.billing === 'Monthly') {
           newBaseCost = monthlyUSD;
         } else if (row.billing === 'Annually') {
           newBaseCost = monthlyUSD * 12;
         }
       } else if (field === 'yearlyEGP') {
-        // Store the exact EGP value the user typed
+        // Store the exact selected currency value the user typed
         row.yearlyEGP = Math.max(0, newValue);
-        const yearlyEGP = row.yearlyEGP;
-        const yearlyUSD = yearlyEGP / state.fx;
+        const yearlySelected = row.yearlyEGP;
+        const yearlyUSD = yearlySelected / state.currencyRate;
         if (row.billing === 'Monthly') {
           newBaseCost = yearlyUSD / 12;
         } else if (row.billing === 'Annually') {
@@ -8266,10 +8488,10 @@ async function saveProfile({ fullName, file }) {
         row.yearlyUSD = row.billing === 'Yearly' ? row.cost : row.cost * 12;
       }
       if (field !== 'monthlyEGP') {
-        row.monthlyEGP = row.monthlyUSD * state.fx;
+        row.monthlyEGP = usdToSelectedCurrency(row.monthlyUSD);
       }
       if (field !== 'yearlyEGP') {
-        row.yearlyEGP = row.yearlyUSD * state.fx;
+        row.yearlyEGP = usdToSelectedCurrency(row.yearlyUSD);
       }
       
       // Update ALL calculated values in real-time as you type
@@ -8295,20 +8517,20 @@ async function saveProfile({ fullName, file }) {
           setTimeout(() => calculatedDivs[1].style.backgroundColor = '', 300);
         }
         
-        // Monthly EGP - always update with current value
-        const monthlyEGPValue = field === 'monthlyEGP' ? newValue : row.monthlyEGP;
-        calculatedDivs[2].textContent = 'EGP ' + Math.round(monthlyEGPValue).toLocaleString();
-        calculatedDivs[2].setAttribute('data-original', Math.round(monthlyEGPValue));
+        // Monthly Selected Currency - always update with current value
+        const monthlySelectedValue = field === 'monthlyEGP' ? newValue : row.monthlyEGP;
+        calculatedDivs[2].textContent = state.currencySymbol + ' ' + Math.round(monthlySelectedValue).toLocaleString();
+        calculatedDivs[2].setAttribute('data-original', Math.round(monthlySelectedValue));
         // Visual feedback for real-time updates
         if (field !== 'monthlyEGP') {
           calculatedDivs[2].style.backgroundColor = '#e8f5e8';
           setTimeout(() => calculatedDivs[2].style.backgroundColor = '', 300);
         }
         
-        // Yearly EGP - always update with current value
-        const yearlyEGPValue = field === 'yearlyEGP' ? newValue : row.yearlyEGP;
-        calculatedDivs[3].textContent = 'EGP ' + Math.round(yearlyEGPValue).toLocaleString();
-        calculatedDivs[3].setAttribute('data-original', Math.round(yearlyEGPValue));
+        // Yearly Selected Currency - always update with current value
+        const yearlySelectedValue = field === 'yearlyEGP' ? newValue : row.yearlyEGP;
+        calculatedDivs[3].textContent = state.currencySymbol + ' ' + Math.round(yearlySelectedValue).toLocaleString();
+        calculatedDivs[3].setAttribute('data-original', Math.round(yearlySelectedValue));
         // Visual feedback for real-time updates
         if (field !== 'yearlyEGP') {
           calculatedDivs[3].style.backgroundColor = '#e8f5e8';
@@ -8346,20 +8568,20 @@ async function saveProfile({ fullName, file }) {
           newBaseCost = yearlyUSD;
         }
       } else if (field === 'monthlyEGP') {
-        // Store the exact EGP value the user typed
+        // Store the exact selected currency value the user typed
         row.monthlyEGP = Math.max(0, newValue);
-        const monthlyEGP = row.monthlyEGP;
-        const monthlyUSD = monthlyEGP / state.fx;
+        const monthlySelected = row.monthlyEGP;
+        const monthlyUSD = monthlySelected / state.currencyRate;
         if (row.billing === 'Monthly') {
           newBaseCost = monthlyUSD;
         } else if (row.billing === 'Annually') {
           newBaseCost = monthlyUSD * 12;
         }
       } else if (field === 'yearlyEGP') {
-        // Store the exact EGP value the user typed
+        // Store the exact selected currency value the user typed
         row.yearlyEGP = Math.max(0, newValue);
-        const yearlyEGP = row.yearlyEGP;
-        const yearlyUSD = yearlyEGP / state.fx;
+        const yearlySelected = row.yearlyEGP;
+        const yearlyUSD = yearlySelected / state.currencyRate;
         if (row.billing === 'Monthly') {
           newBaseCost = yearlyUSD / 12;
         } else if (row.billing === 'Annually') {
@@ -8384,10 +8606,10 @@ async function saveProfile({ fullName, file }) {
         row.yearlyUSD = row.billing === 'Yearly' ? row.cost : row.cost * 12;
       }
       if (field !== 'monthlyEGP') {
-        row.monthlyEGP = row.monthlyUSD * state.fx;
+        row.monthlyEGP = usdToSelectedCurrency(row.monthlyUSD);
       }
       if (field !== 'yearlyEGP') {
-        row.yearlyEGP = row.yearlyUSD * state.fx;
+        row.yearlyEGP = usdToSelectedCurrency(row.yearlyUSD);
       }
       
       // Save the updated state with instant cloud sync for financial inputs
@@ -8680,10 +8902,8 @@ async function saveProfile({ fullName, file }) {
     // Refresh FX rate button
     $('#btnRefreshFx').addEventListener('click', () => refreshCurrencyRate(true));
     
-    // Auto-refresh currency every 5 minutes (reduced frequency to prevent KPI flickering)
-    setInterval(() => {
-      refreshCurrencyRate(false);
-    }, 300000); // 5 minutes = 300,000ms
+    // Auto-refresh currency removed to prevent KPI flickering
+    // Users can manually refresh currency rates using the refresh button
     
     // Enhanced Export/Import functionality - moved inside DOMContentLoaded
     setTimeout(() => {
@@ -10281,6 +10501,28 @@ async function saveProfile({ fullName, file }) {
     }
     if (typeof updateInputsLockState === 'function') {
     updateInputsLockState();
+    }
+    
+    // Initialize currency system
+    try {
+      const savedCurrency = localStorage.getItem('selectedCurrency');
+      if (savedCurrency && currencyRates && currencyRates[savedCurrency]) {
+        state.selectedCurrency = savedCurrency;
+        state.currencySymbol = currencySymbols[savedCurrency] || savedCurrency;
+        state.currencyRate = currencyRates[savedCurrency];
+        updateCurrency(savedCurrency);
+      } else {
+        // Initialize with default EGP
+        state.selectedCurrency = 'EGP';
+        state.currencySymbol = 'EGP';
+        state.currencyRate = 48.1843;
+      }
+    } catch (error) {
+      console.warn('Currency initialization failed:', error);
+      // Fallback to EGP
+      state.selectedCurrency = 'EGP';
+      state.currencySymbol = 'EGP';
+      state.currencyRate = 48.1843;
     }
     
     // Check database schema on load
