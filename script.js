@@ -4530,7 +4530,7 @@ async function saveProfile({ fullName, file }) {
     $('#btnRefresh').addEventListener('click', refreshData);
 
     // Numbers
-    const nfUSD = new Intl.NumberFormat('en-US',{style:'currency', currency:'USD', maximumFractionDigits:2});
+    const nfUSD = new Intl.NumberFormat('en-US',{style:'currency', currency:'USD', maximumFractionDigits:0});
     const nfINT = new Intl.NumberFormat('en-US');
     const usdToEgp = (usd)=> usd * Number(state.fx || 0);
     const rowMonthlyUSD = (r)=> {
@@ -6138,8 +6138,6 @@ async function saveProfile({ fullName, file }) {
       const monthlySpending = monthlyItems.reduce((sum, r) => sum + Number(r.cost || 0), 0);
       const annualSpending = annualItems.reduce((sum, r) => sum + Number(r.cost || 0) / 12, 0);
 
-      // Get personal insights once
-      const personalInsights = generatePersonalInsights();
 
       container.innerHTML = `
         <div class="analytics-grid-4">
@@ -6276,27 +6274,6 @@ async function saveProfile({ fullName, file }) {
           </div>
         </div>
 
-        <div class="analytics-section">
-          <div class="section-title">Insights</div>
-          <div class="insight-card">
-            <div class="insight-text">
-              Personal Budget: <strong>${nfUSD.format(personal.mUSD)}</strong>/month | 
-              Cost Efficiency: <strong>${Math.round((highCostItems / activeItems.length) * 100) || 0}%</strong> premium services | 
-              Daily Impact: <strong>${nfUSD.format(dailyPersonal)}</strong>/day
-              ${highestExpense ? ` | Biggest Expense: <strong>${highestExpense.name || 'Unnamed'}</strong> (${nfUSD.format(highestExpense.billing === 'Monthly' ? Number(highestExpense.cost || 0) : Number(highestExpense.cost || 0) / 12)})` : ''}
-              ${annualSavings > 0 ? ` | Annual Savings Potential: <strong>${nfUSD.format(annualSavings)}</strong>` : ''}
-            </div>
-          </div>
-        </div>
-
-        <div class="analytics-section">
-          <div class="section-title">${personalInsights.title}</div>
-          <div class="insight-card">
-            <div class="insight-text">
-              ${personalInsights.insights.map(insight => `<div class="insight-line">${insight}</div>`).join('')}
-            </div>
-          </div>
-        </div>
       `;
     }
 
@@ -6366,8 +6343,6 @@ async function saveProfile({ fullName, file }) {
         return sum + Number(item.cost || 0);
       }, 0);
 
-      // Get business insights once
-      const bizInsights = generateBizInsights();
 
       container.innerHTML = `
         <div class="analytics-grid-4">
@@ -6569,14 +6544,6 @@ async function saveProfile({ fullName, file }) {
           </div>
         </div>
 
-        <div class="analytics-section">
-          <div class="section-title">${bizInsights.title}</div>
-          <div class="insight-card">
-            <div class="insight-text">
-              ${bizInsights.insights.map(insight => `<div class="insight-line">${insight}</div>`).join('')}
-            </div>
-          </div>
-        </div>
       `;
     }
 
@@ -8041,8 +8008,8 @@ async function saveProfile({ fullName, file }) {
   }
 
   function updateGridTemplate() {
-    // For Personal table (no Next column)
-    const personalTemplate = `24px 32px 1.5fr .8fr .8fr .8fr ${columnOrder.map(() => '1fr').join(' ')} 32px`;
+    // For Personal table (no Next column) - name column size matches business table
+    const personalTemplate = `24px 32px 1.4fr .8fr .8fr .8fr ${columnOrder.map(() => '1fr').join(' ')} 32px`;
     document.querySelectorAll('.row:not(.row-biz):not(.row-income)').forEach(row => {
       row.style.gridTemplateColumns = personalTemplate;
     });

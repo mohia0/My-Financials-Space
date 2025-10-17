@@ -2255,10 +2255,9 @@ input[type="range"]::-moz-range-thumb:hover {
   grid-template-columns:20px 28px 1fr 1.2fr 100px 100px 100px 120px 1fr 28px; 
   gap:0.6rem; 
   align-items:center; 
-  padding:.5rem .75rem .5rem .75rem; 
+  padding:.5rem .4rem; 
   border-bottom:1px solid var(--stroke); 
   transition:background-color .2s ease;
-  min-height: 44px;
   position: relative;
   z-index: 1;
   background: var(--card);
@@ -3356,8 +3355,7 @@ input[type="range"]::-moz-range-thumb:hover {
   .row-biz{ gap:.2rem; padding:.3rem; }
   .row-income{ 
     gap:.5rem; 
-    padding:.4rem .5rem .4rem .5rem; 
-    min-height: 40px;
+    padding:.4rem .4rem; 
     grid-template-columns: 20px 30px 200px 150px 120px 120px 120px 140px 180px 30px;
     white-space: nowrap;
   }
@@ -3379,8 +3377,7 @@ input[type="range"]::-moz-range-thumb:hover {
 @media (max-width: 480px) {
   .row-income{ 
     gap:.4rem; 
-    padding:.35rem .25rem .35rem .25rem; 
-    min-height: 36px;
+    padding:.35rem .25rem; 
     grid-template-columns: 18px 28px 180px 130px 110px 110px 110px 130px 160px 28px;
     font-size: 0.65rem;
     white-space: nowrap;
@@ -4037,8 +4034,9 @@ header img:hover {
 }
 
 .analytics-content {
-  max-height: 350px;
-  overflow: hidden;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .analytics-section {
@@ -4052,22 +4050,126 @@ header img:hover {
 .analytics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 0.375rem;
+  margin-bottom: 0.375rem;
 }
 
 .analytics-grid-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 0.375rem;
+  margin-bottom: 0.375rem;
 }
 
 .analytics-grid-4 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  margin-bottom: 0.375rem;
+}
+
+/* Compact spacing and organization for analytics content */
+.analytics-content {
+  padding: 0.125rem;
+}
+
+.analytics-section {
   margin-bottom: 0.5rem;
+  padding: 0.375rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0.375rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.section-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 0.375rem;
+}
+
+.metric-item {
+  text-align: center;
+  padding: 0.125rem;
+}
+
+.metric-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.1;
+}
+
+.metric-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+/* Compact breakdown lists styling */
+.breakdown-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.125rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.65rem;
+}
+
+.breakdown-item:last-child {
+  border-bottom: none;
+}
+
+.breakdown-name {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.breakdown-amount {
+  color: var(--fg);
+  font-weight: 600;
+  margin-right: 0.375rem;
+}
+
+.breakdown-percentage {
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+/* Insight cards styling */
+.insight-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.insight-text {
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+.insight-line {
+  margin-bottom: 0.25rem;
+}
+
+.insight-line:last-child {
+  margin-bottom: 0;
 }
 
 
@@ -4359,9 +4461,191 @@ header img:hover {
 
 
 @media (max-width:640px){
-  #kpis{ grid-template-columns:1fr !important; gap:12px; }
-  .kpi .value{ font-size:1.35rem; }
-  .btn{ padding:.45rem .7rem; }
+  /* Expenses and Income KPI cards - single column on mobile */
+  #kpis, #incomeKpis{ 
+    grid-template-columns:1fr !important; 
+    gap:12px; 
+  }
+  
+  /* KPI card content adjustments for mobile */
+  .kpi .value{ 
+    font-size:1.35rem; 
+  }
+  
+  /* Better spacing for mobile KPI cards */
+  .kpi{ 
+    padding:0.875rem; 
+    min-height: auto;
+  }
+  
+  /* Adjust grid layouts within KPI cards for mobile */
+  .kpi .grid.grid-cols-2{ 
+    gap:0.75rem; 
+  }
+  
+  .kpi .grid.grid-cols-2.gap-6{ 
+    gap:0.75rem; 
+  }
+  
+  /* Better text sizing for mobile */
+  .kpi h3{ 
+    font-size:0.65rem; 
+  }
+  
+  .kpi .sub{ 
+    font-size:0.7rem; 
+  }
+  
+  /* Mobile-specific adjustments for KPI content */
+  .kpi .text-\[11px\]{ 
+    font-size:0.65rem; 
+  }
+  
+  /* Button adjustments */
+  .btn{ 
+    padding:.45rem .7rem; 
+  }
+  
+  /* Compact analytics content mobile responsiveness */
+  .analytics-content {
+    max-height: 500px;
+    padding: 0.1rem;
+  }
+  
+  .analytics-section {
+    margin-bottom: 0.375rem;
+    padding: 0.25rem;
+  }
+  
+  .analytics-grid-4 {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .analytics-grid-3 {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .metric-grid {
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 0.25rem;
+  }
+}
+
+/* Medium mobile breakpoint for tablets and larger phones */
+@media (max-width:768px) and (min-width:641px){
+  /* Two column layout for medium screens */
+  #kpis, #incomeKpis{ 
+    grid-template-columns:repeat(2, 1fr) !important; 
+    gap:14px; 
+  }
+  
+  /* Analytics page - 2 columns on medium screens */
+  #analyticsKpis{ 
+    grid-template-columns:repeat(2, 1fr) !important; 
+  }
+  
+  /* Slightly larger text for medium screens */
+  .kpi .value{ 
+    font-size:1.4rem; 
+  }
+  
+  .kpi{ 
+    padding:0.9rem; 
+  }
+}
+
+/* Additional mobile responsiveness for very small screens */
+@media (max-width:480px){
+  /* Even more compact KPI cards for very small screens */
+  .kpi{ 
+    padding:0.75rem; 
+  }
+  
+  .kpi .value{ 
+    font-size:1.25rem; 
+  }
+  
+  /* Tighter spacing for very small screens */
+  .kpi .grid.grid-cols-2{ 
+    gap:0.5rem; 
+  }
+  
+  .kpi .grid.grid-cols-2.gap-6{ 
+    gap:0.5rem; 
+  }
+  
+  /* Smaller text for very small screens */
+  .kpi h3{ 
+    font-size:0.6rem; 
+  }
+  
+  .kpi .sub{ 
+    font-size:0.65rem; 
+  }
+  
+  .kpi .text-\[11px\]{ 
+    font-size:0.6rem; 
+  }
+  
+  /* Ensure no horizontal overflow */
+  .kpi{ 
+    overflow: hidden;
+    word-wrap: break-word;
+  }
+  
+  /* Better mobile layout for KPI sections */
+  #kpis, #incomeKpis, #analyticsKpis{ 
+    gap:10px; 
+    padding:0 0.25rem;
+  }
+  
+  /* Analytics page KPI cards - single column on very small screens */
+  #analyticsKpis{ 
+    grid-template-columns:1fr !important; 
+  }
+  
+  /* Ultra-compact analytics content for very small screens */
+  .analytics-content {
+    max-height: 400px;
+    padding: 0.05rem;
+  }
+  
+  .analytics-section {
+    margin-bottom: 0.25rem;
+    padding: 0.2rem;
+  }
+  
+  .analytics-grid-4,
+  .analytics-grid-3,
+  .analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 0.375rem;
+  }
+  
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.2rem;
+  }
+  
+  .section-title {
+    font-size: 0.65rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .metric-value {
+    font-size: 0.8rem;
+  }
+  
+  .metric-label {
+    font-size: 0.55rem;
+  }
 }
 
 /* Authentication Modal Styles */
