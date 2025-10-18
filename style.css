@@ -1590,6 +1590,14 @@ input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
   filter: invert(0.3);
 }
 
+/* Date column alignment for income table */
+.table-container .row-income > div:nth-child(5) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
 /* Minimal Date Input for Income Rows */
 .date-input-minimal {
   font-size: 0.65rem;
@@ -3041,19 +3049,25 @@ input[type="range"]::-moz-range-thumb:hover {
   /* Align specific header columns with their content - 320px */
   .table-container .row-head.row-income > div:nth-child(3) { text-align: left; } /* Project Name */
   .table-container .row-head.row-income > div:nth-child(4) { text-align: left; } /* Tags */
-  .table-container .row-head.row-income > div:nth-child(5) { text-align: left; } /* Date */
+  .table-container .row-head.row-income > div:nth-child(5) { text-align: center; } /* Date */
   .table-container .row-head.row-income > div:nth-child(6) { text-align: center; } /* All Payment */
   .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
   .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
   .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
   
   /* Ensure proper alignment on 320px screens for tags and date */
-  .table-container .row-income > div:nth-child(4),
-  .table-container .row-income > div:nth-child(5) {
+  .table-container .row-income > div:nth-child(4) {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     text-align: left;
+  }
+  
+  .table-container .row-income > div:nth-child(5) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
   }
   
   /* 320px date input styling - positioned directly under DATE title */
@@ -3159,19 +3173,25 @@ input[type="range"]::-moz-range-thumb:hover {
   /* Align specific header columns with their content - 360px */
   .table-container .row-head.row-income > div:nth-child(3) { text-align: left; } /* Project Name */
   .table-container .row-head.row-income > div:nth-child(4) { text-align: left; } /* Tags */
-  .table-container .row-head.row-income > div:nth-child(5) { text-align: left; } /* Date */
+  .table-container .row-head.row-income > div:nth-child(5) { text-align: center; } /* Date */
   .table-container .row-head.row-income > div:nth-child(6) { text-align: center; } /* All Payment */
   .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
   .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
   .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
   
   /* Ensure proper alignment on 360px screens for tags and date */
-  .table-container .row-income > div:nth-child(4),
-  .table-container .row-income > div:nth-child(5) {
+  .table-container .row-income > div:nth-child(4) {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     text-align: left;
+  }
+  
+  .table-container .row-income > div:nth-child(5) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
   }
   
   /* 360px date input styling - positioned directly under DATE title */
