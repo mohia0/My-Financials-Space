@@ -5656,9 +5656,10 @@ header img:hover {
   margin-bottom: 1rem;
   padding: 1.5rem 1.5rem 1rem 1.5rem;
   border-bottom: 1px solid var(--stroke);
-  background: var(--bg);
+  background: transparent; /* Remove background to prevent sticky appearance */
   border-radius: 1rem 1rem 0 0;
   margin: -1.5rem -1.5rem 1rem -1.5rem;
+  position: static; /* Ensure header is not sticky */
 }
 
 .settings-modal-content header h3 {
@@ -5845,7 +5846,7 @@ header img:hover {
   }
   
   .settings-modal-content {
-    padding: 1rem !important;
+    padding: 0.75rem !important;
     max-height: 90vh;
     overflow-y: auto;
   }
@@ -5854,73 +5855,76 @@ header img:hover {
     flex-direction: row !important;
     align-items: flex-start !important;
     justify-content: space-between !important;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    position: relative;
-    padding: 1rem 1rem 0.75rem 1rem;
-    margin: -1rem -1rem 1rem -1rem;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    position: static !important; /* Remove sticky positioning */
+    padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+    margin: -0.75rem -0.75rem 0.75rem -0.75rem;
+    background: transparent !important; /* Remove background to make it non-sticky */
+    border-bottom: 1px solid var(--stroke);
   }
   
   .settings-modal-content header h3 {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     margin: 0;
   }
   
   .settings-modal-content header p {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     margin: 0;
   }
   
   .settings-modal-content header button {
     position: static !important;
-    padding: 0.5rem;
-    min-width: 44px;
-    min-height: 44px;
-    border-radius: 8px;
+    padding: 0.4rem;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 6px;
     background: var(--glass);
     border: 1px solid var(--stroke);
     flex-shrink: 0;
+    font-size: 0.75rem;
   }
   
   
   /* Single column layout on mobile */
   .settings-modal-content .grid {
     grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    gap: 0.75rem !important;
   }
   
-  /* Mobile-friendly input styling */
+  /* Mobile-friendly input styling - more compact */
   .settings-modal-content .settings-input-wrapper {
-    min-height: 44px;
+    min-height: 40px;
   }
   
   .settings-modal-content .settings-input-wrapper input {
     font-size: 16px; /* Prevents zoom on iOS */
-    padding: 0.75rem 0.5rem 0.75rem 1.5rem;
+    padding: 0.6rem 0.4rem 0.6rem 1.25rem;
   }
   
   .settings-modal-content .settings-symbol {
-    left: 0.5rem;
-    font-size: 0.875rem;
+    left: 0.4rem;
+    font-size: 0.8rem;
   }
   
-  /* Mobile-friendly buttons */
+  /* Mobile-friendly buttons - more compact */
   .settings-modal-content button {
-    min-height: 44px;
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
+    min-height: 40px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
   }
   
   .settings-modal-content #btnRefreshFx {
-    padding: 0.5rem !important;
-    min-width: 44px;
-    min-height: 44px;
+    padding: 0.4rem !important;
+    min-width: 40px;
+    min-height: 40px;
   }
   
   /* Data management buttons */
   .settings-modal-content .flex.gap-2 {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
   
   .settings-modal-content .flex.gap-2 button {
@@ -5928,34 +5932,45 @@ header img:hover {
     justify-content: center;
   }
   
-  /* Danger zone styling */
+  /* Danger zone styling - more compact */
   .settings-modal-content .space-y-2 {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.6rem;
   }
   
   .settings-modal-content .space-y-2 input {
     font-size: 16px; /* Prevents zoom on iOS */
-    min-height: 44px;
+    min-height: 40px;
   }
   
   .settings-modal-content #btnDeleteAll {
     width: 100%;
-    min-height: 44px;
-    padding: 0.75rem 1rem;
-    font-size: 0.8rem;
+    min-height: 40px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.75rem;
   }
   
-  /* Section spacing */
+  /* Section spacing - more compact */
   .settings-modal-content .border-t {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
   }
   
   .settings-modal-content h4 {
-    font-size: 1rem;
-    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  /* More compact labels and text */
+  .settings-modal-content label {
+    font-size: 0.7rem !important;
+    margin-bottom: 0.4rem !important;
+  }
+  
+  .settings-modal-content p {
+    font-size: 0.7rem !important;
+    margin: 0.2rem 0 !important;
   }
   
 }
@@ -5976,22 +5991,31 @@ header img:hover {
   }
   
   .settings-modal-content {
-    padding: 0.75rem !important;
+    padding: 0.5rem !important;
     height: 100vh;
     border-radius: 0;
   }
   
   .settings-modal-content header {
-    padding-bottom: 0.5rem;
+    padding: 0.5rem 0.5rem 0.4rem 0.5rem;
+    margin: -0.5rem -0.5rem 0.5rem -0.5rem;
     border-bottom: 1px solid var(--stroke);
-    margin-bottom: 1rem;
+    position: static !important; /* Ensure header is not sticky */
+    background: transparent !important;
   }
   
   .settings-modal-content header h3 {
-    font-size: 1.125rem;
+    font-size: 1rem;
   }
   
   .settings-modal-content header p {
+    font-size: 0.65rem;
+  }
+  
+  .settings-modal-content header button {
+    padding: 0.3rem;
+    min-width: 36px;
+    min-height: 36px;
     font-size: 0.7rem;
   }
   
