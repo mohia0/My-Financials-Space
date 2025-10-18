@@ -850,15 +850,8 @@
           </div>
         </div>
         <div>
-          <label class="text-xs" style="color:var(--muted)">Live Save</label>
-          <div class="flex items-center gap-2">
-            <div class="text-sm" style="color:var(--muted); padding: 0.5rem;">
-              Automatically saves changes instantly as you type
-            </div>
-          </div>
-        </div>
-        <div>
           <label class="text-xs" style="color:var(--muted)">Include Annual in Monthly</label>
+          <p class="text-xs" style="color:var(--muted); font-size: 0.6rem; margin: 0.25rem 0 0.5rem 0; opacity: 0.7;">Include annual expenses in monthly calculations</p>
           <select id="inputIncludeAnnual" class="select">
             <option value="true">Yes</option>
             <option value="false">No</option>
@@ -884,18 +877,21 @@
         <div class="space-y-3">
           <div>
             <label class="text-xs" style="color:var(--muted)">Delete All Data</label>
-            <p class="text-xs mb-2" style="color:var(--muted)">This will permanently delete all expenses and settings. Type "DELETE" to confirm.</p>
-            <div class="flex gap-2 items-center">
-              <input id="inputDeleteConfirm" type="text" class="input flex-1" placeholder="Type DELETE to confirm" />
-              <button id="btnDeleteAll" class="btn" style="background:#ef4444; color:white; border-color:#ef4444; padding:.35rem .5rem; font-size:.7rem;" disabled>Delete All</button>
+            <p class="text-xs mb-3" style="color:var(--muted)">This will permanently delete all expenses and settings. Type "DELETE" to confirm.</p>
+            <div class="space-y-2">
+              <input id="inputDeleteConfirm" type="text" class="input w-full" placeholder="Type DELETE to confirm" />
+              <button id="btnDeleteAll" class="btn w-full" style="background:#ef4444; color:white; border-color:#ef4444; padding:.5rem 1rem; font-size:.75rem;" disabled>Delete All Data</button>
             </div>
           </div>
         </div>
       </div>
       
-        <div class="flex gap-2 justify-end">
-          <button id="btnSaveSettings" class="btn btn-primary">Save</button>
+      <!-- Action Buttons Section -->
+      <div class="border-t pt-4" style="border-color:var(--stroke)">
+        <div class="flex gap-3 justify-end">
+          <button id="btnSaveSettings" class="btn btn-primary" style="padding:.75rem 1.5rem; font-size:.875rem; font-weight:600;">Save Settings</button>
         </div>
+      </div>
     </form>
   </dialog>
 

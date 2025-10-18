@@ -16,7 +16,12 @@ html,body{ font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Robo
 }
 .btn-primary{ background:#e4e4e7; color:#09090b; }
 .btn-ghost{ background:transparent; color:var(--fg); }
-.btn:hover{ border-color:#a1a1aa; }
+.btn:hover{ 
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.03);
+  transform: none;
+  transition: all 0.15s ease;
+}
 .icon-btn{ display:inline-grid; place-items:center; }
 
 /* Ultra Modern Minimal Buttons */
@@ -38,9 +43,11 @@ html,body{ font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Robo
 }
 
 .nav-btn:hover {
-  background: var(--glass);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--fg);
-  border-color: var(--muted);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: none;
+  transition: all 0.15s ease;
 }
 
 .nav-btn.active {
@@ -58,6 +65,21 @@ html,body{ font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Robo
 /* Smooth scrolling for the entire page */
 html {
   scroll-behavior: smooth;
+}
+
+/* Prevent image inversion in light/dark mode */
+img, svg, .icon, .avatar, .profile-pic {
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* Ensure images maintain original colors */
+[data-theme="light"] img,
+[data-theme="light"] svg,
+[data-theme="dark"] img,
+[data-theme="dark"] svg {
+  filter: none !important;
+  -webkit-filter: none !important;
 }
 
 /* Sticky Header Styles */
@@ -5618,6 +5640,229 @@ header img:hover {
   max-height: 90vh;
   overflow-y: auto;
   z-index: 1000;
+  background: var(--bg);
+  border: 1px solid var(--stroke);
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+}
+
+/* Settings Modal Header Styles */
+.settings-modal-content header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid var(--stroke);
+  background: var(--bg);
+  border-radius: 1rem 1rem 0 0;
+  margin: -1.5rem -1.5rem 1rem -1.5rem;
+}
+
+.settings-modal-content header h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.settings-modal-content header p {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.4;
+}
+
+.settings-modal-content header button {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  color: var(--fg);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.settings-modal-content header button:hover {
+  /* No hover effects */
+}
+
+/* Settings Modal Select Dropdown Styles */
+.settings-modal-content .select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+.settings-modal-content .select:hover {
+  border-color: var(--muted);
+  background-color: var(--card);
+}
+
+.settings-modal-content .select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.settings-modal-content .select option {
+  background: var(--card);
+  color: var(--fg);
+  padding: 0.5rem;
+}
+
+/* Settings Modal Content Spacing */
+.settings-modal-content {
+  padding: 1.5rem;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Ensure all text in settings modal is white */
+.settings-modal-content h3,
+.settings-modal-content h4,
+.settings-modal-content label,
+.settings-modal-content p,
+.settings-modal-content span,
+.settings-modal-content input,
+.settings-modal-content select,
+.settings-modal-content option {
+  color: var(--fg) !important;
+}
+
+.settings-modal-content .space-y-4 > * + * {
+  margin-top: 1.5rem;
+}
+
+/* Compact form styling */
+.settings-modal-content .grid {
+  gap: 1.5rem;
+}
+
+.settings-modal-content label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 0.5rem;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Section headers */
+.settings-modal-content h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Compact buttons */
+.settings-modal-content button:not(.btn-ghost) {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  color: var(--fg);
+}
+
+.settings-modal-content button:not(.btn-ghost):hover {
+  /* No hover effects */
+}
+
+/* No hover effects for settings modal buttons */
+.settings-modal-content .btn-ghost:hover {
+  /* No hover effects */
+}
+
+.settings-modal-content .btn:hover {
+  /* No hover effects */
+}
+
+/* No hover effects for settings modal elements */
+.hover\:bg-white\/5:hover {
+  /* No hover effects */
+}
+
+/* Icon button hover effects - disabled for settings */
+.icon-btn:hover {
+  /* No hover effects */
+}
+
+/* Currency option hover effects - disabled for settings */
+.currency-option:hover {
+  /* No hover effects */
+}
+
+/* Compact input styling */
+.settings-modal-content input {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  min-height: 44px;
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  color: var(--fg);
+}
+
+.settings-modal-content input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Settings Modal Button Improvements */
+.settings-modal-content #btnDeleteAll {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.settings-modal-content #btnDeleteAll:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #6b7280 !important;
+  border-color: #6b7280 !important;
+}
+
+.settings-modal-content #btnSaveSettings {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 /* Settings Modal Mobile Responsiveness */
@@ -5642,10 +5887,14 @@ header img:hover {
   }
   
   .settings-modal-content header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 1rem;
     margin-bottom: 1rem;
+    position: relative;
+    padding: 1rem 1rem 0.75rem 1rem;
+    margin: -1rem -1rem 1rem -1rem;
   }
   
   .settings-modal-content header h3 {
@@ -5658,25 +5907,19 @@ header img:hover {
     margin: 0;
   }
   
-  .settings-modal-content header {
-    position: relative;
-  }
-  
   .settings-modal-content header button {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
+    position: static !important;
     padding: 0.5rem;
     min-width: 44px;
     min-height: 44px;
     border-radius: 8px;
     background: var(--glass);
     border: 1px solid var(--stroke);
+    flex-shrink: 0;
   }
   
   .settings-modal-content header button:hover {
-    background: var(--accent);
-    color: var(--bg);
+    /* No hover effects */
   }
   
   /* Single column layout on mobile */
@@ -5725,15 +5968,22 @@ header img:hover {
   }
   
   /* Danger zone styling */
-  .settings-modal-content .flex.gap-2.items-center {
+  .settings-modal-content .space-y-2 {
+    display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
   
-  .settings-modal-content .flex.gap-2.items-center input {
+  .settings-modal-content .space-y-2 input {
     font-size: 16px; /* Prevents zoom on iOS */
     min-height: 44px;
+  }
+  
+  .settings-modal-content #btnDeleteAll {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
   }
   
   /* Section spacing */
@@ -5747,14 +5997,17 @@ header img:hover {
     margin-bottom: 0.75rem;
   }
   
-  /* Save button */
-  .settings-modal-content .flex.gap-2.justify-end {
+  /* Action buttons section */
+  .settings-modal-content .flex.gap-3.justify-end {
     justify-content: stretch;
     margin-top: 1.5rem;
   }
   
-  .settings-modal-content .flex.gap-2.justify-end button {
+  .settings-modal-content .flex.gap-3.justify-end button {
     width: 100%;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -5843,10 +6096,9 @@ header img:hover {
     padding: 0.625rem 0.75rem;
   }
   
-  /* Touch-friendly improvements */
+  /* No active effects for settings modal buttons */
   .settings-modal-content button:active {
-    transform: scale(0.98);
-    transition: transform 0.1s ease;
+    /* No active effects */
   }
   
   .settings-modal-content input:focus,

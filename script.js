@@ -3653,13 +3653,20 @@ async function saveProfile({ fullName, file }) {
         ...allIncomeClickable
       ];
       
-      // Filter out auth modal elements - they should never be locked
+      // Filter out auth modal and settings modal elements - they should never be locked
       const filteredElements = allElements.filter(element => {
         // Check if element is inside auth modal
         const authModal = document.getElementById('authModal');
         if (authModal && authModal.contains(element)) {
           return false; // Exclude auth modal elements
         }
+        
+        // Check if element is inside settings modal
+        const settingsModal = document.getElementById('settings');
+        if (settingsModal && settingsModal.contains(element)) {
+          return false; // Exclude settings modal elements
+        }
+        
         return true; // Include all other elements
       });
       
