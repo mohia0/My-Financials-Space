@@ -4705,6 +4705,8 @@ async function saveProfile({ fullName, file }) {
     const updateCurrency = (currency) => {
       state.selectedCurrency = currency;
       state.currencySymbol = currencySymbols[currency] || currency;
+      // Always update currencyRate to the current rate for the selected currency
+      // This ensures the FX display shows the correct rate
       state.currencyRate = currencyRates[currency] || 1;
       
       // Update UI
@@ -4739,11 +4741,32 @@ async function saveProfile({ fullName, file }) {
         fxInput.value = newFxRate.toFixed(4);
       }
       
+      // Update state.fx to match currencyRate for backward compatibility
+      state.fx = state.currencyRate;
+      
+      // Update all KPI displays with new currency
+      updateAllKPIDisplays();
+      
       // Recalculate and update all displays
       renderKPIs();
       renderTables();
       updateAnalyticsPage();
     };
+    
+    // Function to update all KPI displays with current currency
+    function updateAllKPIDisplays() {
+      // Update FX rate displays in KPI cards
+      setText('kpiFxSmall', Number(state.currencyRate || 0).toFixed(4));
+      setText('kpiIncomeFxSmall', Number(state.currencyRate || 0).toFixed(4));
+      
+      // Update all financial calculations with new rate
+      updateAllCalculationsWithoutRerender();
+      
+      // Update income KPIs if on income page
+      if (typeof updateIncomeKPIsLive === 'function') {
+        updateIncomeKPIsLive();
+      }
+    }
     
     // Function to render all tables
     function renderTables() {
@@ -8392,6 +8415,9 @@ async function saveProfile({ fullName, file }) {
     // Real-time exchange rate updates
     $('#inputFx').addEventListener('input', function() {
       state.fx = Number(this.value) || state.fx;
+      state.currencyRate = state.fx; // Keep both in sync
+      // Update the currencyRates object with the new rate
+      currencyRates[state.selectedCurrency] = state.currencyRate;
       save('fx-rate');
       // Update only EGP calculations without re-rendering inputs
       updateAllCalculationsWithoutRerender();
@@ -8412,8 +8438,10 @@ async function saveProfile({ fullName, file }) {
       e.preventDefault(); 
       // Update the selected currency rate
       state.currencyRate = Number($('#inputFx').value||state.currencyRate);
-      // Update the base EGP rate for backward compatibility
-      state.fx = state.currencyRate / (currencyRates[state.selectedCurrency] || 1) * 48.1843;
+      // Update the base fx rate to match currencyRate for consistency
+      state.fx = state.currencyRate;
+      // Update the currencyRates object with the new rate
+      currencyRates[state.selectedCurrency] = state.currencyRate;
       state.includeAnnualInMonthly = $('#inputIncludeAnnual').value === 'true';
       updateAutosaveStatus();
       save(); 
@@ -8978,9 +9006,8 @@ async function saveProfile({ fullName, file }) {
         const apiEndpoints = [
           `https://api.exchangerate-api.com/v4/latest/USD`,
           `https://api.fxratesapi.com/latest?base=USD`,
-          `https://api.currencyapi.com/v3/latest?apikey=free&currencies=${selectedCurrency}&base_currency=USD`,
           `https://api.exchangerate.host/latest?base=USD&symbols=${selectedCurrency}`,
-          `https://api.fixer.io/latest?access_key=free&base=USD&symbols=${selectedCurrency}`
+          `https://api.currencyapi.com/v3/latest?apikey=free&currencies=${selectedCurrency}&base_currency=USD`
         ];
         
         let data = null;
@@ -9008,19 +9035,19 @@ async function saveProfile({ fullName, file }) {
             // Check if data has the expected structure and extract rate
             if (data && data.rates && data.rates[selectedCurrency]) {
               newRate = data.rates[selectedCurrency];
-              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
               break; // Success, exit the loop
             } else if (data && data.data && data.data[selectedCurrency]) {
               newRate = data.data[selectedCurrency].value;
-              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
               break; // Success, exit the loop
             } else if (data && data.result && data.result[selectedCurrency]) {
               newRate = data.result[selectedCurrency];
-              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
               break; // Success, exit the loop
             } else if (data && data.quotes && data.quotes[`USD${selectedCurrency}`]) {
               newRate = data.quotes[`USD${selectedCurrency}`];
-              console.log(`Successfully fetched ${selectedCurrency} rate from API:`, newRate);
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
               break; // Success, exit the loop
             } else {
               // Log available currencies for debugging
@@ -9028,7 +9055,7 @@ async function saveProfile({ fullName, file }) {
                                         data?.data ? Object.keys(data.data) : 
                                         data?.result ? Object.keys(data.result) : 
                                         data?.quotes ? Object.keys(data.quotes) : 'none';
-              console.warn(`Currency ${selectedCurrency} not found. Available:`, availableCurrencies);
+              console.warn(`❌ Currency ${selectedCurrency} not found in ${endpoint}. Available:`, availableCurrencies);
               throw new Error(`Currency ${selectedCurrency} not found in API response`);
             }
           } catch (error) {
@@ -9045,8 +9072,11 @@ async function saveProfile({ fullName, file }) {
         // Validate the rate
         if (newRate > 0) {
           $('#inputFx').value = newRate.toFixed(4);
-          state.fx = newRate;
           state.currencyRate = newRate;
+          state.fx = newRate; // Keep both in sync
+          
+          // Update the currencyRates object with the live rate
+          currencyRates[state.selectedCurrency] = newRate;
           
           if (showFeedback) {
             // Show success feedback
@@ -9090,8 +9120,11 @@ async function saveProfile({ fullName, file }) {
         };
         const fallbackRate = fallbackRates[selectedCurrency] || 48.1843;
         $('#inputFx').value = fallbackRate.toFixed(4);
-        state.fx = fallbackRate;
         state.currencyRate = fallbackRate;
+        state.fx = fallbackRate; // Keep both in sync
+        
+        // Update the currencyRates object with the fallback rate
+        currencyRates[selectedCurrency] = fallbackRate;
         
         if (showFeedback) {
           btn.style.background = '#f59e0b';
@@ -9203,6 +9236,9 @@ async function saveProfile({ fullName, file }) {
         
         // Update the FX input with the new currency's rate
         $('#inputFx').value = state.currencyRate.toFixed(4);
+        
+        // Update all displays with new currency
+        updateAllKPIDisplays();
         
         // Save the changes
         save();
