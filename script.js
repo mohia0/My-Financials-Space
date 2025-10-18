@@ -8434,21 +8434,6 @@ async function saveProfile({ fullName, file }) {
       updateAllCalculationsWithoutRerender();
     });
     
-    $('#btnSaveSettings').addEventListener('click', (e)=>{ 
-      e.preventDefault(); 
-      // Update the selected currency rate
-      state.currencyRate = Number($('#inputFx').value||state.currencyRate);
-      // Update the base fx rate to match currencyRate for consistency
-      state.fx = state.currencyRate;
-      // Update the currencyRates object with the new rate
-      currencyRates[state.selectedCurrency] = state.currencyRate;
-      state.includeAnnualInMonthly = $('#inputIncludeAnnual').value === 'true';
-      updateAutosaveStatus();
-      save(); 
-      // Update only calculations without re-rendering inputs
-      updateAllCalculationsWithoutRerender();
-      $('#settings').close(); 
-    });
     
     // Update only the calculated values in a specific row
     function updateRowCalculations(rowElement, row, isBiz) {
@@ -9004,10 +8989,12 @@ async function saveProfile({ fullName, file }) {
         // Create dynamic API endpoints based on selected currency
         // All APIs fetch USD rates and we extract the selected currency from USD
         const apiEndpoints = [
+          `https://api.exchangerate.host/latest?base=USD&symbols=${selectedCurrency}`,
           `https://api.exchangerate-api.com/v4/latest/USD`,
           `https://api.fxratesapi.com/latest?base=USD`,
-          `https://api.exchangerate.host/latest?base=USD&symbols=${selectedCurrency}`,
-          `https://api.currencyapi.com/v3/latest?apikey=free&currencies=${selectedCurrency}&base_currency=USD`
+          `https://api.exchangerate.host/latest?base=USD`,
+          `https://api.currencyapi.com/v3/latest?apikey=free&currencies=${selectedCurrency}&base_currency=USD`,
+          `https://api.fixer.io/latest?access_key=free&base=USD&symbols=${selectedCurrency}`
         ];
         
         let data = null;
@@ -9017,13 +9004,15 @@ async function saveProfile({ fullName, file }) {
         // Try each API endpoint
         for (const endpoint of apiEndpoints) {
           try {
+            console.log(`🔄 Trying API endpoint: ${endpoint} for currency: ${selectedCurrency}`);
+            
             const response = await fetch(endpoint, {
               method: 'GET',
               headers: {
                 'Accept': 'application/json',
               },
               // Add timeout to prevent hanging
-              signal: AbortSignal.timeout(8000) // 8 second timeout per endpoint
+              signal: AbortSignal.timeout(10000) // 10 second timeout per endpoint
             });
             
             if (!response.ok) {
@@ -9031,6 +9020,7 @@ async function saveProfile({ fullName, file }) {
             }
             
             data = await response.json();
+            console.log(`📊 API Response from ${endpoint}:`, data);
             
             // Check if data has the expected structure and extract rate
             if (data && data.rates && data.rates[selectedCurrency]) {
@@ -9049,18 +9039,29 @@ async function saveProfile({ fullName, file }) {
               newRate = data.quotes[`USD${selectedCurrency}`];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
               break; // Success, exit the loop
+            } else if (data && data.conversion_rates && data.conversion_rates[selectedCurrency]) {
+              newRate = data.conversion_rates[selectedCurrency];
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
+              break; // Success, exit the loop
+            } else if (data && data.response && data.response.rates && data.response.rates[selectedCurrency]) {
+              newRate = data.response.rates[selectedCurrency];
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
+              break; // Success, exit the loop
             } else {
               // Log available currencies for debugging
               const availableCurrencies = data?.rates ? Object.keys(data.rates) : 
                                         data?.data ? Object.keys(data.data) : 
                                         data?.result ? Object.keys(data.result) : 
-                                        data?.quotes ? Object.keys(data.quotes) : 'none';
+                                        data?.quotes ? Object.keys(data.quotes) : 
+                                        data?.conversion_rates ? Object.keys(data.conversion_rates) :
+                                        data?.response?.rates ? Object.keys(data.response.rates) : 'none';
               console.warn(`❌ Currency ${selectedCurrency} not found in ${endpoint}. Available:`, availableCurrencies);
+              console.warn(`📊 Full response structure:`, Object.keys(data || {}));
               throw new Error(`Currency ${selectedCurrency} not found in API response`);
             }
           } catch (error) {
             lastError = error;
-            console.warn(`API endpoint failed: ${endpoint}`, error);
+            console.warn(`❌ API endpoint failed: ${endpoint}`, error.message);
             continue; // Try next endpoint
           }
         }
@@ -9071,12 +9072,14 @@ async function saveProfile({ fullName, file }) {
         
         // Validate the rate
         if (newRate > 0) {
+          console.log(`🎯 Final rate validation: ${newRate} for ${selectedCurrency}`);
           $('#inputFx').value = newRate.toFixed(4);
           state.currencyRate = newRate;
           state.fx = newRate; // Keep both in sync
           
           // Update the currencyRates object with the live rate
           currencyRates[state.selectedCurrency] = newRate;
+          console.log(`💾 Updated currencyRates[${selectedCurrency}] = ${newRate}`);
           
           if (showFeedback) {
             // Show success feedback
@@ -9155,12 +9158,13 @@ async function saveProfile({ fullName, file }) {
     // Function to test currency API and show available currencies
     async function testCurrencyAPI() {
       try {
+        console.log('🧪 Testing currency API...');
         const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
         const data = await response.json();
         
         if (data && data.rates) {
           const availableCurrencies = Object.keys(data.rates);
-          console.log('Available currencies from API:', availableCurrencies);
+          console.log('📊 Available currencies from API:', availableCurrencies);
           
           // Check if our supported currencies are available
           const supportedCurrencies = ['EGP', 'KWD', 'SAR', 'AED', 'QAR', 'BHD', 'EUR'];
@@ -9168,12 +9172,41 @@ async function saveProfile({ fullName, file }) {
             availableCurrencies.includes(currency)
           );
           
-          console.log('Supported currencies available in API:', availableSupported);
+          console.log('✅ Our supported currencies available in API:', availableSupported);
+          
+          // Test specific rates
+          supportedCurrencies.forEach(currency => {
+            if (data.rates[currency]) {
+              console.log(`💰 ${currency}: ${data.rates[currency]}`);
+            }
+          });
+          
           return availableSupported;
         }
       } catch (error) {
-        console.warn('Currency API test failed:', error);
+        console.warn('❌ Currency API test failed:', error);
         return [];
+      }
+    }
+    
+    // Function to test a specific currency rate
+    async function testSpecificCurrency(currency) {
+      try {
+        console.log(`🧪 Testing specific currency: ${currency}`);
+        const response = await fetch(`https://api.exchangerate.host/latest?base=USD&symbols=${currency}`);
+        const data = await response.json();
+        console.log(`📊 Response for ${currency}:`, data);
+        
+        if (data && data.rates && data.rates[currency]) {
+          console.log(`✅ Rate for ${currency}: ${data.rates[currency]}`);
+          return data.rates[currency];
+        } else {
+          console.warn(`❌ No rate found for ${currency}`);
+          return null;
+        }
+      } catch (error) {
+        console.warn(`❌ Test failed for ${currency}:`, error);
+        return null;
       }
     }
     

@@ -5690,9 +5690,6 @@ header img:hover {
   min-height: 40px;
 }
 
-.settings-modal-content header button:hover {
-  /* No hover effects */
-}
 
 /* Settings Modal Select Dropdown Styles */
 .settings-modal-content .select {
@@ -5793,33 +5790,7 @@ header img:hover {
   color: var(--fg);
 }
 
-.settings-modal-content button:not(.btn-ghost):hover {
-  /* No hover effects */
-}
-
-/* No hover effects for settings modal buttons */
-.settings-modal-content .btn-ghost:hover {
-  /* No hover effects */
-}
-
-.settings-modal-content .btn:hover {
-  /* No hover effects */
-}
-
-/* No hover effects for settings modal elements */
-.hover\:bg-white\/5:hover {
-  /* No hover effects */
-}
-
-/* Icon button hover effects - disabled for settings */
-.icon-btn:hover {
-  /* No hover effects */
-}
-
-/* Currency option hover effects - disabled for settings */
-.currency-option:hover {
-  /* No hover effects */
-}
+/* No hover effects for settings modal buttons - all removed */
 
 /* Compact input styling */
 .settings-modal-content input {
@@ -5857,13 +5828,6 @@ header img:hover {
   border-color: #6b7280 !important;
 }
 
-.settings-modal-content #btnSaveSettings {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
 
 /* Settings Modal Mobile Responsiveness */
 @media (max-width: 768px) {
@@ -5918,9 +5882,6 @@ header img:hover {
     flex-shrink: 0;
   }
   
-  .settings-modal-content header button:hover {
-    /* No hover effects */
-  }
   
   /* Single column layout on mobile */
   .settings-modal-content .grid {
@@ -5997,18 +5958,6 @@ header img:hover {
     margin-bottom: 0.75rem;
   }
   
-  /* Action buttons section */
-  .settings-modal-content .flex.gap-3.justify-end {
-    justify-content: stretch;
-    margin-top: 1.5rem;
-  }
-  
-  .settings-modal-content .flex.gap-3.justify-end button {
-    width: 100%;
-    min-height: 44px;
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-  }
 }
 
 /* Extra small screens */
@@ -6096,10 +6045,6 @@ header img:hover {
     padding: 0.625rem 0.75rem;
   }
   
-  /* No active effects for settings modal buttons */
-  .settings-modal-content button:active {
-    /* No active effects */
-  }
   
   .settings-modal-content input:focus,
   .settings-modal-content select:focus {
