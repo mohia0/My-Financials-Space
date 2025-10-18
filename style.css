@@ -6204,3 +6204,59 @@ header img:hover {
     transform: translateY(0);
   }
 }
+
+/* Income Visualization Styles */
+#incomeHeatmapContainer,
+#incomeTimelineContainer {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+#incomeHeatmap,
+#incomeTimeline {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+}
+
+#heatmapTooltip,
+#timelineTooltip {
+  position: absolute;
+  background: var(--bg);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--fg);
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+/* Responsive adjustments for visualizations */
+@media (max-width: 768px) {
+  #incomeHeatmap,
+  #incomeTimeline {
+    height: 200px !important;
+  }
+  
+  #heatmapTooltip,
+  #timelineTooltip {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+/* Canvas hover effects */
+#incomeHeatmap:hover,
+#incomeTimeline:hover {
+  cursor: crosshair;
+}
+
+/* Chart.js customization for dark theme */
+.chartjs-render-monitor {
+  border-radius: 8px;
+}

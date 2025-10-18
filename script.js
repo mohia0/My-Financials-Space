@@ -7729,17 +7729,54 @@ async function saveProfile({ fullName, file }) {
     }
 
 
+  // Function to save income order to cloud
+  async function saveIncomeOrderToCloud(sortedArr, year) {
+    if (!currentUser || !supabaseReady) return;
+    
+    try {
+      // Update order for all rows in the current year
+      const updates = sortedArr.map((row, index) => ({
+        id: row.id,
+        order: index
+      })).filter(update => update.id); // Only include rows with IDs
+      
+      if (updates.length === 0) return;
+      
+      // Batch update order property
+      for (const update of updates) {
+        await window.supabaseClient
+          .from('income')
+          .update({ order: update.order })
+          .eq('id', update.id);
+      }
+      
+      console.log(`✅ Updated order for ${updates.length} income rows`);
+    } catch (error) {
+      console.error('❌ Failed to update income order:', error);
+    }
+  }
+
   function renderIncomeList(containerId, arr) {
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
     wrap.innerHTML = '';
     
-    // Sort array by order property before rendering
+    // Sort array by date (oldest to newest) before rendering
     const sortedArr = [...arr].sort((a, b) => {
-      const orderA = a.order !== undefined ? a.order : 0;
-      const orderB = b.order !== undefined ? b.order : 0;
-      return orderA - orderB;
+      const dateA = new Date(a.date || '1900-01-01');
+      const dateB = new Date(b.date || '1900-01-01');
+      return dateA - dateB; // Oldest first
     });
+    
+    // Update order property based on date sorting for cloud sync
+    sortedArr.forEach((row, index) => {
+      row.order = index;
+    });
+    
+    // Save updated order to cloud if user is authenticated
+    if (currentUser && supabaseReady && sortedArr.length > 0) {
+      saveIncomeOrderToCloud(sortedArr, currentYear);
+    }
     
     sortedArr.forEach((row, idx) => {
       const mUSD = rowIncomeMonthlyUSD(row);
@@ -7750,31 +7787,15 @@ async function saveProfile({ fullName, file }) {
       const ySelected = usdToSelectedCurrency(yUSD);
       
       const div = document.createElement('div');
-      div.className = 'row row-income row-draggable row-drop-zone';
+      div.className = 'row row-income';
       div.setAttribute('data-row-index', idx);
-      div.setAttribute('draggable', 'true');
       div.__rowData = row; // Store row data for tag system
       
-      // Drag handle
-      const dragHandleDiv = document.createElement('div');
-      dragHandleDiv.className = 'drag-handle';
-      dragHandleDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 6h8M8 12h8M8 18h8"/></svg>';
-      dragHandleDiv.title = 'Drag to reorder';
-      dragHandleDiv.setAttribute('draggable', 'true');
-      
-      // Make the drag handle work by delegating to the row
-      dragHandleDiv.addEventListener('dragstart', (e) => {
-        e.stopPropagation();
-        // Transfer the drag to the parent row
-        const rowDragEvent = new DragEvent('dragstart', {
-          bubbles: true,
-          cancelable: true,
-          dataTransfer: e.dataTransfer
-        });
-        // Set the target to the row element
-        Object.defineProperty(rowDragEvent, 'target', { value: div, enumerable: true });
-        div.dispatchEvent(rowDragEvent);
-      });
+      // Empty space where drag handle used to be (for consistent layout)
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'empty-space';
+      emptyDiv.style.width = '20px';
+      emptyDiv.style.height = '100%';
       
       // Icon cell
       const iconName = row.icon || 'fa:dollar-sign';
@@ -8166,7 +8187,7 @@ async function saveProfile({ fullName, file }) {
       iconBtn.addEventListener('click', async () => await openIconPicker(arr, idx));
       
       // Append all cells
-      div.appendChild(dragHandleDiv);
+      div.appendChild(emptyDiv);
       div.appendChild(iconDiv);
       div.appendChild(nameDiv);
       div.appendChild(tagsDiv);
@@ -8257,7 +8278,7 @@ async function saveProfile({ fullName, file }) {
       const totalPaidSelected = usdToSelectedCurrency(totalPaidUsd);
       
       let sumHTML = '';
-      sumHTML += '<div></div>'; // drag handle
+      sumHTML += '<div></div>'; // empty space (was drag handle)
       sumHTML += '<div></div>'; // icon
       sumHTML += '<div style="font-weight: 600;">Total</div>'; // project name
       sumHTML += '<div></div>'; // tags
