@@ -218,6 +218,7 @@ async function saveProfile({ fullName, file }) {
     let currentPage = 'expenses';
     let currentYear = new Date().getFullYear().toString(); // Default to current year
     let isTransitioning = false; // Prevent multiple rapid page switches
+    let pageSwitchTimeout = null; // Debounce rapid page switches
     
     // Add resize listener for responsive grid updates
     window.addEventListener('resize', function() {
@@ -258,6 +259,21 @@ async function saveProfile({ fullName, file }) {
     }
     
     function showPage(page) {
+      // Clear any pending page switch
+      if (pageSwitchTimeout) {
+        clearTimeout(pageSwitchTimeout);
+      }
+      
+      // Don't switch if already on the same page or currently transitioning
+      if (currentPage === page || isTransitioning) return;
+      
+      // Debounce rapid page switches
+      pageSwitchTimeout = setTimeout(() => {
+        performPageSwitch(page);
+      }, 50);
+    }
+    
+    function performPageSwitch(page) {
       const tabExpenses = $('#tabExpenses');
       const tabIncome = $('#tabIncome');
       const tabAnalytics = $('#tabAnalytics');
@@ -266,66 +282,62 @@ async function saveProfile({ fullName, file }) {
       const pageAnalytics = $('#pageAnalytics');
       const yearTabsContainer = $('#yearTabsContainer');
       
-      // Don't animate if already on the same page or currently transitioning
-      if (currentPage === page || isTransitioning) return;
-      
       // Set transitioning flag
       isTransitioning = true;
       
-      // Determine slide direction based on page order
-      const pageOrder = ['expenses', 'income', 'analytics'];
-      const currentIndex = pageOrder.indexOf(currentPage);
-      const targetIndex = pageOrder.indexOf(page);
-      const slideDirection = targetIndex > currentIndex ? 'right' : 'left';
+      // Get all page elements
+      const pages = {
+        expenses: pageExpenses,
+        income: pageIncome,
+        analytics: pageAnalytics
+      };
       
       // Get current and target pages
-      let currentPageElement = null;
-      let targetPageElement = null;
+      const currentPageElement = pages[currentPage];
+      const targetPageElement = pages[page];
       
-      if (currentPage === 'expenses') currentPageElement = pageExpenses;
-      else if (currentPage === 'income') currentPageElement = pageIncome;
-      else if (currentPage === 'analytics') currentPageElement = pageAnalytics;
+      if (!targetPageElement) {
+        isTransitioning = false;
+        return;
+      }
       
-      if (page === 'expenses') targetPageElement = pageExpenses;
-      else if (page === 'income') targetPageElement = pageIncome;
-      else if (page === 'analytics') targetPageElement = pageAnalytics;
-      
-      // Ultra-smooth page transition using CSS animations
+      // Simple fade transition - much lighter and more reliable
       if (currentPageElement && targetPageElement) {
-        // Set up target page for slide in
-        targetPageElement.style.display = 'block';
-        targetPageElement.classList.add(slideDirection === 'right' ? 'slide-in-left' : 'slide-in-right');
+        // Hide current page with fade out
+        currentPageElement.style.opacity = '0';
+        currentPageElement.style.transition = 'opacity 0.15s ease-out';
         
-        // Start slide out animation for current page
-        currentPageElement.classList.add(slideDirection === 'right' ? 'slide-out-left' : 'slide-out-right');
-        
-        // Use CSS animation events for perfect timing
-        const handleAnimationEnd = () => {
-          currentPageElement.style.display = 'none';
-          currentPageElement.classList.remove('slide-out-left', 'slide-out-right');
-          currentPageElement.removeEventListener('animationend', handleAnimationEnd);
+        // Show target page with fade in after a short delay
+        setTimeout(() => {
+          // Hide all pages first
+          Object.values(pages).forEach(p => {
+            if (p) p.style.display = 'none';
+          });
           
-          // Start slide in animation immediately
-          targetPageElement.classList.remove('slide-in-left', 'slide-in-right');
-          targetPageElement.classList.add('slide-in-active');
+          // Show target page
+          targetPageElement.style.display = 'block';
+          targetPageElement.style.opacity = '0';
+          targetPageElement.style.transition = 'opacity 0.15s ease-in';
           
-          // Clean up after slide in completes
-          const handleSlideInEnd = () => {
-            targetPageElement.classList.remove('slide-in-active');
-            targetPageElement.removeEventListener('animationend', handleSlideInEnd);
-            // Reset transitioning flag
+          // Trigger fade in
+          requestAnimationFrame(() => {
+            targetPageElement.style.opacity = '1';
+          });
+          
+          // Reset transitioning flag after animation
+          setTimeout(() => {
             isTransitioning = false;
-          };
-          targetPageElement.addEventListener('animationend', handleSlideInEnd);
-        };
-        
-        currentPageElement.addEventListener('animationend', handleAnimationEnd);
+            // Clean up transition styles
+            targetPageElement.style.transition = '';
+            if (currentPageElement) currentPageElement.style.transition = '';
+          }, 150);
+        }, 50);
       } else {
         // Fallback to instant transition
-        pageExpenses?.style.setProperty('display', page === 'expenses' ? 'block' : 'none');
-        pageIncome?.style.setProperty('display', page === 'income' ? 'block' : 'none');
-        pageAnalytics?.style.setProperty('display', page === 'analytics' ? 'block' : 'none');
-        // Reset transitioning flag for fallback
+        Object.values(pages).forEach(p => {
+          if (p) p.style.display = 'none';
+        });
+        if (targetPageElement) targetPageElement.style.display = 'block';
         isTransitioning = false;
       }
       

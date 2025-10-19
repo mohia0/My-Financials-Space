@@ -301,47 +301,17 @@ header.scrolled .icon-btn:hover {
   display: none;
 }
 
-/* Page Transition States - Ultra-smooth GPU accelerated */
-.page-content.slide-out-left {
-  animation: slideOutLeft 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+/* Page Transition States - Light and smooth fade transitions */
+.page-content {
+  transition: opacity 0.15s ease-in-out;
 }
 
-.page-content.slide-out-right {
-  animation: slideOutRight 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+.page-content.hidden {
+  display: none;
+  opacity: 0;
 }
 
-.page-content.slide-in-left {
-  animation: slideInLeft 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.page-content.slide-in-right {
-  animation: slideInRight 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.page-content.slide-in-active {
-  transform: translate3d(0, 0, 0);
-}
-
-/* Optimized keyframe animations for smooth transitions */
-@keyframes slideOutLeft {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-100%, 0, 0); }
-}
-
-@keyframes slideOutRight {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(100%, 0, 0); }
-}
-
-@keyframes slideInLeft {
-  from { transform: translate3d(100%, 0, 0); }
-  to { transform: translate3d(0, 0, 0); }
-}
-
-@keyframes slideInRight {
-  from { transform: translate3d(-100%, 0, 0); }
-  to { transform: translate3d(0, 0, 0); }
-}
+/* Remove complex slide animations - using simple fade transitions in JavaScript */
 
 /* Year Tabs */
 .year-tab {
