@@ -5885,15 +5885,22 @@ async function saveProfile({ fullName, file }) {
       let x = e.clientX;
       let y = e.clientY;
       
-      // Simple positioning - always above cursor
-      y = e.clientY - 10;
-      tooltip.style.transform = 'translate(-50%, -100%)';
+      // Position tooltip to the right of cursor to avoid covering numbers
+      x = e.clientX + 20;
+      y = e.clientY - 5;
+      tooltip.style.transform = 'translate(0, -50%)';
       
-      // Keep tooltip on screen horizontally
-      if (x > viewportWidth - 150) {
-        x = viewportWidth - 150;
-      } else if (x < 150) {
-        x = 150;
+      // If tooltip would go off screen to the right, position it to the left
+      if (x > viewportWidth - 200) {
+        x = e.clientX - 20;
+        tooltip.style.transform = 'translate(-100%, -50%)';
+      }
+      
+      // Keep tooltip on screen vertically
+      if (y < 50) {
+        y = 50;
+      } else if (y > viewportHeight - 50) {
+        y = viewportHeight - 50;
       }
       
       // Set position
