@@ -283,12 +283,64 @@ header.scrolled .icon-btn:hover {
 }
 
 /* Page Content */
+/* Page Content Container - Ultra-smooth transitions */
 .page-content {
   display: block;
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .page-content.hidden {
   display: none;
+}
+
+/* Page Transition States - Ultra-smooth GPU accelerated */
+.page-content.slide-out-left {
+  animation: slideOutLeft 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.page-content.slide-out-right {
+  animation: slideOutRight 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.page-content.slide-in-left {
+  animation: slideInLeft 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.page-content.slide-in-right {
+  animation: slideInRight 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.page-content.slide-in-active {
+  transform: translate3d(0, 0, 0);
+}
+
+/* Optimized keyframe animations for smooth transitions */
+@keyframes slideOutLeft {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-100%, 0, 0); }
+}
+
+@keyframes slideOutRight {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(100%, 0, 0); }
+}
+
+@keyframes slideInLeft {
+  from { transform: translate3d(100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translate3d(-100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 /* Year Tabs */
@@ -665,11 +717,40 @@ header.scrolled .icon-btn:hover {
   display:flex; 
   flex-direction:column; 
   gap:.4rem; 
-  transition:all .2s ease;
+  transition:transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.2s ease;
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  will-change: transform;
+  position: relative;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
+
+/* Enhanced KPI Card Animations */
 .kpi:hover{ 
-  transform:translateY(-2px); 
-  box-shadow:0 8px 25px rgba(0,0,0,.15);
+  transform: translate3d(0, -2px, 0);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.kpi.loading {
+  opacity: 0.7;
+  transform: translate3d(0, 4px, 0);
+}
+
+.kpi.fade-in {
+  animation: kpiFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes kpiFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 .kpi h3{ 
   font-size:.7rem; 
@@ -695,7 +776,30 @@ header.scrolled .icon-btn:hover {
 .kpi-em{ background:linear-gradient(180deg, rgba(99,102,241,.10), rgba(99,102,241,.04) 35%, var(--card)); border:1px solid rgba(99,102,241,.25); }
 .bar{ height:8px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden; position: relative; }
 [data-theme="light"] .bar{ background:#eceff3; }
-.bar>span{ display:block; height:100%; background:linear-gradient(90deg, rgba(99,102,241,.9), rgba(56,189,248,.9)); transition: width 0.8s ease; position: relative; }
+.bar>span{ 
+  display:block; 
+  height:100%; 
+  background:linear-gradient(90deg, rgba(99,102,241,.9), rgba(56,189,248,.9)); 
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); 
+  position: relative; 
+  overflow: hidden;
+}
+
+.bar>span::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.2), transparent, rgba(255,255,255,0.2));
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
 
 /* Progress bar loading animation */
 .bar.loading {
@@ -2441,8 +2545,50 @@ input[type="range"]::-moz-range-thumb:hover {
   align-items:center;
   padding:.5rem .4rem;
   border-bottom:1px solid var(--stroke);
-  transition:background-color .2s ease;
+  transition:transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), background-color 0.2s ease;
   background: var(--card);
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Enhanced Row Animations */
+.row:hover{
+  transform: translate3d(0, -1px, 0);
+  background: var(--glass);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.row.fade-in {
+  animation: rowFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.row.slide-in {
+  animation: rowSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes rowFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rowSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Perfect grid alignment for personal expenses */
@@ -6325,63 +6471,92 @@ header img:hover {
   pointer-events: none;
 }
 
-/* Super Minimal Tooltips */
+/* Enhanced Tooltip System with Perfect Delays */
 .tooltip-trigger {
   position: relative;
   cursor: help;
+  transition: all 0.2s ease;
+}
+
+.tooltip-trigger:hover {
+  transform: translateY(-1px);
 }
 
 .tooltip {
   position: fixed;
-  background: var(--bg);
-  border: 1px solid var(--stroke);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.65rem;
+  background: rgba(10, 10, 11, 0.95);
+  border: 1px solid rgba(39, 39, 42, 0.8);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.7rem;
   font-weight: 500;
-  color: var(--fg);
+  color: rgba(228, 228, 231, 0.95);
   white-space: normal;
   word-wrap: break-word;
   word-break: break-word;
   overflow-wrap: break-word;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 999999;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(12px);
-  max-width: 200px;
-  min-width: 120px;
+  -webkit-backdrop-filter: blur(12px);
+  max-width: 220px;
+  min-width: 140px;
   text-align: center;
   line-height: 1.4;
   pointer-events: none;
-  transform: translate(0, -50%);
+  transform: translate(0, -50%) scale(0.95);
   display: none;
   box-sizing: border-box;
 }
 
-/* Tooltip arrow removed */
-
-.tooltip-trigger:hover .tooltip {
+/* Tooltip show animation */
+.tooltip.show {
   opacity: 1;
   visibility: visible;
   display: block;
+  transform: translate(0, -50%) scale(1);
+}
+
+/* Tooltip arrow with modern design */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid rgba(39, 39, 42, 0.8);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  transform: translateY(-50%);
+}
+
+.tooltip.tooltip-left::before {
+  right: auto;
+  left: -6px;
+  border-left: none;
+  border-right: 6px solid rgba(39, 39, 42, 0.8);
 }
 
 /* Tooltip positioning variants */
 .tooltip.tooltip-right {
-  transform: translate(10px, -50%);
-  margin-top: 0;
-  margin-left: 0;
+  transform: translate(10px, -50%) scale(0.95);
 }
-
-/* Tooltip arrow removed */
 
 .tooltip.tooltip-left {
-  transform: translate(-100%, -50%);
+  transform: translate(-100%, -50%) scale(0.95);
 }
 
-/* Tooltip arrow removed */
+.tooltip.tooltip-above {
+  transform: translate(-50%, -100%) scale(0.95);
+}
+
+.tooltip.tooltip-below {
+  transform: translate(-50%, 0%) scale(0.95);
+}
 
 /* Ensure tooltips are never clipped */
 .kpi, .card, .page-content, .grid, .section {

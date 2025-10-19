@@ -38,8 +38,11 @@ window.addEventListener('resize', () => {
 // Initialize header state
 document.addEventListener('DOMContentLoaded', () => {
   updateHeader();
-  initializeTooltips();
   initializeProgressBars();
+  // Initialize tooltips after a short delay to ensure DOM is fully loaded
+  setTimeout(() => {
+    initializeTooltips();
+  }, 100);
 });
 
 // Supabase configuration - NEW PROJECT
@@ -203,9 +206,18 @@ async function saveProfile({ fullName, file }) {
   document.addEventListener('DOMContentLoaded', function(){
     const $ = (s, el)=> (el||document).querySelector(s);
     
+    // Optimize initial loading performance
+    optimizeInitialLoad();
+    
+    // Initialize tooltips after DOM is fully loaded
+    setTimeout(() => {
+      initializeTooltips();
+    }, 200);
+    
     // Page Navigation
     let currentPage = 'expenses';
     let currentYear = new Date().getFullYear().toString(); // Default to current year
+    let isTransitioning = false; // Prevent multiple rapid page switches
     
     // Add resize listener for responsive grid updates
     window.addEventListener('resize', function() {
@@ -254,25 +266,88 @@ async function saveProfile({ fullName, file }) {
       const pageAnalytics = $('#pageAnalytics');
       const yearTabsContainer = $('#yearTabsContainer');
       
+      // Don't animate if already on the same page or currently transitioning
+      if (currentPage === page || isTransitioning) return;
+      
+      // Set transitioning flag
+      isTransitioning = true;
+      
+      // Determine slide direction based on page order
+      const pageOrder = ['expenses', 'income', 'analytics'];
+      const currentIndex = pageOrder.indexOf(currentPage);
+      const targetIndex = pageOrder.indexOf(page);
+      const slideDirection = targetIndex > currentIndex ? 'right' : 'left';
+      
+      // Get current and target pages
+      let currentPageElement = null;
+      let targetPageElement = null;
+      
+      if (currentPage === 'expenses') currentPageElement = pageExpenses;
+      else if (currentPage === 'income') currentPageElement = pageIncome;
+      else if (currentPage === 'analytics') currentPageElement = pageAnalytics;
+      
+      if (page === 'expenses') targetPageElement = pageExpenses;
+      else if (page === 'income') targetPageElement = pageIncome;
+      else if (page === 'analytics') targetPageElement = pageAnalytics;
+      
+      // Ultra-smooth page transition using CSS animations
+      if (currentPageElement && targetPageElement) {
+        // Set up target page for slide in
+        targetPageElement.style.display = 'block';
+        targetPageElement.classList.add(slideDirection === 'right' ? 'slide-in-left' : 'slide-in-right');
+        
+        // Start slide out animation for current page
+        currentPageElement.classList.add(slideDirection === 'right' ? 'slide-out-left' : 'slide-out-right');
+        
+        // Use CSS animation events for perfect timing
+        const handleAnimationEnd = () => {
+          currentPageElement.style.display = 'none';
+          currentPageElement.classList.remove('slide-out-left', 'slide-out-right');
+          currentPageElement.removeEventListener('animationend', handleAnimationEnd);
+          
+          // Start slide in animation immediately
+          targetPageElement.classList.remove('slide-in-left', 'slide-in-right');
+          targetPageElement.classList.add('slide-in-active');
+          
+          // Clean up after slide in completes
+          const handleSlideInEnd = () => {
+            targetPageElement.classList.remove('slide-in-active');
+            targetPageElement.removeEventListener('animationend', handleSlideInEnd);
+            // Reset transitioning flag
+            isTransitioning = false;
+          };
+          targetPageElement.addEventListener('animationend', handleSlideInEnd);
+        };
+        
+        currentPageElement.addEventListener('animationend', handleAnimationEnd);
+      } else {
+        // Fallback to instant transition
+        pageExpenses?.style.setProperty('display', page === 'expenses' ? 'block' : 'none');
+        pageIncome?.style.setProperty('display', page === 'income' ? 'block' : 'none');
+        pageAnalytics?.style.setProperty('display', page === 'analytics' ? 'block' : 'none');
+        // Reset transitioning flag for fallback
+        isTransitioning = false;
+      }
+      
+      // Update tab states
       if (page === 'expenses') {
         tabExpenses?.classList.add('active');
         tabIncome?.classList.remove('active');
         tabAnalytics?.classList.remove('active');
-        pageExpenses?.style.setProperty('display', 'block');
-        pageIncome?.style.setProperty('display', 'none');
-        pageAnalytics?.style.setProperty('display', 'none');
         yearTabsContainer?.style.setProperty('display', 'none');
         currentPage = 'expenses';
         
         // Reset and animate progress bars for expenses page
         resetAllProgressBars();
+        
+        // Re-initialize tooltips for the new page
+        setTimeout(() => {
+          initializeTooltips();
+        }, 100);
       } else if (page === 'income') {
         tabExpenses?.classList.remove('active');
         tabIncome?.classList.add('active');
         tabAnalytics?.classList.remove('active');
-        pageExpenses?.style.setProperty('display', 'none');
-        pageIncome?.style.setProperty('display', 'block');
-        pageAnalytics?.style.setProperty('display', 'none');
         yearTabsContainer?.style.setProperty('display', 'flex');
         currentPage = 'income';
         
@@ -284,18 +359,25 @@ async function saveProfile({ fullName, file }) {
         
         // Update income KPIs live when switching to income page
         updateIncomeKPIsLive();
+        
+        // Re-initialize tooltips for the new page
+        setTimeout(() => {
+          initializeTooltips();
+        }, 100);
       } else if (page === 'analytics') {
         tabExpenses?.classList.remove('active');
         tabIncome?.classList.remove('active');
         tabAnalytics?.classList.add('active');
-        pageExpenses?.style.setProperty('display', 'none');
-        pageIncome?.style.setProperty('display', 'none');
-        pageAnalytics?.style.setProperty('display', 'block');
         yearTabsContainer?.style.setProperty('display', 'none');
         currentPage = 'analytics';
         
         // Reset and animate progress bars for analytics page
         resetAllProgressBars();
+        
+        // Re-initialize tooltips for the new page
+        setTimeout(() => {
+          initializeTooltips();
+        }, 100);
         
         // Update analytics page data
         updateAnalyticsPage();
@@ -3100,8 +3182,12 @@ async function saveProfile({ fullName, file }) {
 
 
 
+    // Loading state for FX rates
+    const FX_LOADING = '––';
+    const FX_LOADING_VALUE = null;
+    
     const defaultState = {
-      fx: 48.1843,
+      fx: FX_LOADING_VALUE,
       autosave: 'on',
       autosaveInterval: 15,
       theme: 'dark',
@@ -3110,7 +3196,7 @@ async function saveProfile({ fullName, file }) {
       // Currency system
       selectedCurrency: 'EGP',
       currencySymbol: 'EGP',
-      currencyRate: 48.1843, // Rate from USD to selected currency
+      currencyRate: FX_LOADING_VALUE, // Rate from USD to selected currency
       personal: [],
       biz: [],
       income: {
@@ -5894,8 +5980,13 @@ async function saveProfile({ fullName, file }) {
       // Remove loading state
       container.classList.remove('loading');
       
-      // Animate to target width
-      bar.style.width = targetWidth + '%';
+      // Reset to 0 first, then animate to target width
+      bar.style.width = '0%';
+      
+      // Use requestAnimationFrame for smooth animation
+      requestAnimationFrame(() => {
+        bar.style.width = targetWidth + '%';
+      });
     }
     
     function resetProgressBar(containerId) {
@@ -5924,72 +6015,166 @@ async function saveProfile({ fullName, file }) {
       progressBarIds.forEach(containerId => {
         resetProgressBar(containerId);
       });
+      
+      // Re-animate progress bars after reset
+      setTimeout(() => {
+        animateAllProgressBars();
+      }, 100);
+    }
+    
+    function animateAllProgressBars() {
+      // Only animate progress bars for the current page
+      if (currentPage === 'expenses') {
+        // Animate expenses page progress bars
+        const p = totals(state.personal);
+        const b = totals(state.biz);
+        const total = p.mUSD + b.mUSD;
+        const sp = total > 0 ? Math.round((p.mUSD/total)*100) : 0;
+        const sb = total > 0 ? Math.round((b.mUSD/total)*100) : 0;
+        
+        setTimeout(() => {
+          animateProgressBar('sharePersonalBarContainer', sp);
+          animateProgressBar('shareBizBarContainer', sb);
+        }, 200);
+      } else if (currentPage === 'analytics') {
+        // Animate analytics page progress bars
+        updateAnalyticsPage();
+      }
     }
 
-    // Tooltip positioning system
+    // Enhanced Tooltip System with Perfect Delays
     function initializeTooltips() {
+      // Initialize existing tooltip triggers
       const tooltipTriggers = document.querySelectorAll('.tooltip-trigger');
       
-      tooltipTriggers.forEach(trigger => {
+      tooltipTriggers.forEach((trigger, index) => {
         const tooltip = trigger.querySelector('.tooltip');
         if (!tooltip) return;
         
-        let tooltipTimeout;
-        
-        trigger.addEventListener('mouseenter', (e) => {
-          // Clear any existing timeout
-          if (tooltipTimeout) {
-            clearTimeout(tooltipTimeout);
-          }
+        setupTooltip(trigger, tooltip);
+      });
+      
+      // Auto-create tooltips for elements with title attributes
+      const elementsWithTitles = document.querySelectorAll('[title]:not(.tooltip-trigger)');
+      
+      elementsWithTitles.forEach((element, index) => {
+        const title = element.getAttribute('title');
+        if (title) {
+          // Remove the title attribute to prevent default tooltip
+          element.removeAttribute('title');
           
-          // Set 2.5 second delay before showing tooltip
-          tooltipTimeout = setTimeout(() => {
-            tooltip.style.display = 'block';
-            tooltip.style.opacity = '1';
-            tooltip.style.visibility = 'visible';
-            updateTooltipPosition(e, tooltip);
-          }, 2500);
-        });
-        
-        trigger.addEventListener('mouseleave', () => {
-          // Clear timeout if mouse leaves before tooltip shows
-          if (tooltipTimeout) {
-            clearTimeout(tooltipTimeout);
-          }
+          // Add tooltip class and create tooltip element
+          element.classList.add('tooltip-trigger');
+          const tooltip = document.createElement('div');
+          tooltip.className = 'tooltip';
+          tooltip.textContent = title;
+          element.appendChild(tooltip);
           
-          tooltip.style.opacity = '0';
-          tooltip.style.visibility = 'hidden';
-          setTimeout(() => {
-            tooltip.style.display = 'none';
-          }, 150);
-        });
+          setupTooltip(element, tooltip);
+        }
       });
     }
     
+    function setupTooltip(trigger, tooltip) {
+      let tooltipTimeout;
+      let isTooltipVisible = false;
+      
+      trigger.addEventListener('mouseenter', (e) => {
+        // Clear any existing timeout
+        if (tooltipTimeout) {
+          clearTimeout(tooltipTimeout);
+        }
+        
+        // Perfect delay: 800ms for quick but not instant tooltips
+        tooltipTimeout = setTimeout(() => {
+          if (!isTooltipVisible) {
+            tooltip.style.display = 'block';
+            updateTooltipPosition(e, tooltip);
+            
+            // Use requestAnimationFrame for smooth animation
+            requestAnimationFrame(() => {
+              tooltip.classList.add('show');
+              isTooltipVisible = true;
+            });
+          }
+        }, 800);
+      });
+      
+      trigger.addEventListener('mouseleave', () => {
+        // Clear timeout if mouse leaves before tooltip shows
+        if (tooltipTimeout) {
+          clearTimeout(tooltipTimeout);
+        }
+        
+        if (isTooltipVisible) {
+          tooltip.classList.remove('show');
+          isTooltipVisible = false;
+          
+          // Hide after animation completes
+          setTimeout(() => {
+            tooltip.style.display = 'none';
+          }, 300);
+        }
+      });
+      
+      // No need for mouse movement tracking since tooltip is positioned relative to element
+    }
+    
     function updateTooltipPosition(e, tooltip) {
+      const trigger = e.target.closest('.tooltip-trigger');
+      if (!trigger) return;
+      
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
+      const triggerRect = trigger.getBoundingClientRect();
+      const tooltipWidth = 220; // max-width from CSS
+      const tooltipHeight = 60; // estimated height
       
-      let x = e.clientX;
-      let y = e.clientY;
+      // Clear any existing positioning classes
+      tooltip.classList.remove('tooltip-left', 'tooltip-right', 'tooltip-above', 'tooltip-below');
       
-      // Position tooltip to the right of cursor to avoid covering numbers
-      x = e.clientX + 20;
-      y = e.clientY - 5;
-      tooltip.style.transform = 'translate(0, -50%)';
+      // Smart positioning relative to the element
+      const spaceRight = viewportWidth - triggerRect.right;
+      const spaceLeft = triggerRect.left;
+      const spaceAbove = triggerRect.top;
+      const spaceBelow = viewportHeight - triggerRect.bottom;
       
-      // If tooltip would go off screen to the right, position it to the left
-      if (x > viewportWidth - 200) {
-        x = e.clientX - 20;
-        tooltip.style.transform = 'translate(-100%, -50%)';
+      let x, y;
+      
+      // Determine horizontal position
+      if (spaceRight >= tooltipWidth + 20) {
+        // Position to the right
+        x = triggerRect.right + 10;
+        y = triggerRect.top + (triggerRect.height / 2);
+        tooltip.classList.add('tooltip-right');
+      } else if (spaceLeft >= tooltipWidth + 20) {
+        // Position to the left
+        x = triggerRect.left - 10;
+        y = triggerRect.top + (triggerRect.height / 2);
+        tooltip.classList.add('tooltip-left');
+      } else {
+        // Center horizontally
+        x = triggerRect.left + (triggerRect.width / 2);
+        
+        // Determine vertical position
+        if (spaceAbove >= tooltipHeight + 20) {
+          // Position above
+          y = triggerRect.top - 10;
+          tooltip.classList.add('tooltip-above');
+        } else if (spaceBelow >= tooltipHeight + 20) {
+          // Position below
+          y = triggerRect.bottom + 10;
+          tooltip.classList.add('tooltip-below');
+        } else {
+          // Center vertically
+          y = triggerRect.top + (triggerRect.height / 2);
+          tooltip.classList.add('tooltip-above');
+        }
       }
       
-      // Keep tooltip on screen vertically
-      if (y < 50) {
-        y = 50;
-      } else if (y > viewportHeight - 50) {
-        y = viewportHeight - 50;
-      }
+      // Ensure tooltip stays within viewport bounds
+      x = Math.max(10, Math.min(x, viewportWidth - 10));
+      y = Math.max(10, Math.min(y, viewportHeight - 10));
       
       // Set position
       tooltip.style.left = x + 'px';
@@ -8773,9 +8958,72 @@ async function saveProfile({ fullName, file }) {
     setText('shareIncomeCompletedVal', nfUSD.format(lifetimeIncome.totalUSD));
     setText('shareIncomePendingVal', lifetimeIncome.totalEntries.toString());
     
-    // Update FX rate display
-    setText('kpiIncomeFxSmall', Number(state.currencyRate||0).toFixed(4));
+  // Update FX rate display
+  setText('kpiIncomeFxSmall', Number(state.currencyRate||0).toFixed(4));
+}
+
+// Ultra-smooth animation functions optimized for performance
+function animateKPICards() {
+  const kpiCards = document.querySelectorAll('.kpi');
+  kpiCards.forEach((card, index) => {
+    // Reset any existing animations
+    card.classList.remove('fade-in', 'loading');
+    
+    // Use requestAnimationFrame for smoother timing
+    requestAnimationFrame(() => {
+      // Add loading state briefly
+      card.classList.add('loading');
+      
+      // Animate in with reduced staggered delay for snappier feel
+      setTimeout(() => {
+        card.classList.remove('loading');
+        card.classList.add('fade-in');
+      }, index * 50); // Reduced from 100ms to 50ms
+    });
+  });
+}
+
+function animateTableRows() {
+  const tableRows = document.querySelectorAll('.row:not(.row-head):not(.row-sum)');
+  tableRows.forEach((row, index) => {
+    // Reset any existing animations
+    row.classList.remove('fade-in', 'slide-in');
+    
+    // Use requestAnimationFrame for smoother timing
+    requestAnimationFrame(() => {
+      // Animate in with reduced staggered delay
+      setTimeout(() => {
+        row.classList.add('fade-in');
+      }, index * 25); // Reduced from 50ms to 25ms
+    });
+  });
+}
+
+// Optimized loading performance
+function optimizeInitialLoad() {
+  // Preload critical resources
+  const criticalImages = ['Images/Logo.svg', 'Images/Favicon.svg'];
+  criticalImages.forEach(src => {
+    const img = new Image();
+    img.src = src;
+  });
+  
+  // Use requestIdleCallback for non-critical operations
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      // Load non-critical resources here
+      loadNonCriticalResources();
+    });
+  } else {
+    // Fallback for browsers without requestIdleCallback
+    setTimeout(loadNonCriticalResources, 100);
   }
+}
+
+function loadNonCriticalResources() {
+  // Load additional resources that aren't critical for initial render
+  // This can include analytics, additional icons, etc.
+}
 
   function renderAll(){
       renderList('list-personal', state.personal, false);
@@ -8796,6 +9044,12 @@ async function saveProfile({ fullName, file }) {
     
     // Re-add event listeners after rendering
     addRowButtonListeners();
+    
+    // Add smooth animations to KPI cards
+    animateKPICards();
+    
+    // Add smooth animations to table rows
+    animateTableRows();
     
     // Ensure all inputs have instant cloud sync after rendering
     setTimeout(() => {
@@ -9539,6 +9793,9 @@ async function saveProfile({ fullName, file }) {
           currencyRates[state.selectedCurrency] = newRate;
           console.log(`💾 Updated currencyRates[${selectedCurrency}] = ${newRate}`);
           
+          // Update FX display in KPIs
+          updateFXDisplay(newRate);
+          
           if (showFeedback) {
             // Show success feedback
             btn.style.background = '#10b981';
@@ -9586,6 +9843,9 @@ async function saveProfile({ fullName, file }) {
         
         // Update the currencyRates object with the fallback rate
         currencyRates[selectedCurrency] = fallbackRate;
+        
+        // Update FX display with fallback rate
+        updateFXDisplay(fallbackRate);
         
         if (showFeedback) {
           btn.style.background = '#f59e0b';
@@ -9668,6 +9928,30 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
+    // Function to update FX display in KPIs and other UI elements
+    function updateFXDisplay(rate) {
+      // Update any FX rate displays in the UI
+      const fxDisplays = document.querySelectorAll('.fx-rate-display, .currency-rate-display');
+      fxDisplays.forEach(display => {
+        display.textContent = rate.toFixed(4);
+      });
+      
+      // Update the input field if it exists
+      const fxInput = $('#inputFx');
+      if (fxInput) {
+        fxInput.value = rate.toFixed(4);
+      }
+      
+      // Update any KPI cards that show FX rates
+      const kpiCards = document.querySelectorAll('.kpi');
+      kpiCards.forEach(card => {
+        const fxText = card.querySelector('.fx-text');
+        if (fxText) {
+          fxText.textContent = `1 USD = ${rate.toFixed(4)} ${state.selectedCurrency}`;
+        }
+      });
+    }
+    
     // Function to update last refresh time display
     function updateLastRefreshDisplay() {
       const lastRefresh = localStorage.getItem('lastCurrencyRefresh');
@@ -9703,6 +9987,35 @@ async function saveProfile({ fullName, file }) {
         updateLastRefreshDisplay();
       });
     });
+    
+    // Auto-refresh FX rates on page load and periodically
+    let fxRefreshInterval;
+    
+    function startAutoRefresh() {
+      // Refresh immediately on page load (silent)
+      setTimeout(() => {
+        refreshCurrencyRate(false).then(() => {
+          updateLastRefreshDisplay();
+        });
+      }, 2000); // Wait 2 seconds after page load
+      
+      // Set up periodic refresh every 5 minutes
+      fxRefreshInterval = setInterval(() => {
+        refreshCurrencyRate(false).then(() => {
+          updateLastRefreshDisplay();
+        });
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+    
+    function stopAutoRefresh() {
+      if (fxRefreshInterval) {
+        clearInterval(fxRefreshInterval);
+        fxRefreshInterval = null;
+      }
+    }
+    
+    // Start auto-refresh when page loads
+    startAutoRefresh();
     
     // Settings currency selector
     const settingsCurrencySelect = document.getElementById('settingsCurrencySelect');
@@ -10292,7 +10605,7 @@ async function saveProfile({ fullName, file }) {
       }
     });
     
-    // Show loading skeletons for first 2 seconds
+    // Show loading skeletons for optimized duration
     const loadingSkeleton = document.getElementById('loading-skeleton');
     const loadingSkeletonBiz = document.getElementById('loading-skeleton-biz');
     
@@ -10303,7 +10616,7 @@ async function saveProfile({ fullName, file }) {
       loadingSkeletonBiz.classList.remove('hidden');
     }
     
-    // Hide skeletons after minimum loading time
+    // Hide skeletons after optimized loading time (reduced from 2000ms to 800ms)
     setTimeout(() => {
       if (loadingSkeleton) {
         loadingSkeleton.classList.add('hidden');
@@ -10311,7 +10624,7 @@ async function saveProfile({ fullName, file }) {
       if (loadingSkeletonBiz) {
         loadingSkeletonBiz.classList.add('hidden');
       }
-    }, 2000);
+    }, 800);
     
     // Initialize column order on page load (after renderAll)
     applyColumnOrder();

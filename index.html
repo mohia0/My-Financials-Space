@@ -392,7 +392,7 @@
       <div class="table-container">
         <div class="table">
           <div class="row row-head">
-            <div></div><div></div><div>Name</div><div>Cost USD</div><div>Status</div><div>Billing</div><div class="draggable-header financial-column" data-column="monthly" draggable="true">Monthly USD</div><div class="draggable-header financial-column" data-column="yearly" draggable="true">Yearly USD</div><div class="draggable-header financial-column" data-column="monthly-egp" draggable="true" id="headerMonthlyEGP">Monthly EGP</div><div class="draggable-header financial-column" data-column="yearly-egp" draggable="true" id="headerYearlyEGP">Yearly EGP</div><div></div>
+            <div></div><div></div><div class="tooltip-trigger">Name<div class="tooltip">Expense name or description</div></div><div class="tooltip-trigger">Cost USD<div class="tooltip">Original cost in US Dollars</div></div><div class="tooltip-trigger">Status<div class="tooltip">Active or Inactive status</div></div><div class="tooltip-trigger">Billing<div class="tooltip">Monthly or Yearly billing cycle</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="monthly" draggable="true">Monthly USD<div class="tooltip">Monthly cost in USD (drag to reorder)</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="yearly" draggable="true">Yearly USD<div class="tooltip">Yearly cost in USD (drag to reorder)</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="monthly-egp" draggable="true" id="headerMonthlyEGP">Monthly EGP<div class="tooltip">Monthly cost in EGP (drag to reorder)</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="yearly-egp" draggable="true" id="headerYearlyEGP">Yearly EGP<div class="tooltip">Yearly cost in EGP (drag to reorder)</div></div><div></div>
           </div>
           <!-- Loading Skeleton -->
           <div id="loading-skeleton" class="loading-skeleton">
@@ -439,7 +439,7 @@
             </div>
           </div>
           <div id="list-personal"></div>
-          <button class="btn w-full justify-start text-xs py-3 mx-0 my-3" data-add-row="personal" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row</button>
+          <button class="btn w-full justify-start text-xs py-3 mx-0 my-3 tooltip-trigger" data-add-row="personal" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row<div class="tooltip">Add a new personal expense</div></button>
           <div id="sum-personal" class="row row-sum"></div>
         </div>
       </div>
@@ -451,7 +451,7 @@
       <div class="table-container">
         <div class="table">
           <div class="row row-head row-biz">
-            <div></div><div></div><div>Name</div><div>Cost USD</div><div>Status</div><div>Billing</div><div>DATE</div><div class="draggable-header financial-column" data-column="monthly" draggable="true">Monthly USD</div><div class="draggable-header financial-column" data-column="yearly" draggable="true">Yearly USD</div><div class="draggable-header financial-column" data-column="monthly-egp" draggable="true" id="headerBizMonthlyEGP">Monthly EGP</div><div class="draggable-header financial-column" data-column="yearly-egp" draggable="true" id="headerBizYearlyEGP">Yearly EGP</div><div></div>
+            <div></div><div></div><div class="tooltip-trigger">Name<div class="tooltip">Business expense name or description</div></div><div class="tooltip-trigger">Cost USD<div class="tooltip">Original cost in US Dollars</div></div><div class="tooltip-trigger">Status<div class="tooltip">Active or Inactive status</div></div><div class="tooltip-trigger">Billing<div class="tooltip">Monthly or Yearly billing cycle</div></div><div class="tooltip-trigger">DATE<div class="tooltip">Next payment due date</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="monthly" draggable="true">Monthly USD<div class="tooltip">Monthly cost in USD (drag to reorder)</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="yearly" draggable="true">Yearly USD<div class="tooltip">Yearly cost in USD (drag to reorder)</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="monthly-egp" draggable="true" id="headerBizMonthlyEGP">Monthly EGP<div class="tooltip">Monthly cost in EGP (drag to reorder)</div></div><div class="draggable-header financial-column tooltip-trigger" data-column="yearly-egp" draggable="true" id="headerBizYearlyEGP">Yearly EGP<div class="tooltip">Yearly cost in EGP (drag to reorder)</div></div><div></div>
           </div>
           <!-- Loading Skeleton for Business -->
           <div id="loading-skeleton-biz" class="loading-skeleton">
@@ -501,7 +501,7 @@
             </div>
           </div>
           <div id="list-biz"></div>
-          <button class="btn w-full justify-start text-xs py-3 mx-0 my-3" data-add-row="biz" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row</button>
+          <button class="btn w-full justify-start text-xs py-3 mx-0 my-3 tooltip-trigger" data-add-row="biz" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row<div class="tooltip">Add a new business expense</div></button>
           <div id="sum-biz" class="row row-sum row-biz"></div>
         </div>
       </div>
@@ -666,10 +666,10 @@
         <div class="table-container">
           <div class="table">
             <div class="row row-head row-income">
-              <div></div><div></div><div>Project Name</div><div>Tags</div><div>Date</div><div>All Payment</div><div>Paid USD</div><div id="headerPaidEGP">Paid EGP</div><div>Method</div><div></div>
+              <div></div><div></div><div class="tooltip-trigger">Project Name<div class="tooltip">Name of the project or client</div></div><div class="tooltip-trigger">Tags<div class="tooltip">Project categories or tags</div></div><div class="tooltip-trigger">Date<div class="tooltip">Payment received date</div></div><div class="tooltip-trigger">All Payment<div class="tooltip">Total project payment amount</div></div><div class="tooltip-trigger">Paid USD<div class="tooltip">Amount paid in US Dollars</div></div><div class="tooltip-trigger" id="headerPaidEGP">Paid EGP<div class="tooltip">Amount paid in EGP</div></div><div class="tooltip-trigger">Method<div class="tooltip">Payment method (bank, cash, etc.)</div></div><div></div>
             </div>
             <div id="list-income"></div>
-            <button class="btn w-full justify-start text-xs py-3 mx-0 my-3" data-add-row="income" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row</button>
+            <button class="btn w-full justify-start text-xs py-3 mx-0 my-3 tooltip-trigger" data-add-row="income" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row<div class="tooltip">Add a new income entry</div></button>
             <div id="sum-income" class="row row-sum row-income"></div>
           </div>
         </div>
