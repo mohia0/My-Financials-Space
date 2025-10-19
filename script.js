@@ -968,7 +968,7 @@ async function saveProfile({ fullName, file }) {
       // Save and re-render
       save('add-row'); 
       clearCalculationCache(); // Clear cache when data changes
-      renderAll();
+      renderAll(true); // User action - enable animations
     }
     
     // Make functions globally accessible
@@ -7762,11 +7762,11 @@ async function saveProfile({ fullName, file }) {
             save();
           }
           
-          iconPickerEl.close();
-          iconPickCtx = null;
-          renderAll();
-        });
-        frag.appendChild(btn);
+        iconPickerEl.close();
+        iconPickCtx = null;
+        renderAll(true); // User action - enable animations
+      });
+      frag.appendChild(btn);
       });
       iconGridEl.appendChild(frag);
       
@@ -8287,7 +8287,7 @@ async function saveProfile({ fullName, file }) {
             });
             
             saveToLocal(); // Save locally as well
-            renderAll();
+            renderAll(true); // User action - enable animations
           } else {
             delBtn.classList.add('delete-confirm');
             delBtn.innerHTML = 'Sure?';
@@ -8766,7 +8766,7 @@ async function saveProfile({ fullName, file }) {
           });
           
           saveToLocal(); // Save locally as well
-          renderAll();
+          renderAll(true); // User action - enable animations
           // Trigger live KPI updates when income row is deleted
           updateIncomeKPIsLive();
         } else {
@@ -9000,7 +9000,7 @@ function loadNonCriticalResources() {
   // This can include analytics, additional icons, etc.
 }
 
-  function renderAll(){
+  function renderAll(shouldAnimate = false){
       renderList('list-personal', state.personal, false);
       renderList('list-biz', state.biz, true);
       const currentYearData = state.income[currentYear] || [];
@@ -9020,11 +9020,14 @@ function loadNonCriticalResources() {
     // Re-add event listeners after rendering
     addRowButtonListeners();
     
-    // Add smooth animations to KPI cards
-    animateKPICards();
-    
-    // Add smooth animations to table rows
-    animateTableRows();
+    // Only animate if explicitly requested (user actions)
+    if (shouldAnimate) {
+      // Add smooth animations to KPI cards
+      animateKPICards();
+      
+      // Add smooth animations to table rows
+      animateTableRows();
+    }
     
     // Ensure all inputs have instant cloud sync after rendering
     setTimeout(() => {
@@ -10310,7 +10313,7 @@ function loadNonCriticalResources() {
               }
               
               save();
-              renderAll();
+              renderAll(true); // User action - enable animations
               document.body.removeChild(modal);
               showNotification('📥 Data imported successfully', 'success', 2000, { force: true });
               
@@ -10342,7 +10345,7 @@ function loadNonCriticalResources() {
             state.personal.forEach(item => delete item.id);
             state.biz.forEach(item => delete item.id);
             save();
-            renderAll();
+            renderAll(true); // User action - enable animations
             showNotification('Data imported', 'success', 2000);
           }
         } catch (error) {
@@ -10378,7 +10381,7 @@ function loadNonCriticalResources() {
       }
       
       // Re-render everything
-      renderAll();
+      renderAll(true); // User action - enable animations
       
       // Close settings modal
       $('#settings').close();
@@ -10725,12 +10728,12 @@ function loadNonCriticalResources() {
           if (dropZone.closest('#list-income')) {
             // Use specific save for income table
             saveToLocal();
-            renderAll();
+            renderAll(true); // User action - enable animations
             showNotification('Income row reordered', 'success', 1500);
           } else {
             // Use regular save for other tables
           save();
-          renderAll();
+          renderAll(true); // User action - enable animations
           showNotification('Row reordered', 'success', 1500);
           }
         }
