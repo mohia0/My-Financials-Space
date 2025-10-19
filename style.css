@@ -693,9 +693,37 @@ header.scrolled .icon-btn:hover {
   transition: all 0.2s ease;
 }
 .kpi-em{ background:linear-gradient(180deg, rgba(99,102,241,.10), rgba(99,102,241,.04) 35%, var(--card)); border:1px solid rgba(99,102,241,.25); }
-.bar{ height:8px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden; }
+.bar{ height:8px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden; position: relative; }
 [data-theme="light"] .bar{ background:#eceff3; }
-.bar>span{ display:block; height:100%; background:linear-gradient(90deg, rgba(99,102,241,.9), rgba(56,189,248,.9)); transition: width 0.3s ease; }
+.bar>span{ display:block; height:100%; background:linear-gradient(90deg, rgba(99,102,241,.9), rgba(56,189,248,.9)); transition: width 0.8s ease; position: relative; }
+
+/* Progress bar loading animation */
+.bar.loading {
+  background: rgba(255,255,255,.06);
+  overflow: hidden;
+}
+
+.bar.loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: progressLoading 1.5s infinite;
+}
+
+[data-theme="light"] .bar.loading::before {
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent);
+}
+
+@keyframes progressLoading {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Progress bar loading text removed */
 
 .input,.select{ 
   width:100%; 
@@ -6332,15 +6360,7 @@ header img:hover {
   box-sizing: border-box;
 }
 
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -5px;
-  transform: translateY(-50%);
-  border: 5px solid transparent;
-  border-right-color: var(--stroke);
-}
+/* Tooltip arrow removed */
 
 .tooltip-trigger:hover .tooltip {
   opacity: 1;
@@ -6355,26 +6375,13 @@ header img:hover {
   margin-left: 0;
 }
 
-.tooltip.tooltip-right::after {
-  top: 50%;
-  left: -5px;
-  transform: translateY(-50%);
-  border-left-color: var(--stroke);
-  border-top-color: transparent;
-}
+/* Tooltip arrow removed */
 
 .tooltip.tooltip-left {
   transform: translate(-100%, -50%);
 }
 
-.tooltip.tooltip-left::after {
-  top: 50%;
-  right: -5px;
-  left: auto;
-  transform: translateY(-50%);
-  border-right-color: var(--stroke);
-  border-left-color: transparent;
-}
+/* Tooltip arrow removed */
 
 /* Ensure tooltips are never clipped */
 .kpi, .card, .page-content, .grid, .section {

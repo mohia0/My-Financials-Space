@@ -292,8 +292,8 @@
           <span class="font-semibold" id="kpiFxSmall">—</span>
         </div>
         <div class="mt-2 grid grid-cols-2 gap-4 text-xs">
-          <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Personal share</span><span id="sharePersonalVal">0%</span></div><div class="bar mt-1 h-2"><span id="sharePersonalBar" style="width:0%"></span></div></div>
-          <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Biz share</span><span id="shareBizVal">0%</span></div><div class="bar mt-1 h-2"><span id="shareBizBar" style="width:0%"></span></div></div>
+          <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Personal share</span><span id="sharePersonalVal">0%</span></div><div class="bar mt-1 h-2 loading" id="sharePersonalBarContainer"><span id="sharePersonalBar" style="width:0%"></span></div></div>
+          <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Biz share</span><span id="shareBizVal">0%</span></div><div class="bar mt-1 h-2 loading" id="shareBizBarContainer"><span id="shareBizBar" style="width:0%"></span></div></div>
         </div>
         
         <!-- Analytics Panel -->
@@ -611,7 +611,7 @@
               <div class="text-[11px]" style="color:var(--muted)">This Year</div>
               <div class="value" id="kpiIncomeYearlyCurrent">$0.00</div>
               <div class="sub" id="kpiIncomeYearlyCurrentEGP">0</div>
-              <div class="tooltip">Total money earned in 2024</div>
+              <div class="tooltip">Total money earned this year</div>
             </div>
             <div class="text-right tooltip-trigger">
               <div class="text-[11px]" style="color:var(--muted)">Target</div>
@@ -704,8 +704,8 @@
             <span class="font-semibold" id="analyticsCashFlowStatus">—</span>
           </div>
           <div class="mt-2 grid grid-cols-2 gap-4 text-xs">
-            <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Income</span><span id="analyticsIncomeVal">$0.00</span></div><div class="bar mt-1 h-2"><span id="analyticsIncomeBar" style="width:0%"></span></div></div>
-            <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Expenses</span><span id="analyticsExpensesVal">$0.00</span></div><div class="bar mt-1 h-2"><span id="analyticsExpensesBar" style="width:0%"></span></div></div>
+            <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Income</span><span id="analyticsIncomeVal">$0.00</span></div><div class="bar mt-1 h-2 loading" id="analyticsIncomeBarContainer"><span id="analyticsIncomeBar" style="width:0%"></span></div></div>
+            <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Expenses</span><span id="analyticsExpensesVal">$0.00</span></div><div class="bar mt-1 h-2 loading" id="analyticsExpensesBarContainer"><span id="analyticsExpensesBar" style="width:0%"></span></div></div>
           </div>
           
           <!-- Analytics Panel -->
@@ -735,7 +735,7 @@
             <div class="flex items-center justify-between tooltip-trigger"><span style="color:var(--muted)">Target: 20%</span><span id="analyticsSavingsTarget">0%</span>
               <div class="tooltip">Recommended savings rate for financial health</div>
             </div>
-            <div class="bar mt-1 h-2"><span id="analyticsSavingsProgressBar" style="width:0%"></span></div>
+            <div class="bar mt-1 h-2 loading" id="analyticsSavingsProgressBarContainer"><span id="analyticsSavingsProgressBar" style="width:0%"></span></div>
           </div>
           
           <!-- Analytics Panel -->
@@ -763,7 +763,7 @@
           </div>
           <div class="mt-2 text-xs">
             <div class="flex items-center justify-between"><span style="color:var(--muted)">Total Efficiency</span><span id="analyticsTotalEfficiency">0%</span></div>
-            <div class="bar mt-1 h-2"><span id="analyticsEfficiencyBar" style="width:0%"></span></div>
+            <div class="bar mt-1 h-2 loading" id="analyticsEfficiencyBarContainer"><span id="analyticsEfficiencyBar" style="width:0%"></span></div>
           </div>
           
           <!-- Analytics Panel -->
@@ -791,7 +791,7 @@
           </div>
           <div class="mt-2 text-xs">
             <div class="flex items-center justify-between"><span style="color:var(--muted)">Progress</span><span id="analyticsHealthProgress">0%</span></div>
-            <div class="bar mt-1 h-2"><span id="analyticsHealthBar" style="width:0%"></span></div>
+            <div class="bar mt-1 h-2 loading" id="analyticsHealthBarContainer"><span id="analyticsHealthBar" style="width:0%"></span></div>
           </div>
           
           <!-- Analytics Panel -->

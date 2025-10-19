@@ -39,6 +39,7 @@ window.addEventListener('resize', () => {
 document.addEventListener('DOMContentLoaded', () => {
   updateHeader();
   initializeTooltips();
+  initializeProgressBars();
 });
 
 // Supabase configuration - NEW PROJECT
@@ -262,6 +263,9 @@ async function saveProfile({ fullName, file }) {
         pageAnalytics?.style.setProperty('display', 'none');
         yearTabsContainer?.style.setProperty('display', 'none');
         currentPage = 'expenses';
+        
+        // Reset and animate progress bars for expenses page
+        resetAllProgressBars();
       } else if (page === 'income') {
         tabExpenses?.classList.remove('active');
         tabIncome?.classList.add('active');
@@ -289,6 +293,9 @@ async function saveProfile({ fullName, file }) {
         pageAnalytics?.style.setProperty('display', 'block');
         yearTabsContainer?.style.setProperty('display', 'none');
         currentPage = 'analytics';
+        
+        // Reset and animate progress bars for analytics page
+        resetAllProgressBars();
         
         // Update analytics page data
         updateAnalyticsPage();
@@ -5098,10 +5105,11 @@ async function saveProfile({ fullName, file }) {
     setText('shareBizVal', sb + '%');
     
     // Update bar widths only if they've changed
-    const ps = document.getElementById('sharePersonalBar');
-    const bs = document.getElementById('shareBizBar');
-    if (ps && ps.style.width !== sp + '%') ps.style.width = sp + '%';
-    if (bs && bs.style.width !== sb + '%') bs.style.width = sb + '%';
+    // Animate progress bars with loading effect
+    setTimeout(() => {
+      animateProgressBar('sharePersonalBarContainer', sp);
+      animateProgressBar('shareBizBarContainer', sb);
+    }, 1000);
     
     // Update Income KPIs with lifetime totals
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
@@ -5694,7 +5702,8 @@ async function saveProfile({ fullName, file }) {
         const sampleUSD = [5000, 7500, 6200, 8800, 9200, 7800];
         const sampleConverted = sampleUSD.map(amount => usdToSelectedCurrency(amount));
         
-        chartData.labels = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024', 'Jun 2024'];
+        const currentYear = new Date().getFullYear();
+        chartData.labels = [`Jan ${currentYear}`, `Feb ${currentYear}`, `Mar ${currentYear}`, `Apr ${currentYear}`, `May ${currentYear}`, `Jun ${currentYear}`];
         chartData.data = sampleConverted;
         
         // Calculate cumulative data
@@ -5849,6 +5858,74 @@ async function saveProfile({ fullName, file }) {
       }
     }
 
+    // Progress bar loading animation system
+    function initializeProgressBars() {
+      const progressBarIds = [
+        'sharePersonalBarContainer',
+        'shareBizBarContainer', 
+        'analyticsIncomeBarContainer',
+        'analyticsExpensesBarContainer',
+        'analyticsSavingsProgressBarContainer',
+        'analyticsEfficiencyBarContainer',
+        'analyticsHealthBarContainer'
+      ];
+      
+      progressBarIds.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+          // Start with loading state
+          container.classList.add('loading');
+          
+          // Simulate loading delay (similar to chart loading)
+          setTimeout(() => {
+            container.classList.remove('loading');
+          }, 2000 + Math.random() * 1000); // 2-3 seconds random delay
+        }
+      });
+    }
+    
+    function animateProgressBar(containerId, targetWidth, duration = 800) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      const bar = container.querySelector('span');
+      if (!bar) return;
+      
+      // Remove loading state
+      container.classList.remove('loading');
+      
+      // Animate to target width
+      bar.style.width = targetWidth + '%';
+    }
+    
+    function resetProgressBar(containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      const bar = container.querySelector('span');
+      if (!bar) return;
+      
+      // Reset to 0 and add loading state
+      bar.style.width = '0%';
+      container.classList.add('loading');
+    }
+    
+    function resetAllProgressBars() {
+      const progressBarIds = [
+        'sharePersonalBarContainer',
+        'shareBizBarContainer', 
+        'analyticsIncomeBarContainer',
+        'analyticsExpensesBarContainer',
+        'analyticsSavingsProgressBarContainer',
+        'analyticsEfficiencyBarContainer',
+        'analyticsHealthBarContainer'
+      ];
+      
+      progressBarIds.forEach(containerId => {
+        resetProgressBar(containerId);
+      });
+    }
+
     // Tooltip positioning system
     function initializeTooltips() {
       const tooltipTriggers = document.querySelectorAll('.tooltip-trigger');
@@ -5857,18 +5934,29 @@ async function saveProfile({ fullName, file }) {
         const tooltip = trigger.querySelector('.tooltip');
         if (!tooltip) return;
         
-        trigger.addEventListener('mouseenter', (e) => {
-          tooltip.style.display = 'block';
-          tooltip.style.opacity = '1';
-          tooltip.style.visibility = 'visible';
-          updateTooltipPosition(e, tooltip);
-        });
+        let tooltipTimeout;
         
-        trigger.addEventListener('mousemove', (e) => {
-          updateTooltipPosition(e, tooltip);
+        trigger.addEventListener('mouseenter', (e) => {
+          // Clear any existing timeout
+          if (tooltipTimeout) {
+            clearTimeout(tooltipTimeout);
+          }
+          
+          // Set 2.5 second delay before showing tooltip
+          tooltipTimeout = setTimeout(() => {
+            tooltip.style.display = 'block';
+            tooltip.style.opacity = '1';
+            tooltip.style.visibility = 'visible';
+            updateTooltipPosition(e, tooltip);
+          }, 2500);
         });
         
         trigger.addEventListener('mouseleave', () => {
+          // Clear timeout if mouse leaves before tooltip shows
+          if (tooltipTimeout) {
+            clearTimeout(tooltipTimeout);
+          }
+          
           tooltip.style.opacity = '0';
           tooltip.style.visibility = 'hidden';
           setTimeout(() => {
@@ -6382,8 +6470,11 @@ async function saveProfile({ fullName, file }) {
       setText('analyticsIncomeVal', nfUSD.format(incomeTotals.monthly));
       setText('analyticsExpensesVal', nfUSD.format(allExpenses.mUSD));
       
-      const incomeBar = $('#analyticsIncomeBar'); if(incomeBar) incomeBar.style.width = incomeBarWidth + '%';
-      const expensesBar = $('#analyticsExpensesBar'); if(expensesBar) expensesBar.style.width = expensesBarWidth + '%';
+      // Animate progress bars with loading effect
+      setTimeout(() => {
+        animateProgressBar('analyticsIncomeBarContainer', incomeBarWidth);
+        animateProgressBar('analyticsExpensesBarContainer', expensesBarWidth);
+      }, 1200);
       
       // 2. Savings Rate Analysis
       const savingsRateMonthly = incomeTotals.monthly > 0 ? (netCashFlow.mUSD / incomeTotals.monthly) * 100 : 0;
@@ -6410,8 +6501,10 @@ async function saveProfile({ fullName, file }) {
       const savingsProgress = Math.min(100, Math.max(0, (savingsRateMonthly / targetSavings) * 100));
       setText('analyticsSavingsTarget', savingsRateMonthly.toFixed(1) + '%');
       
-      const savingsProgressBar = $('#analyticsSavingsProgressBar'); 
-      if(savingsProgressBar) savingsProgressBar.style.width = savingsProgress + '%';
+      // Animate savings progress bar
+      setTimeout(() => {
+        animateProgressBar('analyticsSavingsProgressBarContainer', savingsProgress);
+      }, 1400);
       
       // 3. Expense Efficiency Analysis
       const personalEfficiency = incomeTotals.monthly > 0 ? (p.mUSD / incomeTotals.monthly) * 100 : 0;
@@ -6431,8 +6524,10 @@ async function saveProfile({ fullName, file }) {
       
       // Efficiency bar (inverse - lower is better)
       const efficiencyScore = Math.max(0, 100 - totalEfficiency);
-      const efficiencyBar = $('#analyticsEfficiencyBar'); 
-      if(efficiencyBar) efficiencyBar.style.width = efficiencyScore + '%';
+      // Animate efficiency progress bar
+      setTimeout(() => {
+        animateProgressBar('analyticsEfficiencyBarContainer', efficiencyScore);
+      }, 1600);
       
       // 4. Financial Health Score
       let healthScore = 0;
@@ -6472,9 +6567,10 @@ async function saveProfile({ fullName, file }) {
       setText('analyticsHealthScoreStatus', '/100');
       setText('analyticsHealthGradeStatus', 'Grade');
       
-      // Health progress bar
-      const healthBar = $('#analyticsHealthBar'); 
-      if(healthBar) healthBar.style.width = healthScore + '%';
+      // Animate health progress bar
+      setTimeout(() => {
+        animateProgressBar('analyticsHealthBarContainer', healthScore);
+      }, 1800);
       setText('analyticsHealthProgress', Math.round(healthScore) + '%');
       
       // Apply color coding to health score
