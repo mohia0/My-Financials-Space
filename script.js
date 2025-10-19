@@ -6088,8 +6088,10 @@ async function saveProfile({ fullName, file }) {
         // Perfect delay: 800ms for quick but not instant tooltips
         tooltipTimeout = setTimeout(() => {
           if (!isTooltipVisible) {
+            // Position tooltip relative to the trigger element, not the event target
+            positionTooltipOnElement(trigger, tooltip);
+            
             tooltip.style.display = 'block';
-            updateTooltipPosition(e, tooltip);
             
             // Use requestAnimationFrame for smooth animation
             requestAnimationFrame(() => {
@@ -6120,65 +6122,38 @@ async function saveProfile({ fullName, file }) {
       // No need for mouse movement tracking since tooltip is positioned relative to element
     }
     
-    function updateTooltipPosition(e, tooltip) {
-      const trigger = e.target.closest('.tooltip-trigger');
-      if (!trigger) return;
+    function positionTooltipOnElement(triggerElement, tooltip) {
+      // Ensure tooltip has proper CSS classes and positioning
+      tooltip.style.position = 'fixed';
+      tooltip.style.zIndex = '999999';
+      tooltip.style.pointerEvents = 'none';
       
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const triggerRect = trigger.getBoundingClientRect();
-      const tooltipWidth = 220; // max-width from CSS
-      const tooltipHeight = 60; // estimated height
+      // Get the exact position of the trigger element
+      const rect = triggerElement.getBoundingClientRect();
       
-      // Clear any existing positioning classes
-      tooltip.classList.remove('tooltip-left', 'tooltip-right', 'tooltip-above', 'tooltip-below');
+      // Calculate center position of the element
+      const centerX = rect.left + (rect.width / 2);
+      const topY = rect.top - 10; // 10px above the element
       
-      // Smart positioning relative to the element
-      const spaceRight = viewportWidth - triggerRect.right;
-      const spaceLeft = triggerRect.left;
-      const spaceAbove = triggerRect.top;
-      const spaceBelow = viewportHeight - triggerRect.bottom;
+      // Set the tooltip position using fixed positioning
+      tooltip.style.left = centerX + 'px';
+      tooltip.style.top = topY + 'px';
+      tooltip.style.transform = 'translate(-50%, -100%) scale(0.95)';
       
-      let x, y;
+      // Ensure tooltip is visible and properly positioned
+      tooltip.style.display = 'block';
+      tooltip.style.visibility = 'visible';
       
-      // Determine horizontal position
-      if (spaceRight >= tooltipWidth + 20) {
-        // Position to the right
-        x = triggerRect.right + 10;
-        y = triggerRect.top + (triggerRect.height / 2);
-        tooltip.classList.add('tooltip-right');
-      } else if (spaceLeft >= tooltipWidth + 20) {
-        // Position to the left
-        x = triggerRect.left - 10;
-        y = triggerRect.top + (triggerRect.height / 2);
-        tooltip.classList.add('tooltip-left');
-      } else {
-        // Center horizontally
-        x = triggerRect.left + (triggerRect.width / 2);
-        
-        // Determine vertical position
-        if (spaceAbove >= tooltipHeight + 20) {
-          // Position above
-          y = triggerRect.top - 10;
-          tooltip.classList.add('tooltip-above');
-        } else if (spaceBelow >= tooltipHeight + 20) {
-          // Position below
-          y = triggerRect.bottom + 10;
-          tooltip.classList.add('tooltip-below');
-        } else {
-          // Center vertically
-          y = triggerRect.top + (triggerRect.height / 2);
-          tooltip.classList.add('tooltip-above');
-        }
-      }
-      
-      // Ensure tooltip stays within viewport bounds
-      x = Math.max(10, Math.min(x, viewportWidth - 10));
-      y = Math.max(10, Math.min(y, viewportHeight - 10));
-      
-      // Set position
-      tooltip.style.left = x + 'px';
-      tooltip.style.top = y + 'px';
+      // Debug logging to help identify the issue
+      console.log('Tooltip positioned at:', {
+        element: triggerElement,
+        elementText: triggerElement.textContent?.trim(),
+        rect: rect,
+        centerX: centerX,
+        topY: topY,
+        tooltip: tooltip,
+        tooltipText: tooltip.textContent?.trim()
+      });
     }
 
     // Insight Cards Utility Functions
@@ -10016,6 +9991,22 @@ function loadNonCriticalResources() {
     
     // Start auto-refresh when page loads
     startAutoRefresh();
+    
+    // Test tooltip positioning function
+    function testTooltipPositioning() {
+      console.log('Testing tooltip positioning...');
+      const testElement = document.querySelector('.tooltip-trigger');
+      if (testElement) {
+        const tooltip = testElement.querySelector('.tooltip');
+        if (tooltip) {
+          positionTooltipOnElement(testElement, tooltip);
+          console.log('Test tooltip positioned');
+        }
+      }
+    }
+    
+    // Test after page loads
+    setTimeout(testTooltipPositioning, 3000);
     
     // Settings currency selector
     const settingsCurrencySelect = document.getElementById('settingsCurrencySelect');

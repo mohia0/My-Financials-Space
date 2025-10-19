@@ -6474,7 +6474,7 @@ header img:hover {
 /* Enhanced Tooltip System with Perfect Delays */
 .tooltip-trigger {
   position: relative;
-  cursor: help;
+  cursor: default;
   transition: all 0.2s ease;
 }
 
@@ -6507,7 +6507,7 @@ header img:hover {
   text-align: center;
   line-height: 1.4;
   pointer-events: none;
-  transform: translate(0, -50%) scale(0.95);
+  transform: translate(-50%, -100%) scale(0.95);
   display: none;
   box-sizing: border-box;
 }
@@ -6543,7 +6543,7 @@ header img:hover {
 
 /* Tooltip positioning variants */
 .tooltip.tooltip-right {
-  transform: translate(10px, -50%) scale(0.95);
+  transform: translate(0, -50%) scale(0.95);
 }
 
 .tooltip.tooltip-left {
@@ -6568,6 +6568,8 @@ header img:hover {
   position: fixed !important;
   z-index: 999999 !important;
   pointer-events: none !important;
+  left: 0 !important;
+  top: 0 !important;
 }
 
 /* Chart container responsive adjustments */
