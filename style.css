@@ -6280,3 +6280,120 @@ header img:hover {
 .chartjs-render-monitor {
   border-radius: 8px;
 }
+
+/* Income Flow Chart Styles */
+#incomeFlowChart {
+  width: 100% !important;
+  height: 300px !important;
+  max-height: 400px;
+}
+
+#chartLoading {
+  transition: opacity 0.3s ease;
+}
+
+#chartLoading.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Super Minimal Tooltips */
+.tooltip-trigger {
+  position: relative;
+  cursor: help;
+}
+
+.tooltip {
+  position: fixed;
+  background: var(--bg);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease;
+  z-index: 999999;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  max-width: 250px;
+  text-align: center;
+  line-height: 1.3;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  display: none;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--stroke);
+}
+
+.tooltip-trigger:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  display: block;
+}
+
+/* Tooltip positioning variants */
+.tooltip.tooltip-right {
+  transform: translate(10px, -50%);
+  margin-top: 0;
+  margin-left: 0;
+}
+
+.tooltip.tooltip-right::after {
+  top: 50%;
+  left: -5px;
+  transform: translateY(-50%);
+  border-left-color: var(--stroke);
+  border-top-color: transparent;
+}
+
+.tooltip.tooltip-left {
+  transform: translate(-10px, -50%);
+  margin-top: 0;
+  margin-left: 0;
+}
+
+.tooltip.tooltip-left::after {
+  top: 50%;
+  right: -5px;
+  left: auto;
+  transform: translateY(-50%);
+  border-right-color: var(--stroke);
+  border-top-color: transparent;
+}
+
+/* Ensure tooltips are never clipped */
+.kpi, .card, .page-content, .grid, .section {
+  overflow: visible !important;
+}
+
+/* Force tooltips to appear above everything */
+.tooltip {
+  position: fixed !important;
+  z-index: 999999 !important;
+  pointer-events: none !important;
+}
+
+/* Chart container responsive adjustments */
+@media (max-width: 768px) {
+  #incomeFlowChart {
+    height: 250px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #incomeFlowChart {
+    height: 200px !important;
+  }
+}

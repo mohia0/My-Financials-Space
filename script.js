@@ -38,6 +38,7 @@ window.addEventListener('resize', () => {
 // Initialize header state
 document.addEventListener('DOMContentLoaded', () => {
   updateHeader();
+  initializeTooltips();
 });
 
 // Supabase configuration - NEW PROJECT
@@ -4751,6 +4752,9 @@ async function saveProfile({ fullName, file }) {
       renderKPIs();
       renderTables();
       updateAnalyticsPage();
+      
+      // Update income flow chart with new currency
+      updateIncomeFlowChart();
     };
     
     // Function to update all KPI displays with current currency
@@ -5130,6 +5134,7 @@ async function saveProfile({ fullName, file }) {
       updateIncomeAllAnalytics(income);
       updateIncomeMonthlyAnalytics(income);
       updateIncomeYearlyAnalytics(income);
+      updateIncomeFlowChart();
     }
     
     function updateIncomeAllAnalytics(income) {
@@ -5568,6 +5573,332 @@ async function saveProfile({ fullName, file }) {
           </div>
         </div>
       `;
+    }
+
+    // Income Flow Chart Functions
+    let incomeFlowChart = null;
+
+    function generateIncomeFlowChartData() {
+      // Get all income data organized by year
+      const yearlyData = {};
+      const monthlyData = {};
+      
+      // Process all income entries
+      Object.keys(state.income).forEach(year => {
+        const yearData = state.income[year] || [];
+        let yearTotal = 0;
+        
+        yearData.forEach(entry => {
+          const amount = Number(entry.paidUsd || 0);
+          yearTotal += amount;
+          
+          // Also collect monthly data for more granular view
+          if (entry.date) {
+            const date = new Date(entry.date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthlyData[monthKey]) {
+              monthlyData[monthKey] = 0;
+            }
+            monthlyData[monthKey] += amount;
+          }
+        });
+        
+        if (yearTotal > 0) {
+          yearlyData[year] = yearTotal;
+        }
+      });
+      
+      // Determine if we should show monthly or yearly data
+      const hasMultipleYears = Object.keys(yearlyData).length > 1;
+      const hasMultipleMonths = Object.keys(monthlyData).length > 6;
+      
+      let labels, data, cumulativeData;
+      
+      if (hasMultipleYears && !hasMultipleMonths) {
+        // Show yearly data
+        const sortedYears = Object.keys(yearlyData).sort();
+        labels = sortedYears;
+        data = sortedYears.map(year => yearlyData[year]);
+      } else {
+        // Show monthly data
+        const sortedMonths = Object.keys(monthlyData).sort();
+        labels = sortedMonths.map(month => {
+          const [year, monthNum] = month.split('-');
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+        });
+        data = sortedMonths.map(month => monthlyData[month]);
+      }
+      
+      // Convert USD data to selected currency
+      const convertedData = data.map(usdAmount => usdToSelectedCurrency(usdAmount));
+      
+      // Calculate cumulative data for trend line
+      cumulativeData = [];
+      let cumulative = 0;
+      convertedData.forEach(value => {
+        cumulative += value;
+        cumulativeData.push(cumulative);
+      });
+      
+      return {
+        labels,
+        data: convertedData,
+        cumulativeData,
+        isYearly: hasMultipleYears && !hasMultipleMonths
+      };
+    }
+
+    function initializeIncomeFlowChart() {
+      const canvas = document.getElementById('incomeFlowChart');
+      const loading = document.getElementById('chartLoading');
+      const currencyDisplay = document.getElementById('chartCurrencyDisplay');
+      
+      if (!canvas) {
+        console.warn('Income flow chart canvas not found');
+        return;
+      }
+      
+      // Update currency display
+      if (currencyDisplay) {
+        currencyDisplay.textContent = state.selectedCurrency || 'EGP';
+      }
+      
+      // Check if Chart.js is loaded
+      if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        if (loading) {
+          loading.innerHTML = '<div class="text-sm" style="color:var(--muted)">Chart.js not loaded. Please refresh the page.</div>';
+        }
+        return;
+      }
+      
+      // Hide loading indicator
+      if (loading) {
+        loading.classList.add('hidden');
+      }
+      
+      // Destroy existing chart if it exists
+      if (incomeFlowChart) {
+        incomeFlowChart.destroy();
+        incomeFlowChart = null;
+      }
+      
+      const chartData = generateIncomeFlowChartData();
+      
+      // If no data, show empty state or create sample data for testing
+      if (chartData.labels.length === 0) {
+        // For testing purposes, create some sample data in selected currency
+        console.log('No income data found, creating sample data for testing');
+        const sampleUSD = [5000, 7500, 6200, 8800, 9200, 7800];
+        const sampleConverted = sampleUSD.map(amount => usdToSelectedCurrency(amount));
+        
+        chartData.labels = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024', 'Jun 2024'];
+        chartData.data = sampleConverted;
+        
+        // Calculate cumulative data
+        let cumulative = 0;
+        chartData.cumulativeData = sampleConverted.map(value => {
+          cumulative += value;
+          return cumulative;
+        });
+        chartData.isYearly = false;
+      }
+      
+      // Chart.js configuration with smooth interpolation
+      const config = {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Income Flow',
+            data: chartData.data,
+            borderColor: 'rgba(99, 102, 241, 0.9)',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4, // Smooth interpolation
+            pointBackgroundColor: 'rgba(99, 102, 241, 0.9)',
+            pointBorderColor: 'rgba(255, 255, 255, 0.8)',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointHoverBackgroundColor: 'rgba(99, 102, 241, 1)',
+            pointHoverBorderColor: 'rgba(255, 255, 255, 1)',
+            pointHoverBorderWidth: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(10, 10, 11, 0.95)',
+              titleColor: 'rgba(228, 228, 231, 1)',
+              bodyColor: 'rgba(228, 228, 231, 1)',
+              borderColor: 'rgba(39, 39, 42, 1)',
+              borderWidth: 1,
+              cornerRadius: 8,
+              displayColors: false,
+              callbacks: {
+                title: function(context) {
+                  return context[0].label;
+                },
+                label: function(context) {
+                  return `Income: ${formatCurrency(context.parsed.y)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(39, 39, 42, 0.5)',
+                drawBorder: false
+              },
+              ticks: {
+                color: 'rgba(161, 161, 170, 0.8)',
+                font: {
+                  family: 'Inter, sans-serif',
+                  size: 12
+                }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(39, 39, 42, 0.5)',
+                drawBorder: false
+              },
+              ticks: {
+                color: 'rgba(161, 161, 170, 0.8)',
+                font: {
+                  family: 'Inter, sans-serif',
+                  size: 12
+                },
+                callback: function(value) {
+                  return formatCurrency(value);
+                }
+              }
+            }
+          },
+          elements: {
+            point: {
+              hoverBackgroundColor: 'rgba(99, 102, 241, 1)'
+            }
+          }
+        }
+      };
+      
+      // Create the chart
+      try {
+        console.log('Initializing chart with data:', chartData);
+        console.log('Chart.js available:', typeof Chart);
+        incomeFlowChart = new Chart(canvas, config);
+        console.log('Chart created successfully');
+      } catch (error) {
+        console.error('Error initializing income flow chart:', error);
+        // Show error message on canvas
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted');
+        ctx.font = '14px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Chart initialization failed: ' + error.message, canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function updateIncomeFlowChart() {
+      // Only update if we're on the analytics page
+      const analyticsPage = document.getElementById('pageAnalytics');
+      if (analyticsPage && analyticsPage.style.display !== 'none') {
+        // Wait for Chart.js to load if not available
+        if (typeof Chart === 'undefined') {
+          const checkChart = setInterval(() => {
+            if (typeof Chart !== 'undefined') {
+              clearInterval(checkChart);
+              initializeIncomeFlowChart();
+            }
+          }, 100);
+          
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            clearInterval(checkChart);
+            if (typeof Chart === 'undefined') {
+              console.error('Chart.js failed to load after 5 seconds');
+              const loading = document.getElementById('chartLoading');
+              if (loading) {
+                loading.innerHTML = '<div class="text-sm" style="color:var(--muted)">Chart.js failed to load. Please refresh the page.</div>';
+              }
+            }
+          }, 5000);
+        } else {
+          // Small delay to ensure DOM is ready
+          setTimeout(() => {
+            initializeIncomeFlowChart();
+          }, 100);
+        }
+      }
+    }
+
+    // Tooltip positioning system
+    function initializeTooltips() {
+      const tooltipTriggers = document.querySelectorAll('.tooltip-trigger');
+      
+      tooltipTriggers.forEach(trigger => {
+        const tooltip = trigger.querySelector('.tooltip');
+        if (!tooltip) return;
+        
+        trigger.addEventListener('mouseenter', (e) => {
+          tooltip.style.display = 'block';
+          tooltip.style.opacity = '1';
+          tooltip.style.visibility = 'visible';
+          updateTooltipPosition(e, tooltip);
+        });
+        
+        trigger.addEventListener('mousemove', (e) => {
+          updateTooltipPosition(e, tooltip);
+        });
+        
+        trigger.addEventListener('mouseleave', () => {
+          tooltip.style.opacity = '0';
+          tooltip.style.visibility = 'hidden';
+          setTimeout(() => {
+            tooltip.style.display = 'none';
+          }, 150);
+        });
+      });
+    }
+    
+    function updateTooltipPosition(e, tooltip) {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      let x = e.clientX;
+      let y = e.clientY;
+      
+      // Simple positioning - always above cursor
+      y = e.clientY - 10;
+      tooltip.style.transform = 'translate(-50%, -100%)';
+      
+      // Keep tooltip on screen horizontally
+      if (x > viewportWidth - 150) {
+        x = viewportWidth - 150;
+      } else if (x < 150) {
+        x = 150;
+      }
+      
+      // Set position
+      tooltip.style.left = x + 'px';
+      tooltip.style.top = y + 'px';
     }
 
     // Insight Cards Utility Functions
@@ -6158,6 +6489,9 @@ async function saveProfile({ fullName, file }) {
         
         // Update insight cards
         updateInsightCards();
+        
+        // Initialize income flow chart
+        updateIncomeFlowChart();
     }
 
     function updateInsightCards() {
