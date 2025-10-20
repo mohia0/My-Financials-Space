@@ -51,6 +51,10 @@ let splashScreenVisible = true;
 let dataLoadingSteps = 0;
 let totalDataLoadingSteps = 6; // Authentication, Settings, Personal, Business, Income, Processing
 let isFirstLoad = true; // Track if this is the first time loading the app
+// Track splash timing for optional minimum display duration
+window.splashStartTime = null;
+window.minSplashMs = 5000; // desired min duration for unauthenticated first load
+window.forceMinSplashOnThisLoad = false;
 
 // Initialize splash screen
 function initializeSplashScreen() {
@@ -67,7 +71,12 @@ function initializeSplashScreen() {
   
   // Show splash screen
   splashScreen.classList.remove('hidden');
+  // Ensure fade-in baseline
+  splashScreen.style.opacity = '1';
+  splashScreen.style.transition = 'opacity 0.5s ease';
   splashScreenVisible = true;
+  // Start timer for potential minimum duration
+  window.splashStartTime = Date.now();
   // Prevent scroll on mobile to avoid layout jank/blink
   document.body.classList.add('no-scroll');
 }
@@ -139,11 +148,22 @@ function hideSplashScreen() {
   // Ensure progress is at 100%
   updateSplashProgress(100, 'All data loaded successfully!');
   
-  // Wait a moment to show completion, then fade out
+  // Determine dynamic wait to honor minimum splash time if requested
+  const now = Date.now();
+  const elapsed = window.splashStartTime ? (now - window.splashStartTime) : 0;
+  const baseDelay = 500; // existing small delay to show completion
+  const minDelay = (window.forceMinSplashOnThisLoad && isFirstLoad) ? Math.max(baseDelay, (window.minSplashMs || 5000) - elapsed) : baseDelay;
+  
+  // Wait a moment (or until minimum reached), then fade out
   setTimeout(() => {
-    splashScreen.classList.add('hidden');
+    // Trigger fade-out
+    splashScreen.style.opacity = '0';
+    setTimeout(() => {
+      splashScreen.classList.add('hidden');
+    }, 400);
     splashScreenVisible = false;
     isFirstLoad = false; // Mark that first load is complete
+    window.forceMinSplashOnThisLoad = false; // reset flag
     // Re-enable scrolling
     document.body.classList.remove('no-scroll');
     
@@ -155,7 +175,7 @@ function hideSplashScreen() {
         mainContent.style.opacity = '1';
       }, 100);
     }
-  }, 500);
+  }, minDelay);
 }
 
 // Check if splash screen should be shown
@@ -3416,7 +3436,12 @@ async function saveProfile({ fullName, file }) {
     
     // Enhanced local data loading with sample data
     function loadLocalData() {
-
+      // Ensure splash appears on first load; treat as generic UI loading when not signed in
+      if (shouldShowSplashScreen()) {
+        initializeSplashScreen();
+        // Enforce minimum splash duration for first unauthenticated load
+        window.forceMinSplashOnThisLoad = true;
+      }
       
       // Try to load from localStorage first
       const saved = localStorage.getItem('finance-notion-v6');
@@ -3449,7 +3474,10 @@ async function saveProfile({ fullName, file }) {
             // Initialize currency system before rendering
             initializeCurrencySystem();
             
+            // Finish splash for local-only mode
+            updateSplashProgress(100, 'Ready — loading local workspace');
             renderAll();
+            hideSplashScreen();
             return;
           }
         } catch (error) {
@@ -3476,7 +3504,10 @@ async function saveProfile({ fullName, file }) {
       // Initialize currency system before rendering
       initializeCurrencySystem();
       
+      // Complete splash and show UI for first-time local mode
+      updateSplashProgress(100, 'Ready — starting with empty workspace');
       renderAll();
+      hideSplashScreen();
     }
     
     function save(source = 'general'){ 
@@ -6780,6 +6811,17 @@ async function saveProfile({ fullName, file }) {
       const personalTotals = totals(state.personal);
       const incomeTotals = getCurrentIncomeTotals();
       
+      // Determine if analytics has any data (personal, business, or income)
+      const hasPersonal = Array.isArray(state.personal) && state.personal.length > 0;
+      const hasBiz = Array.isArray(state.biz) && state.biz.length > 0;
+      let hasIncome = false;
+      if (state.income && typeof state.income === 'object') {
+        for (const arr of Object.values(state.income)) {
+          if (Array.isArray(arr) && arr.length > 0) { hasIncome = true; break; }
+        }
+      }
+      const isEmptyAnalytics = !(hasPersonal || hasBiz || hasIncome);
+      
       const insights = [];
       
       // Always show basic spending info if there's any data
@@ -7302,10 +7344,19 @@ async function saveProfile({ fullName, file }) {
       
       // Efficiency bar (inverse - lower is better)
       const efficiencyScore = Math.max(0, 100 - totalEfficiency);
-      // Animate efficiency progress bar
-      setTimeout(() => {
-        animateProgressBar('analyticsEfficiencyBarContainer', efficiencyScore);
-      }, 1600);
+      // Animate efficiency progress bar (stop loading immediately if empty)
+      if (isEmptyAnalytics) {
+        const c = document.getElementById('analyticsEfficiencyBarContainer');
+        if (c) {
+          c.classList.remove('loading');
+          const barEl = c.querySelector('span');
+          if (barEl) barEl.style.width = '0%';
+        }
+      } else {
+        setTimeout(() => {
+          animateProgressBar('analyticsEfficiencyBarContainer', efficiencyScore);
+        }, 1600);
+      }
       
       // 4. Financial Health Score
       let healthScore = 0;
@@ -8976,7 +9027,9 @@ async function saveProfile({ fullName, file }) {
   function hideSplashScreenSmoothly() {
     const splash = document.getElementById('splashScreen');
     if (!splash) return;
-    splash.classList.add('hidden');
+    splash.style.transition = 'opacity 0.5s ease';
+    splash.style.opacity = '0';
+    setTimeout(() => splash.classList.add('hidden'), 400);
   }
 
   function renderIncomeList(containerId, arr) {
