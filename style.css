@@ -4543,22 +4543,17 @@ header img {
   height: 2.5rem;
   width: auto;
   transition: all 0.2s ease;
-  filter: invert(1); /* White by default (dark mode) */
+  filter: invert(0); /* default: preserve original */
 }
 
 header img:hover {
   transform: scale(1.05);
 }
 
-/* Light mode - make logo black */
-[data-theme="light"] header img {
-  filter: invert(1); /* Black in light mode */
-}
-
-/* Dark mode - make logo white */
-[data-theme="dark"] header img {
-  filter: invert(0); /* White in dark mode */
-}
+/* Light mode - invert white SVG to dark for visibility */
+[data-theme="light"] header img { filter: invert(1) !important; }
+/* Ensure dark mode keeps original white */
+[data-theme="dark"] header img { filter: invert(0) !important; }
 
 /* Mobile logo improvements - SVG logo primary everywhere */
 @media (max-width: 768px) {
@@ -7055,6 +7050,10 @@ body.no-scroll { overflow: hidden; height: 100vh; }
   animation: logoFloat 3s ease-in-out infinite;
 }
 
+/* Light mode: invert splash logo to show dark on white */
+[data-theme="light"] .splash-logo { filter: invert(1) drop-shadow(0 0 30px rgba(99, 102, 241, 0.3)) !important; }
+[data-theme="dark"] .splash-logo { filter: invert(0) drop-shadow(0 0 30px rgba(99, 102, 241, 0.4)) !important; }
+
 .splash-logo-glow {
   position: absolute;
   top: 50%;
@@ -7338,7 +7337,7 @@ body.no-scroll { overflow: hidden; height: 100vh; }
   height: 14px;
   border-radius: 2px;
   background: var(--glass);
-  border: 1px solid transparent;
+  border: none;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
@@ -7348,40 +7347,28 @@ body.no-scroll { overflow: hidden; height: 100vh; }
 }
 
 .heatmap-day:hover {
-  border-color: var(--muted);
   transform: scale(1.2);
   z-index: 10;
 }
 
 /* Heatmap Day Intensity Levels */
-.heatmap-day[data-intensity="0"] {
-  background: rgba(2, 6, 23, 0.05); /* subtle in light mode, near-glass in dark */
-}
+.heatmap-day[data-intensity="0"] { background: rgba(161, 161, 170, 0.18); }
 
-.heatmap-day[data-intensity="1"] {
-  background: rgba(99, 102, 241, 0.18);
-}
-
-.heatmap-day[data-intensity="2"] {
-  background: rgba(99, 102, 241, 0.35);
-}
-
-.heatmap-day[data-intensity="3"] {
-  background: rgba(99, 102, 241, 0.52);
-}
-
-.heatmap-day[data-intensity="4"] {
-  background: rgba(99, 102, 241, 0.68);
-}
-
-.heatmap-day[data-intensity="5"] {
-  background: rgba(99, 102, 241, 0.86);
-}
+.heatmap-day[data-intensity="1"] { background: #E0E7FF; }
+.heatmap-day[data-intensity="2"] { background: #C7D2FE; }
+.heatmap-day[data-intensity="3"] { background: #A5B4FC; }
+.heatmap-day[data-intensity="4"] { background: #818CF8; }
+.heatmap-day[data-intensity="5"] { background: #6366F1; }
 
 /* Light mode specific tweaks to ensure contrast on white backgrounds */
-[data-theme="light"] .heatmap-day { border-color: rgba(2, 6, 23, 0.06); }
-[data-theme="light"] .heatmap-day:hover { border-color: rgba(2, 6, 23, 0.15); }
-[data-theme="light"] .heatmap-day[data-intensity="0"] { background: rgba(2, 6, 23, 0.06); }
+[data-theme="light"] .heatmap-day[data-intensity="0"] { background: #E5E7EB; }
+
+/* Dark mode solid palette for better contrast */
+[data-theme="dark"] .heatmap-day[data-intensity="1"] { background: #312E81; }
+[data-theme="dark"] .heatmap-day[data-intensity="2"] { background: #3730A3; }
+[data-theme="dark"] .heatmap-day[data-intensity="3"] { background: #4338CA; }
+[data-theme="dark"] .heatmap-day[data-intensity="4"] { background: #4F46E5; }
+[data-theme="dark"] .heatmap-day[data-intensity="5"] { background: #6366F1; }
 
 /* Heatmap Tooltip */
 .heatmap-tooltip {
@@ -7391,7 +7378,7 @@ body.no-scroll { overflow: hidden; height: 100vh; }
   border-radius: 6px;
   padding: 0.5rem;
   font-size: 0.75rem;
-  color: var(--fg);
+  color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   pointer-events: none;
@@ -7400,6 +7387,10 @@ body.no-scroll { overflow: hidden; height: 100vh; }
   transform: translateY(-5px);
   transition: all 0.2s ease;
 }
+/* Force white text for all tooltip content for readability */
+.heatmap-tooltip * { color: #fff !important; }
+/* Use brand purple for project list inside tooltip */
+.heatmap-tooltip .heatmap-tip-projects { color: var(--accent) !important; }
 /* Tight legend and stats spacing */
 .heatmap-legend{ display:flex; align-items:center; justify-content:center; gap:.5rem; margin:-6px 0 8px 0; }
 .heatmap-legend > span{ line-height:1; }
@@ -7428,7 +7419,7 @@ body.no-scroll { overflow: hidden; height: 100vh; }
 .heatmap-tip-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .heatmap-tip-date{ font-weight:600; }
 .heatmap-tip-projects{ color:var(--muted); line-height:1.2; white-space:normal; max-width:240px; }
-.heatmap-tip .muted{ color:var(--muted); }
+.heatmap-tip .muted{ color:#fff; }
 .heatmap-tip .val{ font-weight:600; }
 
 /* Heatmap Month Labels */

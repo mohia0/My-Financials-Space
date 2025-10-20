@@ -5956,6 +5956,13 @@ async function saveProfile({ fullName, file }) {
       const canvas = document.getElementById('incomeFlowChart');
       const loading = document.getElementById('chartLoading');
       const currencyDisplay = document.getElementById('chartCurrencyDisplay');
+      const formatCompact = (value) => {
+        const abs = Math.abs(value);
+        if (abs >= 1000000000) return (value / 1000000000).toFixed(abs % 1000000000 === 0 ? 0 : 1) + 'b';
+        if (abs >= 1000000) return (value / 1000000).toFixed(abs % 1000000 === 0 ? 0 : 1) + 'm';
+        if (abs >= 1000) return (value / 1000).toFixed(abs % 1000 === 0 ? 0 : 1) + 'k';
+        return Math.round(value).toString();
+      };
       
       if (!canvas) {
         console.warn('Income flow chart canvas not found');
@@ -6056,7 +6063,7 @@ async function saveProfile({ fullName, file }) {
                   return context[0].label;
                 },
                 label: function(context) {
-                  return `Income: ${formatCurrency(context.parsed.y)}`;
+                  return `Income: ${formatCompact(context.parsed.y)}`;
                 }
               }
             }
@@ -6064,7 +6071,7 @@ async function saveProfile({ fullName, file }) {
           scales: {
             x: {
               grid: {
-                color: 'rgba(39, 39, 42, 0.5)',
+                color: 'rgba(161, 161, 170, 0.25)',
                 drawBorder: false
               },
               ticks: {
@@ -6078,7 +6085,7 @@ async function saveProfile({ fullName, file }) {
             y: {
               beginAtZero: true,
               grid: {
-                color: 'rgba(39, 39, 42, 0.5)',
+                color: 'rgba(161, 161, 170, 0.25)',
                 drawBorder: false
               },
               ticks: {
@@ -6088,7 +6095,7 @@ async function saveProfile({ fullName, file }) {
                   size: 12
                 },
                 callback: function(value) {
-                  return formatCurrency(value);
+                  return formatCompact(value);
                 }
               }
             }
