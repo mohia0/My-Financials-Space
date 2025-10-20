@@ -68,6 +68,8 @@ function initializeSplashScreen() {
   // Show splash screen
   splashScreen.classList.remove('hidden');
   splashScreenVisible = true;
+  // Prevent scroll on mobile to avoid layout jank/blink
+  document.body.classList.add('no-scroll');
 }
 
 // Update splash screen progress
@@ -142,6 +144,8 @@ function hideSplashScreen() {
     splashScreen.classList.add('hidden');
     splashScreenVisible = false;
     isFirstLoad = false; // Mark that first load is complete
+    // Re-enable scrolling
+    document.body.classList.remove('no-scroll');
     
     // Show main content with a subtle fade-in
     if (mainContent) {
@@ -2909,6 +2913,9 @@ async function saveProfile({ fullName, file }) {
         
         // Hide splash screen after all data is loaded
         hideSplashScreen();
+        // Ensure heatmap reflects freshly loaded income data
+        try { heatmapCache && heatmapCache.clear && heatmapCache.clear(); } catch {}
+        updateHeatmap();
         
       } catch (error) {
         
@@ -3119,6 +3126,9 @@ async function saveProfile({ fullName, file }) {
       
       // Hide splash screen after local data is loaded
       hideSplashScreen();
+      // Make sure heatmap initializes immediately with local data
+      try { heatmapCache && heatmapCache.clear && heatmapCache.clear(); } catch {}
+      updateHeatmap();
     }
     
     function clearAllData() {
@@ -6147,35 +6157,39 @@ async function saveProfile({ fullName, file }) {
     let heatmapData = {};
     let currentHeatmapYear = new Date().getFullYear();
     
-    // Generate heatmap data for a specific year
+    // Generate heatmap data for a specific year (memoized per currency and year)
+    const heatmapCache = new Map(); // key: `${year}:${state.selectedCurrency}` -> data
     function generateHeatmapData(year) {
+      const cacheKey = `${year}:${state.selectedCurrency || 'EGP'}`;
+      if (heatmapCache.has(cacheKey)) return heatmapCache.get(cacheKey);
       const yearData = state.income[year] || [];
       const dailyData = {};
-      
       // Process income entries for the year and capture project names
-      yearData.forEach(entry => {
-        if (!entry || !entry.date) return;
+      for (let i = 0; i < yearData.length; i++) {
+        const entry = yearData[i];
+        if (!entry || !entry.date) continue;
         const date = new Date(entry.date);
-        if (isNaN(date)) return;
+        if (isNaN(date)) continue;
         const dayKey = `${date.getMonth()}-${date.getDate()}`;
         const amount = Number(entry.paidUsd || 0);
         const projectName = entry.name || '—';
-        if (!dailyData[dayKey]) {
-          dailyData[dayKey] = { usdTotal: 0, projects: [] };
+        let dayObj = dailyData[dayKey];
+        if (!dayObj) {
+          dayObj = { usdTotal: 0, projects: [] };
+          dailyData[dayKey] = dayObj;
         }
-        dailyData[dayKey].usdTotal += amount;
-        if (amount > 0) dailyData[dayKey].projects.push(projectName);
-      });
-      
+        dayObj.usdTotal += amount;
+        if (amount > 0) dayObj.projects.push(projectName);
+      }
       // Convert to selected currency
       const convertedData = {};
-      Object.keys(dailyData).forEach(dayKey => {
-        convertedData[dayKey] = {
-          amount: usdToSelectedCurrency(dailyData[dayKey].usdTotal),
-          projects: dailyData[dayKey].projects
-        };
-      });
-      
+      const dayKeys = Object.keys(dailyData);
+      for (let i = 0; i < dayKeys.length; i++) {
+        const k = dayKeys[i];
+        const d = dailyData[k];
+        convertedData[k] = { amount: usdToSelectedCurrency(d.usdTotal), projects: d.projects };
+      }
+      heatmapCache.set(cacheKey, convertedData);
       return convertedData;
     }
     
@@ -6272,6 +6286,7 @@ async function saveProfile({ fullName, file }) {
       const heatmapContainer = document.getElementById('heatmapCalendar');
       const yearSelect = document.getElementById('heatmapYearSelect');
       const currencyDisplay = document.getElementById('heatmapCurrencyDisplay');
+      const refreshBtn = document.getElementById('heatmapRefreshBtn');
       
       if (!heatmapContainer || !yearSelect) {
         console.warn('Heatmap elements not found');
@@ -6307,36 +6322,66 @@ async function saveProfile({ fullName, file }) {
         yearSelect.appendChild(option);
       });
       
-      // Generate and display heatmap
-      heatmapData = generateHeatmapData(currentHeatmapYear);
-      heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
-      updateHeatmapStats(currentHeatmapYear);
-      
+      // Generate and display heatmap (defer heavy DOM write to next frame)
+      // Protect against missing income data structure
+      try {
+        heatmapData = generateHeatmapData(currentHeatmapYear);
+      } catch (err) {
+        console.warn('Heatmap data generation failed, falling back to empty data.', err);
+        heatmapData = {};
+      }
+      requestAnimationFrame(() => {
+        heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+        updateHeatmapStats(currentHeatmapYear);
+        // Add tooltip functionality
+        addHeatmapTooltips();
+      });
       // Add event listeners
       yearSelect.addEventListener('change', (e) => {
         currentHeatmapYear = parseInt(e.target.value);
-        heatmapData = generateHeatmapData(currentHeatmapYear);
-        heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
-        updateHeatmapStats(currentHeatmapYear);
+        try {
+          heatmapData = generateHeatmapData(currentHeatmapYear);
+        } catch {
+          heatmapData = {};
+        }
+        requestAnimationFrame(() => {
+          heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+          updateHeatmapStats(currentHeatmapYear);
+          addHeatmapTooltips();
+        });
       });
-      
-      // Add tooltip functionality
-      addHeatmapTooltips();
+
+      // Refresh handler
+      if (refreshBtn && !refreshBtn._bound) {
+        refreshBtn.addEventListener('click', () => {
+          try { heatmapCache.clear && heatmapCache.clear(); } catch {}
+          try { heatmapData = generateHeatmapData(currentHeatmapYear); } catch { heatmapData = {}; }
+          requestAnimationFrame(() => {
+            heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+            updateHeatmapStats(currentHeatmapYear);
+            addHeatmapTooltips();
+          });
+        });
+        refreshBtn._bound = true;
+      }
     }
     
     // Add tooltip functionality to heatmap (matching app tooltip style)
     function addHeatmapTooltips() {
       const heatmapDays = document.querySelectorAll('.heatmap-day');
+      const monthsContainers = document.querySelectorAll('.heatmap-month-days');
       let tooltip = document.getElementById('globalHeatmapTooltip');
       if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'globalHeatmapTooltip';
-        tooltip.className = 'tooltip';
+        tooltip.className = 'tooltip tooltip-center';
         document.body.appendChild(tooltip);
       }
       const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
       const showTooltip = (html, x, y) => {
+        // Prepare content without showing animation yet to avoid jump-from-away
         tooltip.innerHTML = html;
+        tooltip.classList.remove('show');
         tooltip.style.display = 'block';
         // After content set, clamp within viewport
         const pad = 8;
@@ -6344,38 +6389,87 @@ async function saveProfile({ fullName, file }) {
         const vh = window.innerHeight || document.documentElement.clientHeight;
         const rect = tooltip.getBoundingClientRect();
         const tx = clamp(x - rect.width / 2, pad, vw - rect.width - pad);
-        const ty = clamp(y - rect.height - 10, pad, vh - rect.height - pad);
-        tooltip.style.left = `${tx}px`;
-        tooltip.style.top = `${ty}px`;
+        // For center animation, position around the cursor (slightly above)
+        const ty = clamp(y - rect.height / 2 - 10, pad, vh - rect.height - pad);
+        // Use !important to override global CSS forcing left/top to 0
+        tooltip.style.setProperty('left', `${tx}px`, 'important');
+        tooltip.style.setProperty('top', `${ty}px`, 'important');
+        // Next frame: fade/scale in from the already-correct position
+        requestAnimationFrame(() => {
+          tooltip.classList.add('show');
+        });
       };
-      const hideTooltip = () => { tooltip.style.display = 'none'; };
-      heatmapDays.forEach(day => {
-        day.addEventListener('mouseenter', (e) => {
-          const date = e.currentTarget.getAttribute('data-date');
-          const formatted = e.currentTarget.getAttribute('data-formatted');
-          const projects = e.currentTarget.getAttribute('data-projects') || 'No projects';
-          const html = `
-            <div class="heatmap-tip">
-              <div class="heatmap-tip-row heatmap-tip-date">${date}</div>
-              <div class="heatmap-tip-row"><span class="muted">Amount</span><span class="val">${formatted}</span></div>
-              <div class="heatmap-tip-row heatmap-tip-projects">${projects}</div>
-            </div>
-          `;
-          const rect = e.currentTarget.getBoundingClientRect();
-          showTooltip(html, rect.left + rect.width / 2, rect.top);
-        });
-        day.addEventListener('mousemove', (e) => {
-          showTooltip(tooltip.innerHTML, e.clientX, e.clientY);
-        });
-        day.addEventListener('mouseleave', hideTooltip);
-        day.addEventListener('blur', hideTooltip);
+      const hideTooltip = () => {
+        // Simple fast fade-out; do not move position to (0,0)
+        tooltip.classList.remove('show');
+        // Keep last position; just hide after fade duration
+        setTimeout(() => {
+          tooltip.style.display = 'none';
+        }, 150);
+      };
+      // Chart-like behavior: show on container enter, update on move across cells, hide on container leave
+      const getDayDataAt = (clientX, clientY) => {
+        const el = document.elementFromPoint(clientX, clientY);
+        if (!el) return null;
+        const day = el.closest && el.closest('.heatmap-day');
+        if (!day) return null;
+        if (day.getAttribute('data-intensity') === '0') return null;
+        return day;
+      };
+      const buildHtml = (day) => {
+        const date = day.getAttribute('data-date');
+        const formatted = day.getAttribute('data-formatted');
+        const projects = day.getAttribute('data-projects') || 'No projects';
+        return `
+          <div class="heatmap-tip">
+            <div class="heatmap-tip-row heatmap-tip-date">${date}</div>
+            <div class="heatmap-tip-row"><span class="muted">Amount</span><span class="val">${formatted}</span></div>
+            <div class="heatmap-tip-row heatmap-tip-projects">${projects}</div>
+          </div>
+        `;
+      };
+      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      monthsContainers.forEach(container => {
+        if (!isTouch) {
+          // Desktop: hover/track like chart
+          container.addEventListener('mouseenter', (e) => {
+            const d = getDayDataAt(e.clientX, e.clientY);
+            if (!d) return;
+            const rectD = d.getBoundingClientRect();
+            showTooltip(buildHtml(d), rectD.left + rectD.width / 2, rectD.top + rectD.height / 2);
+          });
+          container.addEventListener('mousemove', (e) => {
+            const d = getDayDataAt(e.clientX, e.clientY);
+            if (!d) { hideTooltip(); return; }
+            showTooltip(buildHtml(d), e.clientX, e.clientY);
+          });
+          container.addEventListener('mouseleave', hideTooltip);
+          container.addEventListener('blur', hideTooltip);
+        } else {
+          // Mobile/tablet: tap to toggle tooltip on a day, tap outside to hide
+          const onTap = (e) => {
+            const d = getDayDataAt(e.clientX || e.touches?.[0]?.clientX, e.clientY || e.touches?.[0]?.clientY);
+            if (!d) { hideTooltip(); return; }
+            const rectD = d.getBoundingClientRect();
+            showTooltip(buildHtml(d), rectD.left + rectD.width / 2, rectD.top + rectD.height / 2);
+          };
+          container.addEventListener('click', onTap);
+          container.addEventListener('touchstart', onTap, { passive: true });
+          document.addEventListener('click', (ev) => {
+            if (!ev.target.closest('.heatmap-months')) hideTooltip();
+          });
+          document.addEventListener('touchstart', (ev) => {
+            if (!ev.target.closest('.heatmap-months')) hideTooltip();
+          }, { passive: true });
+        }
       });
     }
     
     // Update heatmap when data changes
     function updateHeatmap() {
       const analyticsPage = document.getElementById('pageAnalytics');
-      if (analyticsPage && analyticsPage.style.display !== 'none') {
+      // Initialize even if page currently hidden; it will render on next show
+      if (analyticsPage) {
         initializeHeatmap();
       }
     }
