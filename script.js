@@ -45,6 +45,123 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 100);
 });
 
+// ===== SPLASH SCREEN MANAGEMENT =====
+let splashScreenProgress = 0;
+let splashScreenVisible = true;
+let dataLoadingSteps = 0;
+let totalDataLoadingSteps = 6; // Authentication, Settings, Personal, Business, Income, Processing
+let isFirstLoad = true; // Track if this is the first time loading the app
+
+// Initialize splash screen
+function initializeSplashScreen() {
+  const splashScreen = document.getElementById('splashScreen');
+  const progressFill = document.querySelector('.splash-progress-fill');
+  const progressText = document.querySelector('.splash-progress-text');
+  
+  if (!splashScreen || !progressFill || !progressText) return;
+  
+  // Reset progress
+  splashScreenProgress = 0;
+  dataLoadingSteps = 0;
+  updateSplashProgress(0, 'Preparing your financial dashboard...');
+  
+  // Show splash screen
+  splashScreen.classList.remove('hidden');
+  splashScreenVisible = true;
+}
+
+// Update splash screen progress
+function updateSplashProgress(progress, text = 'Loading your financial data...') {
+  const progressFill = document.querySelector('.splash-progress-fill');
+  const progressText = document.querySelector('.splash-progress-text');
+  
+  if (progressFill) {
+    splashScreenProgress = Math.min(100, Math.max(0, progress));
+    progressFill.style.width = splashScreenProgress + '%';
+  }
+  
+  if (progressText) {
+    progressText.textContent = text;
+  }
+}
+
+// Show intermediate loading message
+function showIntermediateLoading(message) {
+  updateSplashProgress(splashScreenProgress, message);
+}
+
+// Increment progress for each data loading step
+function incrementSplashProgress(stepName) {
+  dataLoadingSteps++;
+  const progress = (dataLoadingSteps / totalDataLoadingSteps) * 100;
+  
+  // Detailed loading messages for each step
+  let detailedMessage = '';
+  switch(stepName) {
+    case 'authentication':
+      detailedMessage = 'Verifying your account and establishing secure connection...';
+      break;
+    case 'settings':
+      detailedMessage = 'Loading your preferences and settings...';
+      break;
+    case 'personal expenses':
+      detailedMessage = 'Loading your personal expenses and lifestyle costs...';
+      break;
+    case 'business expenses':
+      detailedMessage = 'Loading your business tools and operational costs...';
+      break;
+    case 'income data':
+      detailedMessage = 'Loading your income records and earnings history...';
+      break;
+    case 'processing':
+      detailedMessage = 'Processing your financial data and calculating insights...';
+      break;
+    default:
+      detailedMessage = `Loading ${stepName}...`;
+  }
+  
+  updateSplashProgress(progress, detailedMessage);
+}
+
+// Hide splash screen when data is fully loaded
+function hideSplashScreen() {
+  const splashScreen = document.getElementById('splashScreen');
+  const mainContent = document.getElementById('mainContent');
+  
+  if (!splashScreen) return;
+  
+  // Ensure progress is at 100%
+  updateSplashProgress(100, 'All data loaded successfully!');
+  
+  // Wait a moment to show completion, then fade out
+  setTimeout(() => {
+    splashScreen.classList.add('hidden');
+    splashScreenVisible = false;
+    isFirstLoad = false; // Mark that first load is complete
+    
+    // Show main content with a subtle fade-in
+    if (mainContent) {
+      mainContent.style.opacity = '0';
+      mainContent.style.transition = 'opacity 0.5s ease-in-out';
+      setTimeout(() => {
+        mainContent.style.opacity = '1';
+      }, 100);
+    }
+  }, 500);
+}
+
+// Check if splash screen should be shown
+function shouldShowSplashScreen() {
+  // Only show splash screen on first load, not on refreshes
+  return splashScreenVisible && isFirstLoad;
+}
+
+// Reset splash screen for refresh operations
+function resetSplashScreen() {
+  splashScreenVisible = true;
+  dataLoadingSteps = 0;
+}
+
 // Supabase configuration - NEW PROJECT
 const SUPABASE_URL = 'https://whurxquryihxeqkwzaly.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXJ4cXVyeWloeGVxa3d6YWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NjE4ODgsImV4cCI6MjA3NjEzNzg4OH0.SP3SAmaNSTht4oV_rKE8DY7wHmdR7NYjqDjpXV7elDE';
@@ -205,6 +322,9 @@ async function saveProfile({ fullName, file }) {
 
   document.addEventListener('DOMContentLoaded', function(){
     const $ = (s, el)=> (el||document).querySelector(s);
+    
+    // Initialize splash screen
+    initializeSplashScreen();
     
     // Optimize initial loading performance
     optimizeInitialLoad();
@@ -2510,23 +2630,21 @@ async function saveProfile({ fullName, file }) {
     let isLoadingData = false;
     
     async function loadUserData() {
-
-
-
+      // Initialize splash screen if visible
+      if (shouldShowSplashScreen()) {
+        initializeSplashScreen();
+      }
       
       // Prevent multiple simultaneous loads
       if (isLoadingData) {
-
         return;
       }
       
       if (!currentUser) {
-
         return;
       }
       
       if (!supabaseReady) {
-
         showNotification('Database connection not ready. Using local data only.', 'error');
         loadLocalData();
         return;
@@ -2563,8 +2681,10 @@ async function saveProfile({ fullName, file }) {
 
 
         
+        // Authentication step
+        incrementSplashProgress('authentication');
+        
         // CRITICAL: Clear existing data to prevent duplication
-
         state.personal = [];
         state.biz = [];
         state.income = {};
@@ -2572,8 +2692,10 @@ async function saveProfile({ fullName, file }) {
         // Load custom icons from localStorage first
         loadCustomIcons();
         
+        // Show intermediate loading message
+        showIntermediateLoading('Connecting to secure cloud storage...');
+        
         // Start all requests in parallel for maximum speed
-
         const [settingsResult, personalResult, businessResult, incomeResult] = await Promise.allSettled([
         // Load user settings
           window.supabaseClient
@@ -2647,6 +2769,9 @@ async function saveProfile({ fullName, file }) {
           ensureUserSettingsExist();
         }
         
+        // Update splash screen progress
+        incrementSplashProgress('settings');
+        
         // Process personal expenses
         if (personalResult.status === 'fulfilled' && personalResult.value.data) {
           const personalExpenses = personalResult.value.data;
@@ -2672,6 +2797,9 @@ async function saveProfile({ fullName, file }) {
             return row;
           });
         }
+        
+        // Update splash screen progress
+        incrementSplashProgress('personal expenses');
         
         // Process business expenses
         if (businessResult.status === 'fulfilled' && businessResult.value.data) {
@@ -2699,6 +2827,9 @@ async function saveProfile({ fullName, file }) {
             return row;
           });
         }
+        
+        // Update splash screen progress
+        incrementSplashProgress('business expenses');
         
         // Process income data
         if (incomeResult.status === 'fulfilled' && incomeResult.value.data) {
@@ -2747,11 +2878,26 @@ async function saveProfile({ fullName, file }) {
           createYearTabsFromData(state.income);
         }
         
+        // Show intermediate loading message
+        showIntermediateLoading('Validating data integrity and checking for duplicates...');
+        
         // Check for and fix duplicates in the database
         await checkAndFixDuplicates();
         
+        // Update splash screen progress - income data step
+        incrementSplashProgress('income data');
+        
+        // Show intermediate loading message
+        showIntermediateLoading('Calculating financial insights and analytics...');
+        
+        // Processing step
+        incrementSplashProgress('processing');
+        
         renderAll();
         showSuccessNotification('Data loaded from cloud!');
+        
+        // Hide splash screen after all data is loaded
+        hideSplashScreen();
         
       } catch (error) {
         
@@ -2873,7 +3019,10 @@ async function saveProfile({ fullName, file }) {
     }
     
     function loadLocalData() {
-
+      // Initialize splash screen if visible
+      if (shouldShowSplashScreen()) {
+        initializeSplashScreen();
+      }
       
       // Load custom icons from localStorage
       loadCustomIcons();
@@ -2952,7 +3101,13 @@ async function saveProfile({ fullName, file }) {
       // Initialize currency system before rendering
       initializeCurrencySystem();
       
+      // Update splash screen progress for local data loading
+      updateSplashProgress(100, 'All data loaded successfully!');
+      
       renderAll();
+      
+      // Hide splash screen after local data is loaded
+      hideSplashScreen();
     }
     
     function clearAllData() {
@@ -4612,11 +4767,14 @@ async function saveProfile({ fullName, file }) {
       refreshIcon.style.transform = 'rotate(360deg)';
       refreshIcon.style.transition = 'transform 0.5s ease';
       
+      // Don't show splash screen for refresh operations - just update sync status
+      // resetSplashScreen(); // Removed - refreshes should be instant
+      
       // Only load fresh data from cloud - no saving
       if (currentUser && supabaseReady) {
         loadUserData().then(() => {
           updateSyncStatus('success');
-          showNotification('🔄 Data synced from cloud', 'success', 2000, { force: true });
+          showNotification('Data synced from cloud', 'success', 2000, { force: true });
           resetRefreshIcon();
         }).catch((error) => {
           updateSyncStatus('error');
