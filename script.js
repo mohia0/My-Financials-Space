@@ -513,6 +513,11 @@ async function saveProfile({ fullName, file }) {
         
         // Update analytics page data
         updateAnalyticsPage();
+        
+        // Initialize heatmap
+        setTimeout(() => {
+          initializeHeatmap();
+        }, 200);
       }
       
       // Update mobile navigation active state
@@ -5032,6 +5037,9 @@ async function saveProfile({ fullName, file }) {
       
       // Update income flow chart with new currency
       updateIncomeFlowChart();
+      
+      // Update heatmap with new currency
+      updateHeatmap();
     };
     
     // Function to update all KPI displays with current currency
@@ -6125,6 +6133,224 @@ async function saveProfile({ fullName, file }) {
             initializeIncomeFlowChart();
           }, 100);
         }
+      }
+    }
+
+    // ===== INCOME HEATMAP FUNCTIONS =====
+    
+    let heatmapData = {};
+    let currentHeatmapYear = new Date().getFullYear();
+    
+    // Generate heatmap data for a specific year
+    function generateHeatmapData(year) {
+      const yearData = state.income[year] || [];
+      const dailyData = {};
+      
+      // Process income entries for the year
+      yearData.forEach(entry => {
+        if (entry.date) {
+          const date = new Date(entry.date);
+          const dayKey = `${date.getMonth()}-${date.getDate()}`;
+          const amount = Number(entry.paidUsd || 0);
+          
+          if (dailyData[dayKey]) {
+            dailyData[dayKey] += amount;
+          } else {
+            dailyData[dayKey] = amount;
+          }
+        }
+      });
+      
+      // Convert to selected currency
+      const convertedData = {};
+      Object.keys(dailyData).forEach(dayKey => {
+        convertedData[dayKey] = usdToSelectedCurrency(dailyData[dayKey]);
+      });
+      
+      return convertedData;
+    }
+    
+    // Calculate intensity level based on amount
+    function calculateIntensity(amount, maxAmount) {
+      if (amount === 0) return 0;
+      if (maxAmount === 0) return 0;
+      
+      const ratio = amount / maxAmount;
+      if (ratio <= 0.1) return 1;
+      if (ratio <= 0.3) return 2;
+      if (ratio <= 0.5) return 3;
+      if (ratio <= 0.7) return 4;
+      return 5;
+    }
+    
+    // Generate calendar heatmap HTML (months grouped as individual calendars)
+    function generateHeatmapCalendar(year) {
+      const yearData = generateHeatmapData(year);
+      const maxAmount = Math.max(...Object.values(yearData), 0);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      let calendarHTML = '';
+      calendarHTML += '<div class="heatmap-months">';
+
+      for (let m = 0; m < 12; m++) {
+        const firstDayOfMonth = new Date(year, m, 1);
+        const firstWeekday = firstDayOfMonth.getDay(); // 0-6
+        const daysInMonth = new Date(year, m + 1, 0).getDate();
+
+        calendarHTML += '<div class="heatmap-month">';
+        calendarHTML += `<div class="heatmap-month-title">${months[m]}</div>`;
+        calendarHTML += '<div class="heatmap-month-days">';
+
+        // leading blanks
+        for (let i = 0; i < firstWeekday; i++) {
+          calendarHTML += '<div class="heatmap-day" data-intensity="0"></div>';
+        }
+
+        // month days
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dayKey = `${m}-${d}`;
+          const amount = yearData[dayKey] || 0;
+          const intensity = calculateIntensity(amount, maxAmount);
+          const currentDate = new Date(year, m, d);
+          const formattedAmount = formatCurrency(amount);
+          const dateString = currentDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+
+          calendarHTML += `<div class="heatmap-day" 
+            data-intensity="${intensity}" 
+            data-amount="${amount}" 
+            data-date="${dateString}"
+            data-formatted="${formattedAmount}"
+            title="${dateString}: ${formattedAmount}">
+          </div>`;
+        }
+
+        calendarHTML += '</div>'; // .heatmap-month-days
+        calendarHTML += '</div>'; // .heatmap-month
+      }
+
+      calendarHTML += '</div>'; // .heatmap-months
+      return calendarHTML;
+    }
+    
+    // Update heatmap statistics
+    function updateHeatmapStats(year) {
+      const yearData = generateHeatmapData(year);
+      const amounts = Object.values(yearData);
+      const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+      const totalDays = isLeap ? 366 : 365;
+      const activeDays = amounts.filter(amount => amount > 0).length;
+      const maxAmount = Math.max(...amounts, 0);
+      const avgAmount = amounts.length > 0 ? amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length : 0;
+      
+      setText('heatmapTotalDays', totalDays);
+      setText('heatmapActiveDays', activeDays);
+      setText('heatmapHighestDay', formatCurrency(maxAmount));
+      setText('heatmapAverageDay', formatCurrency(avgAmount));
+    }
+    
+    // Initialize heatmap
+    function initializeHeatmap() {
+      const heatmapContainer = document.getElementById('heatmapCalendar');
+      const yearSelect = document.getElementById('heatmapYearSelect');
+      const currencyDisplay = document.getElementById('heatmapCurrencyDisplay');
+      
+      if (!heatmapContainer || !yearSelect) {
+        console.warn('Heatmap elements not found');
+        return;
+      }
+      
+      // Update currency display
+      if (currencyDisplay) {
+        currencyDisplay.textContent = state.selectedCurrency || 'EGP';
+      }
+      
+      // Populate year selector
+      const currentYear = new Date().getFullYear();
+      const availableYears = Object.keys(state.income).map(year => parseInt(year)).filter(year => !isNaN(year));
+      
+      // Add current year if not present
+      if (!availableYears.includes(currentYear)) {
+        availableYears.push(currentYear);
+      }
+      
+      // Sort years descending
+      availableYears.sort((a, b) => b - a);
+      
+      // Clear and populate year select
+      yearSelect.innerHTML = '';
+      availableYears.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentHeatmapYear) {
+          option.selected = true;
+        }
+        yearSelect.appendChild(option);
+      });
+      
+      // Generate and display heatmap
+      heatmapData = generateHeatmapData(currentHeatmapYear);
+      heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+      updateHeatmapStats(currentHeatmapYear);
+      
+      // Add event listeners
+      yearSelect.addEventListener('change', (e) => {
+        currentHeatmapYear = parseInt(e.target.value);
+        heatmapData = generateHeatmapData(currentHeatmapYear);
+        heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+        updateHeatmapStats(currentHeatmapYear);
+      });
+      
+      // Add tooltip functionality
+      addHeatmapTooltips();
+    }
+    
+    // Add tooltip functionality to heatmap (matching app tooltip style)
+    function addHeatmapTooltips() {
+      const heatmapDays = document.querySelectorAll('.heatmap-day');
+      let tooltip = document.getElementById('globalHeatmapTooltip');
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'globalHeatmapTooltip';
+        tooltip.className = 'tooltip';
+        document.body.appendChild(tooltip);
+      }
+      const showTooltip = (html, x, y) => {
+        tooltip.innerHTML = html;
+        tooltip.style.left = `${x}px`;
+        tooltip.style.top = `${y}px`;
+        tooltip.style.display = 'block';
+      };
+      const hideTooltip = () => {
+        tooltip.style.display = 'none';
+      };
+      heatmapDays.forEach(day => {
+        day.addEventListener('mouseenter', (e) => {
+          const amount = e.currentTarget.getAttribute('data-amount');
+          const date = e.currentTarget.getAttribute('data-date');
+          const formatted = e.currentTarget.getAttribute('data-formatted');
+          const rect = e.currentTarget.getBoundingClientRect();
+          const html = `<div class=\"text-xs\"><div class=\"font-semibold\" style=\"margin-bottom:2px;\">${date}</div><div style=\"color:var(--muted);\">${formatted}</div></div>`;
+          showTooltip(html, rect.left + rect.width / 2, rect.top - 8);
+        });
+        day.addEventListener('mousemove', (e) => {
+          showTooltip(tooltip.innerHTML, e.clientX + 8, e.clientY - 12);
+        });
+        day.addEventListener('mouseleave', hideTooltip);
+        day.addEventListener('blur', hideTooltip);
+      });
+    }
+    
+    // Update heatmap when data changes
+    function updateHeatmap() {
+      const analyticsPage = document.getElementById('pageAnalytics');
+      if (analyticsPage && analyticsPage.style.display !== 'none') {
+        initializeHeatmap();
       }
     }
 

@@ -842,6 +842,73 @@
         </div>
       </section>
 
+      <!-- Income Heatmap Section -->
+      <section class="mb-6">
+        <div class="card p-6" style="background:var(--card); border:1px solid var(--stroke); border-radius:1rem;">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold px-1 tooltip-trigger" style="color:var(--fg)">
+              Income Calendar Heatmap
+              <div class="tooltip">Visual calendar showing daily income patterns throughout the year</div>
+            </h2>
+            <div class="flex items-center gap-3">
+              <!-- Year Filter -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs" style="color:var(--muted)">Year:</label>
+                <select id="heatmapYearSelect" class="heatmap-year-select">
+                  <!-- Years will be populated dynamically -->
+                </select>
+              </div>
+              <div class="flex items-center gap-2 text-xs tooltip-trigger" style="color:var(--muted)">
+                <span id="heatmapCurrencyDisplay">EGP</span>
+                <div class="w-2 h-2 rounded-full" style="background:linear-gradient(90deg, rgba(99,102,241,.9), rgba(56,189,248,.9))"></div>
+                <div class="tooltip tooltip-left">Heatmap displays values in selected currency</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Heatmap Legend -->
+          <div class="flex items-center justify-between mb-4 text-xs" style="color:var(--muted)">
+            <span>Less</span>
+            <div class="flex items-center gap-1">
+              <div class="heatmap-legend-item" style="background:var(--glass); width:10px; height:10px; border-radius:2px;"></div>
+              <div class="heatmap-legend-item" style="background:rgba(99,102,241,0.2); width:10px; height:10px; border-radius:2px;"></div>
+              <div class="heatmap-legend-item" style="background:rgba(99,102,241,0.4); width:10px; height:10px; border-radius:2px;"></div>
+              <div class="heatmap-legend-item" style="background:rgba(99,102,241,0.6); width:10px; height:10px; border-radius:2px;"></div>
+              <div class="heatmap-legend-item" style="background:rgba(99,102,241,0.8); width:10px; height:10px; border-radius:2px;"></div>
+              <div class="heatmap-legend-item" style="background:rgba(99,102,241,1); width:10px; height:10px; border-radius:2px;"></div>
+            </div>
+            <span>More</span>
+          </div>
+          
+          <!-- Calendar Heatmap Container -->
+          <div class="heatmap-container">
+            <div id="heatmapCalendar" class="heatmap-calendar">
+              <!-- Calendar will be generated dynamically -->
+            </div>
+          </div>
+          
+          <!-- Heatmap Stats -->
+          <div class="mt-4 grid grid-cols-2 gap-4 text-xs">
+            <div class="flex items-center justify-between">
+              <span style="color:var(--muted)">Total Days</span>
+              <span id="heatmapTotalDays" class="font-semibold">0</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span style="color:var(--muted)">Active Days</span>
+              <span id="heatmapActiveDays" class="font-semibold">0</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span style="color:var(--muted)">Highest Day</span>
+              <span id="heatmapHighestDay" class="font-semibold">$0.00</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span style="color:var(--muted)">Average/Day</span>
+              <span id="heatmapAverageDay" class="font-semibold">$0.00</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
           <!-- Insight Cards Section -->
           <section class="space-y-6">
             <div class="flex justify-between items-center mb-4">
