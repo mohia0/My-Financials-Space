@@ -7256,6 +7256,13 @@ header img:hover {
   min-width: 80px;
   cursor: pointer;
   transition: all 0.2s ease;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23a1a1aa" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right .45rem center;
+  padding-right: 1.4rem;
 }
 
 .heatmap-year-select:hover {
@@ -7267,6 +7274,14 @@ header img:hover {
   border-color: rgba(99, 102, 241, 0.5);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
+
+/* Enhanced dropdown UI */
+.heatmap-year-select{
+  padding: .35rem .6rem;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--card), rgba(0,0,0,0));
+}
+.heatmap-year-select option{ background: var(--card); color: var(--fg); }
 
 /* Heatmap Container */
 .heatmap-container {
@@ -7288,14 +7303,14 @@ header img:hover {
   width:100%;
 }
 
-.heatmap-month{ display:flex; flex-direction:column; gap:4px; background:transparent; padding:8px; border-radius:8px; border:1px solid transparent; }
+.heatmap-month{ display:flex; flex-direction:column; gap:6px; background:transparent; padding:10px; border-radius:10px; border:1px solid transparent; }
 
-.heatmap-month-title{ text-align:center; font-size:.65rem; color:var(--muted); font-weight:600; }
+.heatmap-month-title{ text-align:center; font-size:.72rem; color:var(--muted); font-weight:600; }
 
-.heatmap-month-days{ display:grid; grid-template-columns:repeat(7, 10px); grid-auto-rows:10px; gap:2px; justify-content:center; }
+.heatmap-month-days{ display:grid; grid-template-columns:repeat(7, 14px); grid-auto-rows:14px; gap:3px; justify-content:center; }
 
 /* Heatmap Legend Items */
-.heatmap-legend-item { transition: transform 0.2s ease; width: 8px !important; height: 8px !important; }
+.heatmap-legend-item { transition: transform 0.2s ease; width: 10px !important; height: 10px !important; }
 
 .heatmap-legend-item:hover {
   transform: scale(1.1);
@@ -7303,8 +7318,8 @@ header img:hover {
 
 /* Heatmap Day Cells */
 .heatmap-day {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border-radius: 2px;
   background: var(--glass);
   border: 1px solid transparent;
@@ -7359,11 +7374,18 @@ header img:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   pointer-events: none;
-  white-space: nowrap;
+  white-space: normal;
   opacity: 0;
   transform: translateY(-5px);
   transition: all 0.2s ease;
 }
+/* Tight legend and stats spacing */
+.heatmap-legend{ display:flex; align-items:center; justify-content:center; gap:.5rem; margin:-6px 0 8px 0; }
+.heatmap-legend > span{ line-height:1; }
+.heatmap-legend-items{ gap:4px !important; }
+
+.heatmap-stats{ margin-top:8px; row-gap:4px; column-gap:16px; }
+
 
 .heatmap-tooltip.show {
   opacity: 1;
@@ -7379,6 +7401,14 @@ header img:hover {
   border: 4px solid transparent;
   border-top-color: var(--stroke);
 }
+
+/* Structured tooltip content */
+.heatmap-tip{ display:flex; flex-direction:column; gap:4px; min-width: 180px; }
+.heatmap-tip-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.heatmap-tip-date{ font-weight:600; }
+.heatmap-tip-projects{ color:var(--muted); line-height:1.2; white-space:normal; max-width:240px; }
+.heatmap-tip .muted{ color:var(--muted); }
+.heatmap-tip .val{ font-weight:600; }
 
 /* Heatmap Month Labels */
 .heatmap-month-label {
@@ -7427,8 +7457,8 @@ header img:hover {
   .heatmap-months{ grid-template-columns:repeat(4, 1fr); }
   
   .heatmap-day {
-    width: 9px;
-    height: 9px;
+    width: 12px;
+    height: 12px;
   }
   
   .heatmap-container {
@@ -7448,8 +7478,8 @@ header img:hover {
   .heatmap-months{ grid-template-columns:repeat(2, 1fr); }
   
   .heatmap-day {
-    width: 8px;
-    height: 8px;
+    width: 11px;
+    height: 11px;
   }
   
   .heatmap-weekday-label {

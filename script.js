@@ -121,6 +121,10 @@ function incrementSplashProgress(stepName) {
   }
   
   updateSplashProgress(progress, detailedMessage);
+  // If all steps completed, immediately hide via legacy behavior
+  if (dataLoadingSteps >= totalDataLoadingSteps) {
+    hideSplashScreen();
+  }
 }
 
 // Hide splash screen when data is fully loaded
@@ -988,6 +992,7 @@ async function saveProfile({ fullName, file }) {
       if (currentPage === 'analytics') {
         updateAnalyticsPage();
       }
+      hideSplashScreenSmoothly();
     }, 100);
     
     // Also update analytics page after a longer delay to ensure data is loaded
@@ -995,6 +1000,7 @@ async function saveProfile({ fullName, file }) {
       if (currentPage === 'analytics') {
         updateAnalyticsPage();
       }
+      hideSplashScreenSmoothly();
     }, 1000);
     
     // Note: currentYear is now set in initYearTabs() to default to current year
@@ -6146,25 +6152,28 @@ async function saveProfile({ fullName, file }) {
       const yearData = state.income[year] || [];
       const dailyData = {};
       
-      // Process income entries for the year
+      // Process income entries for the year and capture project names
       yearData.forEach(entry => {
-        if (entry.date) {
-          const date = new Date(entry.date);
-          const dayKey = `${date.getMonth()}-${date.getDate()}`;
-          const amount = Number(entry.paidUsd || 0);
-          
-          if (dailyData[dayKey]) {
-            dailyData[dayKey] += amount;
-          } else {
-            dailyData[dayKey] = amount;
-          }
+        if (!entry || !entry.date) return;
+        const date = new Date(entry.date);
+        if (isNaN(date)) return;
+        const dayKey = `${date.getMonth()}-${date.getDate()}`;
+        const amount = Number(entry.paidUsd || 0);
+        const projectName = entry.name || '—';
+        if (!dailyData[dayKey]) {
+          dailyData[dayKey] = { usdTotal: 0, projects: [] };
         }
+        dailyData[dayKey].usdTotal += amount;
+        if (amount > 0) dailyData[dayKey].projects.push(projectName);
       });
       
       // Convert to selected currency
       const convertedData = {};
       Object.keys(dailyData).forEach(dayKey => {
-        convertedData[dayKey] = usdToSelectedCurrency(dailyData[dayKey]);
+        convertedData[dayKey] = {
+          amount: usdToSelectedCurrency(dailyData[dayKey].usdTotal),
+          projects: dailyData[dayKey].projects
+        };
       });
       
       return convertedData;
@@ -6186,7 +6195,7 @@ async function saveProfile({ fullName, file }) {
     // Generate calendar heatmap HTML (months grouped as individual calendars)
     function generateHeatmapCalendar(year) {
       const yearData = generateHeatmapData(year);
-      const maxAmount = Math.max(...Object.values(yearData), 0);
+      const maxAmount = Math.max(...Object.values(yearData).map(v => v.amount || 0), 0);
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
       let calendarHTML = '';
@@ -6209,10 +6218,15 @@ async function saveProfile({ fullName, file }) {
         // month days
         for (let d = 1; d <= daysInMonth; d++) {
           const dayKey = `${m}-${d}`;
-          const amount = yearData[dayKey] || 0;
+          const dayObj = yearData[dayKey] || { amount: 0, projects: [] };
+          const amount = dayObj.amount || 0;
           const intensity = calculateIntensity(amount, maxAmount);
           const currentDate = new Date(year, m, d);
           const formattedAmount = formatCurrency(amount);
+          const projects = dayObj.projects || [];
+          const projectPreview = projects.slice(0, 2).join(', ');
+          const moreCount = Math.max(0, projects.length - 2);
+          const projectsAttr = (projects.length > 0 ? `${projectPreview}${moreCount ? `, +${moreCount} more` : ''}` : 'No projects').replace(/"/g, '&quot;');
           const dateString = currentDate.toLocaleDateString('en-US', {
             weekday: 'short',
             year: 'numeric',
@@ -6225,7 +6239,7 @@ async function saveProfile({ fullName, file }) {
             data-amount="${amount}" 
             data-date="${dateString}"
             data-formatted="${formattedAmount}"
-            title="${dateString}: ${formattedAmount}">
+            data-projects="${projectsAttr}">
           </div>`;
         }
 
@@ -6240,7 +6254,7 @@ async function saveProfile({ fullName, file }) {
     // Update heatmap statistics
     function updateHeatmapStats(year) {
       const yearData = generateHeatmapData(year);
-      const amounts = Object.values(yearData);
+      const amounts = Object.values(yearData).map(v => v.amount || 0);
       const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
       const totalDays = isLeap ? 366 : 365;
       const activeDays = amounts.filter(amount => amount > 0).length;
@@ -6320,26 +6334,38 @@ async function saveProfile({ fullName, file }) {
         tooltip.className = 'tooltip';
         document.body.appendChild(tooltip);
       }
+      const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
       const showTooltip = (html, x, y) => {
         tooltip.innerHTML = html;
-        tooltip.style.left = `${x}px`;
-        tooltip.style.top = `${y}px`;
         tooltip.style.display = 'block';
+        // After content set, clamp within viewport
+        const pad = 8;
+        const vw = window.innerWidth || document.documentElement.clientWidth;
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const rect = tooltip.getBoundingClientRect();
+        const tx = clamp(x - rect.width / 2, pad, vw - rect.width - pad);
+        const ty = clamp(y - rect.height - 10, pad, vh - rect.height - pad);
+        tooltip.style.left = `${tx}px`;
+        tooltip.style.top = `${ty}px`;
       };
-      const hideTooltip = () => {
-        tooltip.style.display = 'none';
-      };
+      const hideTooltip = () => { tooltip.style.display = 'none'; };
       heatmapDays.forEach(day => {
         day.addEventListener('mouseenter', (e) => {
-          const amount = e.currentTarget.getAttribute('data-amount');
           const date = e.currentTarget.getAttribute('data-date');
           const formatted = e.currentTarget.getAttribute('data-formatted');
+          const projects = e.currentTarget.getAttribute('data-projects') || 'No projects';
+          const html = `
+            <div class="heatmap-tip">
+              <div class="heatmap-tip-row heatmap-tip-date">${date}</div>
+              <div class="heatmap-tip-row"><span class="muted">Amount</span><span class="val">${formatted}</span></div>
+              <div class="heatmap-tip-row heatmap-tip-projects">${projects}</div>
+            </div>
+          `;
           const rect = e.currentTarget.getBoundingClientRect();
-          const html = `<div class=\"text-xs\"><div class=\"font-semibold\" style=\"margin-bottom:2px;\">${date}</div><div style=\"color:var(--muted);\">${formatted}</div></div>`;
-          showTooltip(html, rect.left + rect.width / 2, rect.top - 8);
+          showTooltip(html, rect.left + rect.width / 2, rect.top);
         });
         day.addEventListener('mousemove', (e) => {
-          showTooltip(tooltip.innerHTML, e.clientX + 8, e.clientY - 12);
+          showTooltip(tooltip.innerHTML, e.clientX, e.clientY);
         });
         day.addEventListener('mouseleave', hideTooltip);
         day.addEventListener('blur', hideTooltip);
@@ -8761,6 +8787,14 @@ async function saveProfile({ fullName, file }) {
     } catch (error) {
       console.error('❌ Failed to update income order:', error);
     }
+  }
+
+  // Smoothly hide splash screen after initial render
+  // Legacy no-fade behavior: keep for compatibility
+  function hideSplashScreenSmoothly() {
+    const splash = document.getElementById('splashScreen');
+    if (!splash) return;
+    splash.classList.add('hidden');
   }
 
   function renderIncomeList(containerId, arr) {
