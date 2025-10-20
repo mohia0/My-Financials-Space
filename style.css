@@ -1,5 +1,356 @@
 ﻿:root{ --bg:#0a0a0b; --fg:#e4e4e7; --muted:#a1a1aa; --card:rgba(24,24,27,.75); --stroke:#27272a; --glass:#1f1f23; }
 [data-theme="light"]{ --bg:#f8fafc; --fg:#0f172a; --muted:#475569; --card:#ffffff; --stroke:#e2e8f0; --glass:#f8fafc; }
+
+/* Light mode shadow overrides - much lighter and more subtle */
+[data-theme="light"] .card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .kpi {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+}
+
+[data-theme="light"] .kpi:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .row:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .nav-btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .icon-btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Light mode dropdown and modal shadows */
+[data-theme="light"] .custom-dropdown,
+[data-theme="light"] .dropdown-content,
+[data-theme="light"] .select-dropdown,
+[data-theme="light"] .method-dropdown,
+[data-theme="light"] .status-dropdown,
+[data-theme="light"] .billing-dropdown {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .modal,
+[data-theme="light"] .settings-modal,
+[data-theme="light"] .auth-modal {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light"] .custom-date-picker {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Light mode input and form element shadows */
+[data-theme="light"] .input,
+[data-theme="light"] .select,
+[data-theme="light"] .input-enhanced {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .input:focus,
+[data-theme="light"] .select:focus,
+[data-theme="light"] .input-enhanced:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08) !important;
+}
+
+/* Light mode icon tile shadows */
+[data-theme="light"] .icon-tile:hover {
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08) !important;
+}
+
+[data-theme="light"] .icon-tile.selected {
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* Light mode range slider shadows */
+[data-theme="light"] input[type="range"]::-webkit-slider-thumb,
+[data-theme="light"] input[type="range"]::-moz-range-thumb {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Light mode toggle switch shadows */
+[data-theme="light"] .toggle-switch {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Light mode header shadows */
+[data-theme="light"] header.scrolled {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Light mode mobile bottom bar shadow */
+[data-theme="light"] .mobile-bottom-bar {
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Enhanced light mode button hover effects */
+[data-theme="light"] .btn-primary:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light"] .btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .nav-btn:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: var(--fg) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .icon-btn:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Light mode specific button variants */
+[data-theme="light"] .year-tab:hover {
+  background: rgba(99, 102, 241, 0.05) !important;
+  color: var(--fg) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+[data-theme="light"] .year-tab-manage:hover {
+  background: rgba(99, 102, 241, 0.05) !important;
+  color: var(--fg) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+[data-theme="light"] .year-add-btn:hover {
+  background: rgba(99, 102, 241, 0.05) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: var(--accent) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+[data-theme="light"] .year-add-between:hover {
+  background: rgba(99, 102, 241, 0.05) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: var(--accent) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Light mode confirmation buttons */
+[data-theme="light"] .year-confirm-yes:hover {
+  background: rgba(220, 38, 38, 0.9) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
+}
+
+[data-theme="light"] .year-confirm-no:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+  color: var(--fg) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode sync button */
+[data-theme="light"] .sync-button:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode icon cell buttons */
+[data-theme="light"] .icon-cell button:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Light mode date picker buttons */
+[data-theme="light"] .date-picker-nav:hover,
+[data-theme="light"] .date-picker-btn:hover {
+  background: var(--accent) !important;
+  color: white !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-theme="light"] .date-picker-btn.primary:hover {
+  background: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Light mode dropdown triggers */
+[data-theme="light"] .custom-dropdown-trigger:hover,
+[data-theme="light"] .method-trigger-minimal:hover,
+[data-theme="light"] .status-trigger-minimal:hover,
+[data-theme="light"] .billing-trigger-minimal:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode toggle switch */
+[data-theme="light"] .toggle-switch:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Light mode form elements and inputs */
+[data-theme="light"] .input:hover,
+[data-theme="light"] .select:hover,
+[data-theme="light"] .input-enhanced:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .input:focus,
+[data-theme="light"] .select:focus,
+[data-theme="light"] .input-enhanced:focus {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: var(--accent) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08) !important;
+}
+
+/* Light mode select wrappers */
+[data-theme="light"] .select-wrap:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode settings inputs */
+[data-theme="light"] .settings-input-wrapper:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .settings-currency-select:hover {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode cost input wrappers */
+[data-theme="light"] .cost-input-wrapper:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode tag elements */
+[data-theme="light"] .tag:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(56, 189, 248, 0.08)) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+[data-theme="light"] .tag-input-wrapper:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .tag-suggestion:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  color: var(--fg) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .tag-chip:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(56, 189, 248, 0.08)) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+[data-theme="light"] .tag-chip-remove:hover {
+  color: var(--fg) !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Light mode dropdown items */
+[data-theme="light"] .custom-dropdown-item:hover,
+[data-theme="light"] .method-item-minimal:hover,
+[data-theme="light"] .status-item-minimal:hover,
+[data-theme="light"] .billing-item-minimal:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  color: var(--fg) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode date picker elements */
+[data-theme="light"] .date-day:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Light mode range sliders */
+[data-theme="light"] input[type="range"]::-webkit-slider-thumb:hover,
+[data-theme="light"] input[type="range"]::-moz-range-thumb:hover {
+  background: var(--muted) !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Light mode year items */
+[data-theme="light"] .year-item:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light mode year remove buttons */
+[data-theme="light"] .year-btn-remove:hover {
+  background: rgba(220, 38, 38, 0.9) !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2) !important;
+}
+
+/* Light mode table header - much lighter shadow */
+[data-theme="light"] .row-head {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Light mode row head hover */
+[data-theme="light"] .row-head:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
 html,body{ font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--fg); }
 *{ scrollbar-width:thin; scrollbar-color:#52525b transparent; }
 ::-webkit-scrollbar{ height:8px; width:8px; }

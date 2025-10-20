@@ -42,7 +42,14 @@
       
       <!-- Navigation Tabs in Header -->
       <div class="flex items-center gap-2">
-        <button id="tabExpenses" class="nav-btn nav-btn-expenses active" data-page="expenses">
+        <button id="tabAnalytics" class="nav-btn nav-btn-analytics active" data-page="analytics">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3">
+            <path d="M3 3v18h18"/>
+            <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+          </svg>
+          Analytics
+        </button>
+        <button id="tabExpenses" class="nav-btn nav-btn-expenses" data-page="expenses">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3">
             <path d="M12 19V5M5 12l7-7 7 7"/>
           </svg>
@@ -53,13 +60,6 @@
             <path d="M12 5v14M19 12l-7 7-7-7"/>
           </svg>
           Income
-        </button>
-        <button id="tabAnalytics" class="nav-btn nav-btn-analytics" data-page="analytics">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3">
-            <path d="M3 3v18h18"/>
-            <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
-          </svg>
-          Analytics
         </button>
         
       </div>
@@ -227,6 +227,13 @@
 
     <!-- Mobile Bottom Navigation -->
     <div id="mobileBottomNav" class="mobile-bottom-nav">
+      <button class="mobile-nav-btn active" data-page="analytics">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+          <path d="M3 3v18h18"/>
+          <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+        </svg>
+        <span class="nav-label">Analytics</span>
+      </button>
       <button class="mobile-nav-btn" data-page="expenses">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
           <path d="M12 19V5M5 12l7-7 7 7"/>
@@ -239,18 +246,11 @@
         </svg>
         <span class="nav-label">Income</span>
       </button>
-      <button class="mobile-nav-btn" data-page="analytics">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
-          <path d="M3 3v18h18"/>
-          <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
-        </svg>
-        <span class="nav-label">Analytics</span>
-      </button>
     </div>
 
 
     <!-- Expenses Page -->
-    <div id="pageExpenses" class="page-content">
+    <div id="pageExpenses" class="page-content" style="display: none;">
       <!-- KPIs -->
       <section id="kpis" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-4">
       <div class="kpi kpi-em sm:col-span-1" data-analytics="all">
@@ -677,7 +677,7 @@
     </div>
 
     <!-- Analytics Page -->
-    <div id="pageAnalytics" class="page-content" style="display: none;">
+    <div id="pageAnalytics" class="page-content">
       <!-- Analytics KPIs -->
       <section id="analyticsKpis" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">
         <!-- Net Cash Flow Card -->

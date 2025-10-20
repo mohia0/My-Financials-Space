@@ -237,10 +237,10 @@ async function saveProfile({ fullName, file }) {
       
       if (tabExpenses && tabIncome && tabAnalytics && pageExpenses && pageIncome && pageAnalytics) {
         // Set initial state
-        showPage('expenses');
+        showPage('analytics');
         
         // Initialize mobile navigation
-        updateMobileNavActiveState('expenses');
+        updateMobileNavActiveState('analytics');
         
         // Add mobile navigation click listeners
         document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
@@ -857,6 +857,20 @@ async function saveProfile({ fullName, file }) {
     // Initialize navigation
     initPageNavigation();
     initYearTabs();
+    
+    // Ensure analytics page is updated after initialization
+    setTimeout(() => {
+      if (currentPage === 'analytics') {
+        updateAnalyticsPage();
+      }
+    }, 100);
+    
+    // Also update analytics page after a longer delay to ensure data is loaded
+    setTimeout(() => {
+      if (currentPage === 'analytics') {
+        updateAnalyticsPage();
+      }
+    }, 1000);
     
     // Note: currentYear is now set in initYearTabs() to default to current year
     
@@ -9031,6 +9045,11 @@ function loadNonCriticalResources() {
     
     // Re-add event listeners after rendering
     addRowButtonListeners();
+    
+    // Update analytics page if it's currently visible
+    if (currentPage === 'analytics') {
+      updateAnalyticsPage();
+    }
     
     // Only animate if explicitly requested (user actions)
     if (shouldAnimate) {
