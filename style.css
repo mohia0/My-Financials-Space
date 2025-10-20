@@ -7261,43 +7261,7 @@ body.no-scroll { overflow: hidden; height: 100vh; }
 
 /* ===== INCOME HEATMAP STYLES ===== */
 
-/* Heatmap Year Select */
-.heatmap-year-select {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  border: 1px solid var(--stroke);
-  border-radius: 6px;
-  background: var(--card);
-  color: var(--fg);
-  min-width: 80px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23a1a1aa" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>');
-  background-repeat: no-repeat;
-  background-position: right .45rem center;
-  padding-right: 1.4rem;
-}
-
-.heatmap-year-select:hover {
-  border-color: var(--muted);
-}
-
-.heatmap-year-select:focus {
-  outline: none;
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
-}
-
-/* Enhanced dropdown UI */
-.heatmap-year-select{
-  padding: .35rem .6rem;
-  border-radius: 8px;
-  background: linear-gradient(180deg, var(--card), rgba(0,0,0,0));
-}
-.heatmap-year-select option{ background: var(--card); color: var(--fg); }
+/* Heatmap Year Select uses shared select UI via .select-wrap and .select */
 
 /* Heatmap Container */
 .heatmap-container {
@@ -7396,7 +7360,7 @@ body.no-scroll { overflow: hidden; height: 100vh; }
 .heatmap-legend > span{ line-height:1; }
 .heatmap-legend-items{ gap:4px !important; }
 
-.heatmap-stats{ margin-top:8px; row-gap:4px; column-gap:16px; }
+.heatmap-stats{ margin-top:8px; row-gap:6px; column-gap:24px; }
 
 
 .heatmap-tooltip.show {

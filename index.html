@@ -854,9 +854,11 @@
               <!-- Year Filter -->
               <div class="flex items-center gap-2">
                 <label class="text-xs" style="color:var(--muted)">Year:</label>
-                <select id="heatmapYearSelect" class="heatmap-year-select">
-                  <!-- Years will be populated dynamically -->
-                </select>
+                <div class="select-wrap" style="min-width:90px; max-width:120px;">
+                  <select id="heatmapYearSelect" class="select">
+                    <!-- Years will be populated dynamically -->
+                  </select>
+                </div>
               </div>
               <!-- Refresh Heatmap -->
               <button id="heatmapRefreshBtn" class="tooltip-trigger" style="width:18px; height:18px; display:grid; place-items:center; border:1px solid var(--stroke); border-radius:4px; background:var(--glass)">
@@ -886,14 +888,22 @@
           </div>
           
           <!-- Heatmap Stats -->
-          <div class="heatmap-stats grid grid-cols-2 text-xs">
-            <div class="flex items-center justify-between">
+          <div class="heatmap-stats grid grid-cols-4 text-xs">
+            <div class="flex items-center gap-2">
               <span style="color:var(--muted)">Highest Day</span>
               <span id="heatmapHighestDay" class="font-semibold">$0.00</span>
             </div>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
               <span style="color:var(--muted)">Average/Day</span>
               <span id="heatmapAverageDay" class="font-semibold">$0.00</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span style="color:var(--muted)">Best Project</span>
+              <span id="heatmapBestProject" class="font-semibold">—</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span style="color:var(--muted)">Longest Gap</span>
+              <span id="heatmapLongestGap" class="font-semibold">—</span>
             </div>
           </div>
         </div>

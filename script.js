@@ -3967,6 +3967,17 @@ async function saveProfile({ fullName, file }) {
       });
       
       filteredElements.forEach(element => {
+        // Allow heatmap year select to remain interactive even when locked
+        if (element.id === 'heatmapYearSelect' || (element.classList && element.classList.contains('heatmap-year-select'))) {
+          element.disabled = false;
+          element.style.pointerEvents = 'auto';
+          element.style.userSelect = 'auto';
+          const existingOverlay = element.querySelector && element.querySelector('.lock-indicator');
+          if (existingOverlay && existingOverlay.parentNode === element) {
+            existingOverlay.remove();
+          }
+          return; // Skip locking for this control
+        }
         if (state.inputsLocked) {
           // Disable the element but keep its appearance
           element.disabled = true;
@@ -6286,6 +6297,76 @@ async function saveProfile({ fullName, file }) {
       setText('heatmapActiveDays', activeDays);
       setText('heatmapHighestDay', formatCurrency(maxAmount));
       setText('heatmapAverageDay', formatCurrency(avgAmount));
+
+      // Compute best project by total income for the selected year
+      try {
+        const incomeEntries = (state.income && state.income[year]) || [];
+        const totalsByProject = new Map();
+        for (let i = 0; i < incomeEntries.length; i++) {
+          const entry = incomeEntries[i];
+          if (!entry) continue;
+          const amountUsd = Number(entry.paidUsd || 0);
+          if (amountUsd <= 0) continue;
+          const projectName = (entry.name || '—').toString();
+          const current = totalsByProject.get(projectName) || 0;
+          totalsByProject.set(projectName, current + amountUsd);
+        }
+        let bestProject = '—';
+        let bestTotal = 0;
+        for (const [name, totalUsd] of totalsByProject.entries()) {
+          if (totalUsd > bestTotal) {
+            bestTotal = totalUsd;
+            bestProject = name;
+          }
+        }
+        const bestTotalSelected = usdToSelectedCurrency(bestTotal);
+        const bestText = bestProject === '—' ? '—' : `${bestProject} · ${formatCurrency(bestTotalSelected)}`;
+        setText('heatmapBestProject', bestText);
+      } catch (e) {
+        setText('heatmapBestProject', '—');
+      }
+
+      // Compute longest gap (consecutive zero-income days)
+      try {
+        const yearStart = new Date(year, 0, 1);
+        const daysInYear = ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) ? 366 : 365;
+        let longest = 0;
+        let current = 0;
+        let longestStart = null;
+        let longestEnd = null;
+        let currentStart = null;
+        for (let i = 0; i < daysInYear; i++) {
+          const date = new Date(yearStart);
+          date.setDate(yearStart.getDate() + i);
+          const key = `${date.getMonth()}-${date.getDate()}`;
+          const amt = (yearData[key] && yearData[key].amount) || 0;
+          if (amt <= 0) {
+            if (current === 0) currentStart = new Date(date);
+            current += 1;
+          } else {
+            if (current > longest) {
+              longest = current;
+              longestStart = currentStart;
+              longestEnd = new Date(date);
+              longestEnd.setDate(longestEnd.getDate() - 1);
+            }
+            current = 0;
+            currentStart = null;
+          }
+        }
+        // Handle trailing gap till end of year
+        if (current > longest) {
+          longest = current;
+          longestStart = currentStart;
+          const end = new Date(year, 11, 31);
+          longestEnd = end;
+        }
+        const fmt = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        const gapText = longest > 0 ? `${longest} days · ${fmt(longestStart)}–${fmt(longestEnd)}` : '—';
+        setText('heatmapLongestGap', gapText);
+      } catch (e) {
+        setText('heatmapLongestGap', '—');
+      }
     }
     
     // Initialize heatmap
