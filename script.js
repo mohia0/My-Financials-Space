@@ -6640,7 +6640,19 @@ async function saveProfile({ fullName, file }) {
       ];
       
       progressBarIds.forEach(containerId => {
-        resetProgressBar(containerId);
+        // Special handling for efficiency bar when user is not logged in
+        if (containerId === 'analyticsEfficiencyBarContainer' && !currentUser) {
+          const container = document.getElementById(containerId);
+          if (container) {
+            const bar = container.querySelector('span');
+            if (bar) {
+              bar.style.width = '0%';
+              container.classList.remove('loading');
+            }
+          }
+        } else {
+          resetProgressBar(containerId);
+        }
       });
       
       // Re-animate progress bars after reset
@@ -7311,10 +7323,18 @@ async function saveProfile({ fullName, file }) {
       
       // Efficiency bar (inverse - lower is better)
       const efficiencyScore = Math.max(0, 100 - totalEfficiency);
-      // Animate efficiency progress bar
-      setTimeout(() => {
-        animateProgressBar('analyticsEfficiencyBarContainer', efficiencyScore);
-      }, 1600);
+      // Animate efficiency progress bar - only if user is logged in
+      if (currentUser) {
+        setTimeout(() => {
+          animateProgressBar('analyticsEfficiencyBarContainer', efficiencyScore);
+        }, 1600);
+      } else {
+        // If not logged in, set progress bar to 0 without animation
+        const efficiencyBar = document.querySelector('#analyticsEfficiencyBarContainer .progress-bar');
+        if (efficiencyBar) {
+          efficiencyBar.style.width = '0%';
+        }
+      }
       
       // 4. Financial Health Score
       let healthScore = 0;
