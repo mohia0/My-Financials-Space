@@ -7326,8 +7326,7 @@ body.no-scroll { overflow: hidden; height: 100vh; }
 
 .heatmap-month-days{ display:grid; grid-template-columns:repeat(7, 14px); grid-auto-rows:14px; gap:3px; justify-content:center; }
 
-/* Heatmap Legend Items */
-.heatmap-legend-item { transition: transform 0.2s ease; width: 10px !important; height: 10px !important; }
+/* Heatmap legend removed in UI */
 
 .heatmap-legend-item:hover {
   transform: scale(1.1);
@@ -7356,28 +7355,33 @@ body.no-scroll { overflow: hidden; height: 100vh; }
 
 /* Heatmap Day Intensity Levels */
 .heatmap-day[data-intensity="0"] {
-  background: var(--glass);
+  background: rgba(2, 6, 23, 0.05); /* subtle in light mode, near-glass in dark */
 }
 
 .heatmap-day[data-intensity="1"] {
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(99, 102, 241, 0.18);
 }
 
 .heatmap-day[data-intensity="2"] {
-  background: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.35);
 }
 
 .heatmap-day[data-intensity="3"] {
-  background: rgba(99, 102, 241, 0.6);
+  background: rgba(99, 102, 241, 0.52);
 }
 
 .heatmap-day[data-intensity="4"] {
-  background: rgba(99, 102, 241, 0.8);
+  background: rgba(99, 102, 241, 0.68);
 }
 
 .heatmap-day[data-intensity="5"] {
-  background: rgba(99, 102, 241, 1);
+  background: rgba(99, 102, 241, 0.86);
 }
+
+/* Light mode specific tweaks to ensure contrast on white backgrounds */
+[data-theme="light"] .heatmap-day { border-color: rgba(2, 6, 23, 0.06); }
+[data-theme="light"] .heatmap-day:hover { border-color: rgba(2, 6, 23, 0.15); }
+[data-theme="light"] .heatmap-day[data-intensity="0"] { background: rgba(2, 6, 23, 0.06); }
 
 /* Heatmap Tooltip */
 .heatmap-tooltip {
