@@ -712,6 +712,49 @@ header.scrolled {
   }
 }
 
+/* ===== NEW ROW ANIMATION ===== */
+.new-row-animation {
+  animation: newRowSlideIn 0.6s ease-out;
+  transform-origin: top;
+}
+
+@keyframes newRowSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scaleY(0.8);
+    background-color: var(--accent-bg);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-5px) scaleY(0.95);
+    background-color: var(--accent-bg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    background-color: transparent;
+  }
+}
+
+/* Smooth transition for row removal */
+.row-removing {
+  animation: rowSlideOut 0.3s ease-in forwards;
+}
+
+@keyframes rowSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.9);
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+  }
+}
+
 /* Smooth transitions for all interactive elements */
 header * {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

@@ -1458,10 +1458,34 @@ async function saveProfile({ fullName, file }) {
 
       }
       
-      // Save and re-render
+      // Save and re-render efficiently
       save('add-row'); 
       clearCalculationCache(); // Clear cache when data changes
-      renderAll(true); // User action - enable animations
+      
+      // Only re-render the specific table that was updated (no animations)
+      if (group === 'personal') {
+        renderList('list-personal', state.personal, false, false); // false = no animations
+        updateInputsLockState();
+        addRowButtonListeners();
+        // Add smooth animation only to the new row
+        animateNewRow('list-personal', state.personal.length - 1);
+      } else if (group === 'biz') {
+        renderList('list-biz', state.biz, true, false); // false = no animations
+        updateInputsLockState();
+        addRowButtonListeners();
+        // Add smooth animation only to the new row
+        animateNewRow('list-biz', state.biz.length - 1);
+      } else if (group === 'income') {
+        const currentYearData = state.income[currentYear] || [];
+        renderIncomeList('list-income', currentYearData, false); // false = no animations
+        updateInputsLockState();
+        addRowButtonListeners();
+        // Add smooth animation only to the new row
+        animateNewRow('list-income', currentYearData.length - 1);
+      }
+      
+      // Update KPIs without full re-render
+      updateKPIs();
       
       // Check if user has reached 3+ rows and hide onboarding if needed
       checkAndHideOnboardingIfNeeded();
@@ -1561,6 +1585,19 @@ async function saveProfile({ fullName, file }) {
           updateUserDisplay();
           loadUserData();
           
+          // Initialize optimized sync system when user signs in (stable version)
+          if (typeof window.initializeOptimizedSync === 'function') {
+            // Initialize sync system in background without blocking
+            setTimeout(() => {
+              window.initializeOptimizedSync().then(() => {
+                console.log('✅ Optimized sync system initialized');
+              }).catch((error) => {
+                console.error('❌ Failed to initialize optimized sync:', error);
+                console.log('🔄 Continuing with basic sync...');
+              });
+            }, 2000); // Wait 2 seconds for everything to load
+          }
+          
           // Re-initialize currency dropdown for cloud sync
           setTimeout(() => {
             console.log('🔄 Re-initializing currency dropdown after sign in...');
@@ -1574,6 +1611,16 @@ async function saveProfile({ fullName, file }) {
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
           updateAuthUI();
+          
+          // Cleanup optimized sync system when user signs out
+          if (typeof window.cleanupOptimizedSync === 'function') {
+            try {
+              window.cleanupOptimizedSync();
+              console.log('🧹 Optimized sync system cleaned up');
+            } catch (error) {
+              console.error('❌ Failed to cleanup optimized sync:', error);
+            }
+          }
           
           // User signed out
           console.log('👋 User signed out, cloud sync disabled');
@@ -3238,6 +3285,9 @@ async function saveProfile({ fullName, file }) {
       // Initialize splash screen if visible
       if (shouldShowSplashScreen()) {
         initializeSplashScreen();
+        // Update splash screen to show cloud loading for authenticated users
+        updateSplashProgress(20, 'User authenticated');
+        updateSplashProgress(30, 'Connecting to cloud storage...');
       }
       
       // Prevent multiple simultaneous loads
@@ -3643,6 +3693,9 @@ async function saveProfile({ fullName, file }) {
       // Initialize splash screen if visible
       if (shouldShowSplashScreen()) {
         initializeSplashScreen();
+        // Update splash screen to show local loading for non-authenticated users
+        updateSplashProgress(20, 'Using local workspace');
+        updateSplashProgress(30, 'Loading local data...');
       }
       
       // Load custom icons from localStorage
@@ -3722,8 +3775,8 @@ async function saveProfile({ fullName, file }) {
       // Initialize currency system before rendering
       initializeCurrencySystem();
       
-      // Update splash screen progress for local data loading
-      updateSplashProgress(100, 'All data loaded successfully!');
+      // Update splash screen progress for cloud data loading
+      updateSplashProgress(100, 'Cloud data loaded successfully!');
       
       renderAll();
       
@@ -4022,6 +4075,9 @@ async function saveProfile({ fullName, file }) {
       // Ensure splash appears on first load; treat as generic UI loading when not signed in
       if (shouldShowSplashScreen()) {
         initializeSplashScreen();
+        // Update splash screen to show local loading for non-authenticated users
+        updateSplashProgress(20, 'Using local workspace');
+        updateSplashProgress(30, 'Loading local data...');
       }
       
       // Try to load from localStorage first
@@ -4107,10 +4163,24 @@ async function saveProfile({ fullName, file }) {
         return;
       }
       
-      // If user is signed in, use instant save for fast cloud sync
+      // Always save locally first for immediate response
+      saveToLocal();
+      
+      // If user is signed in, also save to cloud
       if (currentUser && supabaseReady) {
-        console.log('🚀 Using instant save for cloud sync');
-        instantSaveAll(source);
+        // Try optimized sync first, fallback to instant save
+        if (typeof window.saveOptimized === 'function') {
+          console.log('🚀 Using optimized sync for cloud sync');
+          try {
+            window.saveOptimized(source);
+          } catch (error) {
+            console.error('❌ Optimized sync failed, falling back to instant save:', error);
+            instantSaveAll(source);
+          }
+        } else {
+          console.log('🚀 Using instant save for cloud sync (fallback)');
+          instantSaveAll(source);
+        }
       } else {
         console.log('💾 Using local save only');
         // Fallback to regular live save for local storage
@@ -4913,8 +4983,19 @@ async function saveProfile({ fullName, file }) {
         console.log('🔄 Starting cloud save...');
         updateSyncStatus('syncing');
         
-        // Always use the regular saveToSupabase function for reliability
-        await saveToSupabase();
+        // Use optimized sync if available, otherwise fallback to regular save
+        if (typeof window.instantSaveAllOptimized === 'function') {
+          console.log('⚡ Using optimized instant save');
+          try {
+            await window.instantSaveAllOptimized(source);
+          } catch (error) {
+            console.error('❌ Optimized instant save failed, falling back to regular save:', error);
+            await saveToSupabase();
+          }
+        } else {
+          console.log('⚡ Using regular instant save (fallback)');
+          await saveToSupabase();
+        }
         
         console.log('✅ Cloud save successful');
         updateSyncStatus('success');
@@ -9551,7 +9632,7 @@ async function saveProfile({ fullName, file }) {
       ensureFontAwesomeLoaded().then(()=>{ renderIconPicker('', 'all'); iconPickerEl.showModal(); });
     }
 
-    function renderList(containerId, arr, isBiz){
+    function renderList(containerId, arr, isBiz, enableAnimations = true){
       const wrap=document.getElementById(containerId); wrap.innerHTML='';
       
       // Sort array by order property before rendering
@@ -9840,16 +9921,35 @@ async function saveProfile({ fullName, file }) {
               }
             }
             
-            // Remove from local state
-            arr.splice(idx,1); 
+            // Add removal animation to the row
+            div.classList.add('row-removing');
             
-            // Update order properties for remaining rows
-            arr.forEach((row, index) => {
-              row.order = index;
-            });
-            
-            saveToLocal(); // Save locally as well
-            renderAll(true); // User action - enable animations
+            // Wait for animation to complete before removing
+            setTimeout(() => {
+              // Remove from local state
+              arr.splice(idx,1); 
+              
+              // Update order properties for remaining rows
+              arr.forEach((row, index) => {
+                row.order = index;
+              });
+              
+              saveToLocal(); // Save locally as well
+              
+              // Re-render only the specific table without animations
+              if (isBiz) {
+                renderList('list-biz', state.biz, true, false);
+                updateInputsLockState();
+                addRowButtonListeners();
+              } else {
+                renderList('list-personal', state.personal, false, false);
+                updateInputsLockState();
+                addRowButtonListeners();
+              }
+              
+              // Update KPIs without full re-render
+              updateKPIs();
+            }, 300); // Match CSS animation duration
             
             // Check if onboarding should be shown again after deletion
             checkAndShowOnboardingIfNeeded();
@@ -9925,7 +10025,7 @@ async function saveProfile({ fullName, file }) {
     hideSplashScreen();
   }
 
-  function renderIncomeList(containerId, arr) {
+  function renderIncomeList(containerId, arr, enableAnimations = true) {
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
     wrap.innerHTML = '';
@@ -10330,17 +10430,31 @@ async function saveProfile({ fullName, file }) {
                 }
               });
           }
-          arr.splice(idx, 1);
+          // Add removal animation to the row
+          div.classList.add('row-removing');
           
-          // Update order properties for remaining rows
-          arr.forEach((row, index) => {
-            row.order = index;
-          });
-          
-          saveToLocal(); // Save locally as well
-          renderAll(true); // User action - enable animations
-          // Trigger live KPI updates when income row is deleted
-          updateIncomeKPIsLive();
+          // Wait for animation to complete before removing
+          setTimeout(() => {
+            arr.splice(idx, 1);
+            
+            // Update order properties for remaining rows
+            arr.forEach((row, index) => {
+              row.order = index;
+            });
+            
+            saveToLocal(); // Save locally as well
+            
+            // Re-render only the income table without animations
+            const currentYearData = state.income[currentYear] || [];
+            renderIncomeList('list-income', currentYearData, false);
+            updateInputsLockState();
+            addRowButtonListeners();
+            
+            // Update KPIs without full re-render
+            updateKPIs();
+            // Trigger live KPI updates when income row is deleted
+            updateIncomeKPIsLive();
+          }, 300); // Match CSS animation duration
           
           // Check if onboarding should be shown again after deletion
           checkAndShowOnboardingIfNeeded();
@@ -10632,6 +10746,45 @@ function loadNonCriticalResources() {
         
         renderTimeout = null;
       }, 10); // 10ms debounce
+  }
+  
+  // Individual table rendering functions for better performance
+  function renderPersonalTable() {
+    renderList('list-personal', state.personal, false, false); // false = no animations
+    updateInputsLockState();
+    addRowButtonListeners();
+  }
+  
+  function renderBusinessTable() {
+    renderList('list-biz', state.biz, true, false); // false = no animations
+    updateInputsLockState();
+    addRowButtonListeners();
+  }
+  
+  function renderIncomeTable() {
+    const currentYearData = state.income[currentYear] || [];
+    renderIncomeList('list-income', currentYearData, false); // false = no animations
+    updateInputsLockState();
+    addRowButtonListeners();
+  }
+  
+  // Animate only the new row that was added
+  function animateNewRow(containerId, rowIndex) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const rows = container.querySelectorAll('.row:not(.row-head):not(.row-sum)');
+    const newRow = rows[rowIndex];
+    
+    if (newRow) {
+      // Add animation class to the new row
+      newRow.classList.add('new-row-animation');
+      
+      // Remove animation class after animation completes
+      setTimeout(() => {
+        newRow.classList.remove('new-row-animation');
+      }, 600); // Match CSS animation duration
+    }
   }
 
   function updateGridTemplate() {
