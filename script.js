@@ -14489,4 +14489,3 @@ function loadNonCriticalResources() {
   // Make duplicate check function globally available
   window.checkAndFixDuplicates = checkAndFixDuplicates;
 
-
