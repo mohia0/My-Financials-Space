@@ -1,5 +1,5 @@
-﻿:root{ --bg:#0a0a0b; --fg:#e4e4e7; --muted:#a1a1aa; --card:rgba(24,24,27,.75); --stroke:#27272a; --glass:#1f1f23; }
-[data-theme="light"]{ --bg:#f8fafc; --fg:#0f172a; --muted:#475569; --card:#ffffff; --stroke:#e2e8f0; --glass:#f8fafc; }
+﻿:root{ --bg:#0a0a0b; --fg:#e4e4e7; --muted:#a1a1aa; --card:rgba(24,24,27,.75); --stroke:#27272a; --glass:#1f1f23; --accent:#6366f1; --accent-hover:#4f46e5; --accent-bg:rgba(99,102,241,0.1); }
+[data-theme="light"]{ --bg:#f8fafc; --fg:#0f172a; --muted:#475569; --card:#ffffff; --stroke:#e2e8f0; --glass:#f8fafc; --accent:#6366f1; --accent-hover:#4f46e5; --accent-bg:rgba(99,102,241,0.1); }
 
 /* ===== ENHANCED BACKGROUND GLOW ===== */
 body {
@@ -8591,4 +8591,37 @@ body.splash-complete .mobile-bottom-nav {
   font-weight: bold;
   position: absolute;
   left: -1rem;
+}
+
+/* ===== LIFETIME TOTAL HIGHLIGHTING ===== */
+/* Subtle highlighting for the Lifetime Total section */
+#shareIncomeCompletedValCurrency {
+  transition: all 0.2s ease;
+  animation: subtlePulse 3s ease-in-out infinite;
+}
+
+@keyframes subtlePulse {
+  0%, 100% { 
+    opacity: 0.8; 
+    transform: scale(1); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.02); 
+  }
+}
+
+/* Enhanced hover effect for the entire Lifetime Total row */
+.kpi[data-analytics="income-all"] .mt-2 .flex:hover {
+  background: var(--accent-bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  transition: all 0.2s ease;
+}
+
+/* Subtle glow effect for the currency badge */
+#shareIncomeCompletedValCurrency:hover {
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+  transform: scale(1.05);
 }

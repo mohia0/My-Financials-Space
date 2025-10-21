@@ -1563,10 +1563,11 @@ async function saveProfile({ fullName, file }) {
           
           // Re-initialize currency dropdown for cloud sync
           setTimeout(() => {
+            console.log('🔄 Re-initializing currency dropdown after sign in...');
             if (typeof initializeCurrencyDropdown === 'function') {
               initializeCurrencyDropdown();
             }
-          }, 500);
+          }, 1000);
           
           // Initialize basic sync system for cloud saves
           console.log('✅ User signed in, cloud sync enabled');
@@ -5514,8 +5515,16 @@ async function saveProfile({ fullName, file }) {
     
     // Initialize currency dropdown functionality
     function initializeCurrencyDropdown() {
+      console.log('🔍 Initializing currency dropdown...');
       const currencyBtn = document.getElementById('btnCurrency');
       const currencyDropdown = document.getElementById('currencyDropdown');
+      
+      console.log('Currency elements found:', { 
+        currencyBtn: !!currencyBtn, 
+        currencyDropdown: !!currencyDropdown,
+        currentUser: !!currentUser,
+        supabaseReady: !!supabaseReady
+      });
       
       if (!currencyBtn || !currencyDropdown) {
         console.warn('Currency dropdown elements not found, retrying...');
@@ -5555,6 +5564,11 @@ async function saveProfile({ fullName, file }) {
           const rate = parseFloat(newOption.dataset.rate);
           
           console.log('🔄 Currency changed to:', currency);
+          console.log('Cloud sync status:', { 
+            currentUser: !!currentUser, 
+            supabaseReady: !!supabaseReady,
+            supabaseClient: !!window.supabaseClient
+          });
           
           // Update currency in application state
           updateCurrency(currency);
@@ -5565,9 +5579,10 @@ async function saveProfile({ fullName, file }) {
           localStorage.setItem('currencySymbol', symbol);
           
           // Save to cloud if user is signed in
-          if (currentUser && supabaseReady) {
+          if (currentUser && supabaseReady && window.supabaseClient) {
             try {
-              await window.supabaseClient
+              console.log('💾 Attempting to save currency to cloud...');
+              const result = await window.supabaseClient
                 .from('user_settings')
                 .upsert({
                   user_id: currentUser.id,
@@ -5575,21 +5590,22 @@ async function saveProfile({ fullName, file }) {
                 }, {
                   onConflict: 'user_id'
                 });
-              console.log('✅ Currency preference saved to cloud:', currency);
+              
+              console.log('✅ Currency preference saved to cloud:', currency, result);
               
               // Show success notification
               if (typeof showNotification === 'function') {
-                showNotification(`Currency changed to ${currency}`, 'success', 2000);
+                showNotification(`Currency changed to ${currency} (synced to cloud)`, 'success', 2000);
               }
             } catch (error) {
-              console.warn('⚠️ Failed to save currency preference to cloud:', error);
+              console.error('❌ Failed to save currency preference to cloud:', error);
               // Show warning but continue
               if (typeof showNotification === 'function') {
                 showNotification('Currency changed locally (cloud sync failed)', 'warning', 3000);
               }
             }
           } else {
-            console.log('💾 Currency saved locally (not signed in)');
+            console.log('💾 Currency saved locally (not signed in or Supabase not ready)');
             if (typeof showNotification === 'function') {
               showNotification(`Currency changed to ${currency}`, 'success', 2000);
             }
@@ -5600,8 +5616,41 @@ async function saveProfile({ fullName, file }) {
       console.log('✅ Currency dropdown initialized');
     }
     
-    // Initialize currency dropdown
-    initializeCurrencyDropdown();
+    // Test function for currency sync (can be called from browser console)
+    window.testCurrencySync = async function(currency = 'EUR') {
+      console.log('🧪 Testing currency sync with:', currency);
+      console.log('Current state:', {
+        currentUser: !!currentUser,
+        supabaseReady: !!supabaseReady,
+        supabaseClient: !!window.supabaseClient,
+        selectedCurrency: state.selectedCurrency
+      });
+      
+      if (currentUser && supabaseReady && window.supabaseClient) {
+        try {
+          const result = await window.supabaseClient
+            .from('user_settings')
+            .upsert({
+              user_id: currentUser.id,
+              preferred_currency: currency
+            }, {
+              onConflict: 'user_id'
+            });
+          
+          console.log('✅ Test sync successful:', result);
+          return result;
+        } catch (error) {
+          console.error('❌ Test sync failed:', error);
+          return error;
+        }
+      } else {
+        console.warn('⚠️ Cannot test sync - user not signed in or Supabase not ready');
+        return false;
+      }
+    };
+    
+    // Initialize currency dropdown after DOM is ready
+    // This will be called from DOMContentLoaded event
     
     // Load saved currency on startup (moved after function definitions)
 
@@ -5737,6 +5786,9 @@ async function saveProfile({ fullName, file }) {
       
       // Update chart currency display
       updateChartCurrencyDisplay();
+      
+      // Update total amounts display
+      updateIncomeFlowTotals();
       
       // Update heatmap with new currency
       updateHeatmap();
@@ -6106,7 +6158,7 @@ async function saveProfile({ fullName, file }) {
     
     // Update lifetime income breakdown
     setText('shareIncomeCompletedVal', nfUSD.format(lifetimeIncome.totalUSD));
-    setText('shareIncomePendingVal', lifetimeIncome.totalEntries.toString());
+    setText('shareIncomeCompletedValCurrency', formatCurrency(lifetimeIncome.totalSelected));
     
     // Update analytics content (only when values change)
     updateAnalytics();
@@ -6838,6 +6890,9 @@ async function saveProfile({ fullName, file }) {
         // Update currency display
         updateChartCurrencyDisplay();
         
+        // Update total amounts display
+        updateIncomeFlowTotals();
+        
         // Handle window resize for responsive chart points
         setupChartResponsiveHandling();
         
@@ -6892,6 +6947,20 @@ async function saveProfile({ fullName, file }) {
       const currencyDisplay = document.getElementById('chartCurrencyDisplay');
       if (currencyDisplay && state.currencySymbol) {
         currencyDisplay.textContent = state.currencySymbol;
+      }
+    }
+
+    function updateIncomeFlowTotals() {
+      const lifetimeIncome = lifetimeIncomeTotals();
+      const totalUSD = document.getElementById('incomeFlowTotalUSD');
+      const totalCurrency = document.getElementById('incomeFlowTotalCurrency');
+      
+      if (totalUSD) {
+        totalUSD.textContent = nfUSD.format(lifetimeIncome.totalUSD);
+      }
+      
+      if (totalCurrency) {
+        totalCurrency.textContent = formatCurrency(lifetimeIncome.totalSelected);
       }
     }
 
@@ -8245,6 +8314,9 @@ async function saveProfile({ fullName, file }) {
         
         // Update chart currency display
         updateChartCurrencyDisplay();
+        
+        // Update total amounts display
+        updateIncomeFlowTotals();
     }
 
     function updateInsightCards() {
@@ -10434,7 +10506,7 @@ async function saveProfile({ fullName, file }) {
     
     // Update lifetime income breakdown
     setText('shareIncomeCompletedVal', nfUSD.format(lifetimeIncome.totalUSD));
-    setText('shareIncomePendingVal', lifetimeIncome.totalEntries.toString());
+    setText('shareIncomeCompletedValCurrency', formatCurrency(lifetimeIncome.totalSelected));
     
   // Update FX rate display
   setText('kpiIncomeFxSmall', Number(state.currencyRate||0).toFixed(4));
@@ -14124,6 +14196,14 @@ function loadNonCriticalResources() {
     if (currentUser && supabaseReady) {
       checkDatabaseSchema();
     }
+    
+    // Initialize currency dropdown after DOM is fully loaded
+    setTimeout(() => {
+      if (typeof initializeCurrencyDropdown === 'function') {
+        console.log('🔄 Initializing currency dropdown...');
+        initializeCurrencyDropdown();
+      }
+    }, 100);
   });
   
   

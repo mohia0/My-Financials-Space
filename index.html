@@ -562,9 +562,8 @@
             <span id="kpiIncomeFxLabel" style="color:var(--muted)">FX (USD→EGP)</span>
             <span class="font-semibold" id="kpiIncomeFxSmall">â€"</span>
           </div>
-          <div class="mt-2 grid grid-cols-2 gap-4 text-xs">
-            <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Lifetime Total</span><span id="shareIncomeCompletedVal">$0.00</span></div></div>
-            <div><div class="flex items-center justify-between"><span style="color:var(--muted)">Total Entries</span><span id="shareIncomePendingVal">0</span></div></div>
+          <div class="mt-2 text-xs">
+            <div class="flex items-center justify-between"><span style="color:var(--muted)">Lifetime Total</span><div class="flex items-center gap-2"><span id="shareIncomeCompletedVal">$0.00</span><span id="shareIncomeCompletedValCurrency" class="text-xs font-medium" style="color:var(--accent); background:var(--accent-bg); padding:2px 6px; border-radius:4px;">0</span></div></div>
           </div>
           
           <!-- Analytics Panel -->
@@ -823,10 +822,18 @@
       <section class="mb-6">
         <div class="card p-6" style="background:var(--card); border:1px solid var(--stroke); border-radius:1rem;">
           <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-semibold px-1 tooltip-trigger" style="color:var(--fg)">
-              Income Flow Over Time
-              <div class="tooltip">Visual representation of your income trends across time periods</div>
-            </h2>
+            <div class="flex items-center gap-4">
+              <h2 class="text-lg font-semibold px-1 tooltip-trigger" style="color:var(--fg)">
+                Income Flow Over Time
+                <div class="tooltip">Visual representation of your income trends across time periods</div>
+              </h2>
+              <!-- Lifetime Total Display -->
+              <div class="flex items-center gap-2 text-sm" style="color:var(--muted)">
+                <span>Total:</span>
+                <span id="incomeFlowTotalUSD" class="font-semibold" style="color:var(--fg)">$0.00</span>
+                <span id="incomeFlowTotalCurrency" class="text-xs font-medium" style="color:var(--accent); background:var(--accent-bg); padding:2px 6px; border-radius:4px;">0</span>
+              </div>
+            </div>
             <div class="flex items-center gap-3">
               <!-- Chart View Toggle -->
               <div class="flex items-center gap-2">
@@ -926,7 +933,6 @@
           <section class="space-y-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-lg font-semibold px-1" style="color:var(--fg)">Smart Insights</h2>
-              <button onclick="updateInsightCards()" class="text-xs px-2 py-1 rounded" style="background:var(--accent); color:var(--bg)">Refresh</button>
             </div>
         
         <div class="grid gap-4 sm:grid-cols-2">
