@@ -214,23 +214,87 @@ async function ensureAllDataRendered() {
   // Wait for charts if on analytics page
   await waitForChartsRendered();
   
+  // Final verification - ensure content is actually visible
+  await waitForContentVisible();
+  
   updateSplashProgress(100, 'Ready!');
+}
+
+// Final check to ensure content is visible before hiding splash
+async function waitForContentVisible() {
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 20; // 2 seconds max wait
+    
+    const checkVisibility = () => {
+      attempts++;
+      
+      // Check if main content is visible
+      const mainContent = document.getElementById('mainContent');
+      const header = document.querySelector('header');
+      const mobileNav = document.querySelector('.mobile-bottom-nav');
+      
+      const contentVisible = mainContent && mainContent.offsetHeight > 0;
+      const headerVisible = header && header.offsetHeight > 0;
+      const mobileNavVisible = !mobileNav || mobileNav.offsetHeight > 0;
+      
+      console.log(`🔍 Content visibility check attempt ${attempts}:`, {
+        contentVisible,
+        headerVisible,
+        mobileNavVisible
+      });
+      
+      if (contentVisible && headerVisible && mobileNavVisible) {
+        console.log('✅ All content is visible');
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        console.warn('⚠️ Content visibility timeout - proceeding anyway');
+        resolve();
+      } else {
+        setTimeout(checkVisibility, 100);
+      }
+    };
+    checkVisibility();
+  });
 }
 
 // Wait for all tables to be rendered with data
 async function waitForTablesRendered() {
   return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds max wait
+    
     const checkTables = () => {
+      attempts++;
+      
       const personalTable = document.getElementById('list-personal');
       const businessTable = document.getElementById('list-biz');
       const incomeTable = document.getElementById('list-income');
       
+      // Check if tables exist and have content
       const personalRendered = personalTable && personalTable.children.length > 0;
       const businessRendered = businessTable && businessTable.children.length > 0;
       const incomeRendered = incomeTable && incomeTable.children.length > 0;
       
-      if (personalRendered && businessRendered && incomeRendered) {
+      // Also check if tables are visible (not hidden)
+      const personalVisible = personalTable && personalTable.offsetHeight > 0;
+      const businessVisible = businessTable && businessTable.offsetHeight > 0;
+      const incomeVisible = incomeTable && incomeTable.offsetHeight > 0;
+      
+      console.log(`🔍 Table check attempt ${attempts}:`, {
+        personal: { rendered: personalRendered, visible: personalVisible },
+        business: { rendered: businessRendered, visible: businessVisible },
+        income: { rendered: incomeRendered, visible: incomeVisible }
+      });
+      
+      if ((personalRendered && personalVisible) && 
+          (businessRendered && businessVisible) && 
+          (incomeRendered && incomeVisible)) {
         splashLoadingState.dataSteps.rendering = true;
+        console.log('✅ All tables rendered and visible');
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        console.warn('⚠️ Table rendering timeout - proceeding anyway');
         resolve();
       } else {
         setTimeout(checkTables, 100);
@@ -243,13 +307,31 @@ async function waitForTablesRendered() {
 // Wait for all KPIs to be populated
 async function waitForKPIsRendered() {
   return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds max wait
+    
     const checkKPIs = () => {
+      attempts++;
+      
       const kpiElements = document.querySelectorAll('.kpi .value');
       const allKPIsPopulated = Array.from(kpiElements).every(el => 
-        el.textContent && el.textContent.trim() !== '' && !el.textContent.includes('Loading')
+        el.textContent && el.textContent.trim() !== '' && 
+        !el.textContent.includes('Loading') &&
+        !el.textContent.includes('...') &&
+        el.offsetHeight > 0 // Ensure element is visible
       );
       
+      console.log(`🔍 KPI check attempt ${attempts}:`, {
+        totalKPIs: kpiElements.length,
+        allPopulated: allKPIsPopulated,
+        kpiValues: Array.from(kpiElements).map(el => el.textContent)
+      });
+      
       if (allKPIsPopulated && kpiElements.length > 0) {
+        console.log('✅ All KPIs rendered and populated');
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        console.warn('⚠️ KPI rendering timeout - proceeding anyway');
         resolve();
       } else {
         setTimeout(checkKPIs, 100);
@@ -264,12 +346,32 @@ async function waitForChartsRendered() {
   return new Promise((resolve) => {
     const analyticsPage = document.getElementById('pageAnalytics');
     if (!analyticsPage || analyticsPage.style.display === 'none') {
+      console.log('📊 Analytics page not visible - skipping chart check');
       resolve();
       return;
     }
     
+    let attempts = 0;
+    const maxAttempts = 30; // 3 seconds max wait for charts
+    
     const checkCharts = () => {
-      if (incomeFlowChart !== null) {
+      attempts++;
+      
+      const chartCanvas = document.getElementById('incomeFlowChart');
+      const chartVisible = chartCanvas && chartCanvas.offsetHeight > 0;
+      const chartRendered = incomeFlowChart !== null;
+      
+      console.log(`🔍 Chart check attempt ${attempts}:`, {
+        chartRendered,
+        chartVisible,
+        canvasExists: !!chartCanvas
+      });
+      
+      if (chartRendered && chartVisible) {
+        console.log('✅ Charts rendered and visible');
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        console.warn('⚠️ Chart rendering timeout - proceeding anyway');
         resolve();
       } else {
         setTimeout(checkCharts, 100);
@@ -346,7 +448,7 @@ function hideSplashScreen() {
   // Ensure progress is at 100%
   updateSplashProgress(100, 'All data loaded successfully!');
   
-  // Wait a moment to show completion, then fade out
+  // Add extra delay to ensure all content is fully rendered and visible
   setTimeout(() => {
     splashScreen.classList.add('hidden');
     splashScreenVisible = false;
@@ -6247,54 +6349,62 @@ async function saveProfile({ fullName, file }) {
         type: 'line',
         data: {
           labels: chartData.labels,
-          datasets: [{
-            label: 'Income Flow',
-            data: chartData.data,
-            borderColor: 'rgba(99, 102, 241, 0.9)',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4, // Smooth interpolation
-            pointBackgroundColor: 'rgba(99, 102, 241, 0.9)',
-            pointBorderColor: 'rgba(255, 255, 255, 0.8)',
-            pointBorderWidth: 2,
-            pointRadius: window.innerWidth <= 768 ? 3 : 6,
-            pointHoverRadius: window.innerWidth <= 768 ? 5 : 8,
-            pointHoverBackgroundColor: 'rgba(99, 102, 241, 1)',
-            pointHoverBorderColor: 'rgba(255, 255, 255, 1)',
-            pointHoverBorderWidth: 3
-          }, {
-            label: 'Cumulative Total',
-            data: chartData.cumulativeData,
-            borderColor: 'rgba(56, 189, 248, 0.8)',
-            backgroundColor: 'rgba(56, 189, 248, 0.05)',
-            borderWidth: 2,
-            fill: false,
-            tension: 0.4,
-            pointBackgroundColor: 'rgba(56, 189, 248, 0.8)',
-            pointBorderColor: 'rgba(255, 255, 255, 0.8)',
-            pointBorderWidth: 2,
-            pointRadius: window.innerWidth <= 768 ? 2 : 4,
-            pointHoverRadius: window.innerWidth <= 768 ? 4 : 6,
-            pointHoverBackgroundColor: 'rgba(56, 189, 248, 1)',
-            pointHoverBorderColor: 'rgba(255, 255, 255, 1)',
-            pointHoverBorderWidth: 2
-          }]
+          datasets: [            {
+              label: 'Income Flow',
+              data: chartData.data,
+              borderColor: 'rgba(99, 102, 241, 1)',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.2,
+              pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+              pointBorderColor: 'rgba(255, 255, 255, 1)',
+              pointBorderWidth: 2,
+              pointRadius: window.innerWidth <= 768 ? 3 : 4,
+              pointHoverRadius: window.innerWidth <= 768 ? 5 : 6,
+              pointHoverBackgroundColor: 'rgba(99, 102, 241, 1)',
+              pointHoverBorderColor: 'rgba(255, 255, 255, 1)',
+              pointHoverBorderWidth: 3,
+              cubicInterpolationMode: 'monotone'
+            },             {
+              label: 'Cumulative Total',
+              data: chartData.cumulativeData,
+              borderColor: 'rgba(56, 189, 248, 1)',
+              backgroundColor: 'rgba(56, 189, 248, 0.05)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.2,
+              pointBackgroundColor: 'rgba(56, 189, 248, 1)',
+              pointBorderColor: 'rgba(255, 255, 255, 1)',
+              pointBorderWidth: 2,
+              pointRadius: window.innerWidth <= 768 ? 2 : 3,
+              pointHoverRadius: window.innerWidth <= 768 ? 4 : 5,
+              pointHoverBackgroundColor: 'rgba(56, 189, 248, 1)',
+              pointHoverBorderColor: 'rgba(255, 255, 255, 1)',
+              pointHoverBorderWidth: 2,
+              cubicInterpolationMode: 'monotone'
+            }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           animation: {
-            duration: 1500,
-            easing: 'easeOutQuart',
-            delay: (context) => {
-              // Animate from bottom to top (reverse order)
-              return context.dataIndex * 100;
-            }
+            duration: 1000,
+            easing: 'easeOutCubic',
+            delay: 0
           },
           interaction: {
             intersect: false,
             mode: 'index'
+          },
+          elements: {
+            line: {
+              borderJoinStyle: 'round',
+              borderCapStyle: 'round'
+            },
+            point: {
+              hoverBorderWidth: 3
+            }
           },
           plugins: {
             legend: {

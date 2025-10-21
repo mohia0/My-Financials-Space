@@ -8091,9 +8091,20 @@ body.splash-complete .mobile-bottom-nav {
   justify-content:stretch;
   align-content:start;
   width:100%;
+  justify-items: center;
 }
 
-.heatmap-month{ display:flex; flex-direction:column; gap:6px; background:transparent; padding:10px; border-radius:10px; border:1px solid transparent; }
+.heatmap-month{ 
+  display:flex; 
+  flex-direction:column; 
+  gap:6px; 
+  background:transparent; 
+  padding:10px; 
+  border-radius:10px; 
+  border:1px solid transparent;
+  align-items: center;
+  justify-content: center;
+}
 
 .heatmap-month-title{ text-align:center; font-size:.72rem; color:var(--muted); font-weight:600; }
 
@@ -8258,12 +8269,18 @@ body.splash-complete .mobile-bottom-nav {
 
 /* Mobile Responsive Heatmap */
 @media (max-width: 1200px) {
-  .heatmap-months{ grid-template-columns:repeat(4, 1fr); }
+  .heatmap-months{ 
+    grid-template-columns:repeat(4, 1fr);
+    justify-items: center;
+  }
 }
 
 /* Tablets and small laptops */
 @media (max-width: 768px) {
-  .heatmap-months{ grid-template-columns:repeat(3, 1fr); }
+  .heatmap-months{ 
+    grid-template-columns:repeat(3, 1fr);
+    justify-items: center;
+  }
   
   .heatmap-day {
     width: 12px;
@@ -8282,12 +8299,46 @@ body.splash-complete .mobile-bottom-nav {
     padding: 0.375rem;
   }
 
+  /* Mobile heatmap stats layout */
+  .heatmap-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  
+  .heatmap-stats > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 8px;
+    background: var(--card);
+    border-radius: 8px;
+    border: 1px solid var(--stroke);
+  }
+  
+  .heatmap-stats .label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  
+  .heatmap-stats .value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
   /* Tiny refresh button hit area in mobile header */
   #heatmapRefreshBtn { padding: 0; }
 }
 
 @media (max-width: 480px) {
-  .heatmap-months{ grid-template-columns:repeat(2, 1fr); }
+  .heatmap-months{ 
+    grid-template-columns:repeat(2, 1fr);
+    justify-items: center;
+  }
   
   .heatmap-day {
     width: 11px;
@@ -8300,6 +8351,24 @@ body.splash-complete .mobile-bottom-nav {
   
   .heatmap-month-label {
     font-size: 0.6rem;
+  }
+  
+  /* Small mobile heatmap stats */
+  .heatmap-stats {
+    gap: 8px;
+    margin-top: 8px;
+  }
+  
+  .heatmap-stats > div {
+    padding: 6px;
+  }
+  
+  .heatmap-stats .label {
+    font-size: 0.65rem;
+  }
+  
+  .heatmap-stats .value {
+    font-size: 0.8rem;
   }
 }
 
