@@ -12739,12 +12739,20 @@ function loadNonCriticalResources() {
     const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
     const isFirstVisit = !hasCompletedOnboarding && !currentUser;
     
-    // Only show onboarding if it's a first visit and user is not authenticated
+    // Show onboarding for new visitors (no completed onboarding flag and no authenticated user)
     if (isFirstVisit) {
       // Small delay to ensure all other initialization is complete
       setTimeout(() => {
         showOnboardingModal();
-      }, 500);
+      }, 1000); // Increased delay to ensure everything is loaded
+      
+      // Fallback: Show onboarding after 3 seconds if it hasn't been shown yet
+      setTimeout(() => {
+        const modal = document.getElementById('onboardingModal');
+        if (modal && modal.style.display === 'none') {
+          showOnboardingModal();
+        }
+      }, 3000);
     }
   }
 
@@ -12755,6 +12763,10 @@ function loadNonCriticalResources() {
       modal.style.display = 'flex';
       document.body.classList.add('no-scroll');
       resetOnboarding();
+      
+      // Ensure modal is visible and properly positioned
+      modal.style.opacity = '1';
+      modal.style.visibility = 'visible';
     }
   }
 
