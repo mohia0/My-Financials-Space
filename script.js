@@ -3411,6 +3411,7 @@ async function saveProfile({ fullName, file }) {
           
           // Load preferred currency from user_settings
           if (settings.preferred_currency) {
+            console.log('🔄 Loading currency from cloud settings:', settings.preferred_currency);
             state.selectedCurrency = settings.preferred_currency;
             state.currencySymbol = currencySymbols[settings.preferred_currency] || settings.preferred_currency;
             // Update currency rate if available
@@ -3419,8 +3420,16 @@ async function saveProfile({ fullName, file }) {
             }
             // Save to localStorage for consistency
             localStorage.setItem('selectedCurrency', settings.preferred_currency);
+            localStorage.setItem('currencySymbol', state.currencySymbol);
+            // Mark that currency has been loaded from cloud
+            state.currencyLoadedFromCloud = true;
             // Update currency UI
             updateCurrency(settings.preferred_currency);
+            console.log('✅ Currency loaded from cloud:', {
+              selectedCurrency: state.selectedCurrency,
+              currencySymbol: state.currencySymbol,
+              currencyRate: state.currencyRate
+            });
           }
           
           // Update UI elements to reflect loaded settings
@@ -4055,6 +4064,7 @@ async function saveProfile({ fullName, file }) {
       selectedCurrency: 'EGP',
       currencySymbol: 'EGP',
       currencyRate: FX_LOADING_VALUE, // Rate from USD to selected currency
+      currencyLoadedFromCloud: false, // Flag to track if currency was loaded from cloud
       personal: [],
       biz: [],
       income: {
@@ -5784,19 +5794,39 @@ async function saveProfile({ fullName, file }) {
     // Initialize currency system
     const initializeCurrencySystem = () => {
       try {
-        const savedCurrency = localStorage.getItem('selectedCurrency');
-        if (savedCurrency && currencyRates && currencyRates[savedCurrency]) {
-          state.selectedCurrency = savedCurrency;
-          state.currencySymbol = currencySymbols[savedCurrency] || savedCurrency;
-          state.currencyRate = currencyRates[savedCurrency];
-          updateCurrency(savedCurrency);
+        console.log('🔄 Initializing currency system, current state:', {
+          selectedCurrency: state.selectedCurrency,
+          currencySymbol: state.currencySymbol,
+          hasUser: !!currentUser,
+          supabaseReady: !!supabaseReady
+        });
+        
+        // Only initialize from localStorage if currency hasn't been set by cloud data
+        // Check if currency has been loaded from cloud
+        const isCloudDataLoaded = state.currencyLoadedFromCloud;
+        
+        if (!isCloudDataLoaded && (!state.selectedCurrency || state.selectedCurrency === 'EGP')) {
+          const savedCurrency = localStorage.getItem('selectedCurrency');
+          console.log('🔄 Loading currency from localStorage:', savedCurrency);
+          
+          if (savedCurrency && currencyRates && currencyRates[savedCurrency]) {
+            state.selectedCurrency = savedCurrency;
+            state.currencySymbol = currencySymbols[savedCurrency] || savedCurrency;
+            state.currencyRate = currencyRates[savedCurrency];
+            updateCurrency(savedCurrency);
+            console.log('✅ Currency loaded from localStorage:', savedCurrency);
+          } else {
+            // Initialize with default EGP
+            state.selectedCurrency = 'EGP';
+            state.currencySymbol = 'EGP';
+            state.currencyRate = 48.1843;
+            updateCurrency('EGP');
+            console.log('✅ Currency initialized with default EGP');
+          }
         } else {
-          // Initialize with default EGP
-          state.selectedCurrency = 'EGP';
-          state.currencySymbol = 'EGP';
-          state.currencyRate = 48.1843;
-          updateCurrency('EGP');
+          console.log('✅ Currency already set, skipping initialization:', state.selectedCurrency);
         }
+        
         console.log('Currency system initialized:', { 
           selectedCurrency: state.selectedCurrency, 
           currencySymbol: state.currencySymbol, 
@@ -5873,6 +5903,32 @@ async function saveProfile({ fullName, file }) {
       
       // Update heatmap with new currency
       updateHeatmap();
+      
+      // Save to cloud if user is authenticated
+      if (currentUser && supabaseReady) {
+        // Save to localStorage first
+        localStorage.setItem('selectedCurrency', currency);
+        localStorage.setItem('currencySymbol', state.currencySymbol);
+        
+        // Trigger cloud sync
+        if (typeof window.saveOptimized === 'function') {
+          try {
+            window.saveOptimized('currency-change');
+            console.log('🔄 Currency change synced to cloud via optimized sync');
+          } catch (error) {
+            console.error('❌ Failed to sync currency change via optimized sync:', error);
+            // Fallback to regular save
+            saveUserSettingsToCloud();
+          }
+        } else {
+          // Fallback to regular save
+          saveUserSettingsToCloud();
+        }
+      } else {
+        // Save to localStorage only for non-authenticated users
+        localStorage.setItem('selectedCurrency', currency);
+        localStorage.setItem('currencySymbol', state.currencySymbol);
+      }
     };
     
     // Function to update all KPI displays with current currency
@@ -5887,6 +5943,31 @@ async function saveProfile({ fullName, file }) {
       // Update income KPIs if on income page
       if (typeof updateIncomeKPIsLive === 'function') {
         updateIncomeKPIsLive();
+      }
+    }
+    
+    // Save user settings to cloud (including currency preference)
+    async function saveUserSettingsToCloud() {
+      if (!currentUser || !supabaseReady) return;
+      
+      try {
+        await window.supabaseClient
+          .from('user_settings')
+          .upsert({
+            user_id: currentUser.id,
+            preferred_currency: state.selectedCurrency || 'EGP',
+            fx_rate: state.fx || 48.1843,
+            theme: state.theme || 'dark',
+            autosave: state.autosave === 'on',
+            include_annual_in_monthly: state.includeAnnualInMonthly !== undefined ? state.includeAnnualInMonthly : true,
+            inputs_locked: state.inputsLocked || false
+          }, {
+            onConflict: 'user_id'
+          });
+        
+        console.log('✅ User settings (including currency) saved to cloud');
+      } catch (error) {
+        console.error('❌ Failed to save user settings to cloud:', error);
       }
     }
     

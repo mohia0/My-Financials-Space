@@ -395,6 +395,45 @@ function updateSettingsFromRealtime(payload) {
       state.includeAnnualInMonthly = newRecord.include_annual_in_monthly !== undefined ? newRecord.include_annual_in_monthly : true;
       state.inputsLocked = newRecord.inputs_locked || false;
       
+      // Sync currency preference
+      if (newRecord.preferred_currency) {
+        state.selectedCurrency = newRecord.preferred_currency;
+        state.currencySymbol = currencySymbols[newRecord.preferred_currency] || newRecord.preferred_currency;
+        
+        // Update UI elements
+        const currencySymbolEl = document.getElementById('currencySymbol');
+        if (currencySymbolEl) {
+          currencySymbolEl.textContent = state.currencySymbol;
+        }
+        
+        // Update settings dropdown
+        const settingsCurrencySelect = document.getElementById('settingsCurrencySelect');
+        if (settingsCurrencySelect) {
+          settingsCurrencySelect.value = newRecord.preferred_currency;
+        }
+        
+        // Update currency display
+        const settingsCurrencyDisplay = document.getElementById('settingsCurrencyDisplay');
+        if (settingsCurrencyDisplay) {
+          settingsCurrencyDisplay.textContent = state.currencySymbol;
+        }
+        
+        // Update table headers
+        const currencyText = state.currencySymbol;
+        setText('headerMonthlyEGP', `Monthly ${currencyText}`);
+        setText('headerYearlyEGP', `Yearly ${currencyText}`);
+        setText('headerBizMonthlyEGP', `Monthly ${currencyText}`);
+        setText('headerBizYearlyEGP', `Yearly ${currencyText}`);
+        
+        // Update page title
+        const titleCurrencyEl = document.getElementById('titleCurrency');
+        if (titleCurrencyEl) {
+          titleCurrencyEl.textContent = state.currencySymbol;
+        }
+        
+        console.log('🔄 Currency synced from cloud:', newRecord.preferred_currency);
+      }
+      
       if (newRecord.column_order) {
         columnOrder = newRecord.column_order;
       }

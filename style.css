@@ -4508,7 +4508,7 @@ input[type="range"]::-moz-range-thumb:hover {
   /* Modern Notification Center */
   .notification-center {
     position: fixed;
-    top: 20px;
+    top: 60px;
     left: 50%;
     transform: translate(-50%, 0) translateX(20px);
     z-index: 9999;
