@@ -1252,6 +1252,112 @@
     
   </div>
 
+  <!-- Signup Modal -->
+  <div id="signupModal" class="auth-modal" style="display: none;">
+    <div class="auth-modal-overlay"></div>
+    <div class="auth-modal-content">
+      <div class="auth-modal-header">
+        <div class="auth-modal-brand">
+          <h2 id="signupModalTitle" class="auth-modal-title">Create Account</h2>
+        </div>
+        <p id="signupModalSubtitle" class="auth-modal-subtitle">Sign up to sync your data across devices</p>
+        <button class="auth-modal-close" onclick="closeSignupModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="auth-modal-body">
+        <!-- Signup Form -->
+        <div id="signupForm" class="auth-form">
+          <div class="auth-form-group">
+            <label for="signupName" class="auth-label">Full Name</label>
+            <input type="text" id="signupName" class="auth-input" placeholder="Enter your full name" required>
+          </div>
+          
+          <div class="auth-form-group">
+            <label for="signupEmail" class="auth-label">Email</label>
+            <input type="email" id="signupEmail" class="auth-input" placeholder="Enter your email" required>
+          </div>
+          
+          <div class="auth-form-group">
+            <label for="signupPassword" class="auth-label">Password</label>
+            <input type="password" id="signupPassword" class="auth-input" placeholder="Create a strong password" required minlength="8">
+            <div class="auth-password-strength" id="signupPasswordStrength">
+              <div class="password-strength-bar">
+                <div class="password-strength-fill" id="signupPasswordStrengthFill"></div>
+              </div>
+              <div class="password-strength-text" id="signupPasswordStrengthText">Enter a password</div>
+            </div>
+            <div class="auth-password-requirements" id="signupPasswordRequirements">
+              <div class="requirement" data-requirement="length">
+                <span class="requirement-icon"></span>
+                <span class="requirement-text">At least 8 characters</span>
+              </div>
+              <div class="requirement" data-requirement="uppercase">
+                <span class="requirement-icon"></span>
+                <span class="requirement-text">One uppercase letter</span>
+              </div>
+              <div class="requirement" data-requirement="lowercase">
+                <span class="requirement-icon"></span>
+                <span class="requirement-text">One lowercase letter</span>
+              </div>
+              <div class="requirement" data-requirement="number">
+                <span class="requirement-icon"></span>
+                <span class="requirement-text">One number</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="auth-form-group">
+            <label for="signupPasswordConfirm" class="auth-label">Confirm Password</label>
+            <input type="password" id="signupPasswordConfirm" class="auth-input" placeholder="Confirm your password" required>
+            <div class="auth-password-match" id="signupPasswordMatch">
+              <span class="match-icon"></span>
+              <span class="match-text">Passwords must match</span>
+            </div>
+          </div>
+          
+          <div class="auth-form-group">
+            <label for="signupCurrency" class="auth-label">Primary Currency</label>
+            <select id="signupCurrency" class="auth-select" required>
+              <option value="">Select your currency</option>
+              <option value="EGP" data-symbol="EGP">EGP - Egyptian Pound</option>
+              <option value="KWD" data-symbol="KWD">KWD - Kuwaiti Dinar</option>
+              <option value="SAR" data-symbol="SAR">SAR - Saudi Riyal</option>
+              <option value="AED" data-symbol="AED">AED - UAE Dirham</option>
+              <option value="QAR" data-symbol="QAR">QAR - Qatari Riyal</option>
+              <option value="BHD" data-symbol="BHD">BHD - Bahraini Dinar</option>
+              <option value="EUR" data-symbol="€">EUR - Euro</option>
+            </select>
+          </div>
+          
+          <div class="auth-form-actions">
+            <button id="signupBtn" class="auth-btn auth-btn-primary">Create Account</button>
+            <button id="backToSignInBtn" class="auth-btn auth-btn-secondary">Back to Sign In</button>
+          </div>
+        </div>
+        
+        <!-- Auth Status Messages -->
+        <div id="signupStatus" class="auth-status" style="display: none;"></div>
+        
+        <!-- Loading State -->
+        <div id="signupLoading" class="auth-loading" style="display: none;">
+          <div class="auth-spinner"></div>
+          <span>Creating account...</span>
+        </div>
+      </div>
+      
+      <div class="auth-modal-footer">
+        <p class="auth-footer-text">
+          By creating an account, you agree to sync your financial data securely across devices.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <!-- Onboarding Modal -->
   <div id="onboardingModal" class="onboarding-modal" style="display: none;">
     <div class="onboarding-modal-overlay"></div>
@@ -1277,16 +1383,15 @@
             <div class="onboarding-logo-container">
               <img src="Images/Logo.svg" alt="Financial Tool" class="onboarding-logo">
             </div>
-            <p class="onboarding-subtitle">Your personal financial dashboard for tracking expenses, income, and analytics</p>
+            <h2 class="onboarding-title">Welcome to Financial Tool</h2>
+            <p class="onboarding-subtitle">Sign in to sync your data across devices</p>
             
             <div class="onboarding-welcome-options">
               <div class="welcome-option" id="welcomeNewUser">
                 <div class="welcome-option-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6">
+                    <circle cx="12" cy="8" r="3"/>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   </svg>
                 </div>
                 <div class="welcome-option-content">
@@ -1294,18 +1399,17 @@
                   <p class="welcome-option-description">Create a new account to sync your data across devices</p>
                 </div>
                 <div class="welcome-option-arrow">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
+                    <path d="M9 18l6-6-6-6"/>
                   </svg>
                 </div>
               </div>
 
               <div class="welcome-option" id="welcomeExistingUser">
                 <div class="welcome-option-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                    <polyline points="10,17 15,12 10,7"/>
-                    <line x1="15" y1="12" x2="3" y2="12"/>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6">
+                    <path d="M9 12l2 2 4-4"/>
+                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
                   </svg>
                 </div>
                 <div class="welcome-option-content">
@@ -1313,15 +1417,15 @@
                   <p class="welcome-option-description">Sign in to access your existing data</p>
                 </div>
                 <div class="welcome-option-arrow">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
+                    <path d="M9 18l6-6-6-6"/>
                   </svg>
                 </div>
               </div>
 
               <div class="welcome-option" id="welcomeLocalUser">
                 <div class="welcome-option-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6">
                     <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
                     <line x1="8" y1="21" x2="16" y2="21"/>
                     <line x1="12" y1="17" x2="12" y2="21"/>
@@ -1332,12 +1436,16 @@
                   <p class="welcome-option-description">Skip account creation and use the tool offline</p>
                 </div>
                 <div class="welcome-option-arrow">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
+                    <path d="M9 18l6-6-6-6"/>
                   </svg>
                 </div>
               </div>
             </div>
+            
+            <button class="onboarding-step-skip" id="onboardingSkipBtn">
+              Skip for now
+            </button>
           </div>
         </div>
 
@@ -1520,13 +1628,16 @@
       
       <div class="onboarding-modal-footer">
         <div class="onboarding-actions">
-          <button class="onboarding-btn onboarding-btn-secondary" id="onboardingBackBtn" style="display: none;">
+          <button class="onboarding-btn onboarding-btn-secondary onboarding-back-btn" id="onboardingBackBtn" style="display: none;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Back
           </button>
           <button class="onboarding-btn onboarding-btn-primary" id="onboardingNextBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 onboarding-back-icon" style="display: none;">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
             Next
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
               <path d="M5 12h14M12 5l7 7-7 7"/>

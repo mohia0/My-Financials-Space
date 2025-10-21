@@ -465,6 +465,11 @@ function hideSplashScreen() {
     setTimeout(() => {
       document.body.classList.remove('splash-complete');
     }, 1000);
+    
+    // Initialize onboarding after splash screen is hidden
+    setTimeout(() => {
+      initializeOnboarding();
+    }, 1000);
   }, 500);
 }
 
@@ -646,6 +651,23 @@ async function saveProfile({ fullName, file }) {
     
     // Optimize initial loading performance
     optimizeInitialLoad();
+    
+    // Fallback: Initialize onboarding after a delay in case splash screen doesn't show
+    setTimeout(() => {
+      initializeOnboarding();
+    }, 3000);
+    
+    // Final fallback: Force show onboarding for non-signed-in users after 5 seconds
+    setTimeout(() => {
+      const isUserSignedIn = typeof currentUser !== 'undefined' && currentUser !== null;
+      const hasEnoughData = hasMinimumDataRows();
+      const modal = document.getElementById('onboardingModal');
+      
+      if (!isUserSignedIn && !hasEnoughData && modal && modal.style.display === 'none') {
+        console.log('🚨 Final fallback: Force showing onboarding for non-signed-in user');
+        showOnboardingModal();
+      }
+    }, 5000);
     
     // Initialize tooltips after DOM is fully loaded
     setTimeout(() => {
@@ -1440,6 +1462,9 @@ async function saveProfile({ fullName, file }) {
       save('add-row'); 
       clearCalculationCache(); // Clear cache when data changes
       renderAll(true); // User action - enable animations
+      
+      // Check if user has reached 3+ rows and hide onboarding if needed
+      checkAndHideOnboardingIfNeeded();
     }
     
     // Make functions globally accessible
@@ -1536,6 +1561,13 @@ async function saveProfile({ fullName, file }) {
           updateUserDisplay();
           loadUserData();
           
+          // Re-initialize currency dropdown for cloud sync
+          setTimeout(() => {
+            if (typeof initializeCurrencyDropdown === 'function') {
+              initializeCurrencyDropdown();
+            }
+          }, 500);
+          
           // Initialize basic sync system for cloud saves
           console.log('✅ User signed in, cloud sync enabled');
         } else if (event === 'SIGNED_OUT') {
@@ -1620,7 +1652,7 @@ async function saveProfile({ fullName, file }) {
       }
       
       if (emailSignUpBtn) {
-        emailSignUpBtn.addEventListener('click', signUpWithEmail);
+        emailSignUpBtn.addEventListener('click', openSignupModal);
 
       }
       
@@ -1636,7 +1668,43 @@ async function saveProfile({ fullName, file }) {
       
       if (backToSignInBtn) {
         backToSignInBtn.addEventListener('click', showSignInForm);
+      }
 
+      // Signup modal event listeners
+      const signupBtn = $('#signupBtn');
+      const backToSignInFromSignupBtn = $('#backToSignInBtn');
+      
+      if (signupBtn) {
+        signupBtn.addEventListener('click', handleSignup);
+      }
+      
+      if (backToSignInFromSignupBtn) {
+        backToSignInFromSignupBtn.addEventListener('click', () => {
+          closeSignupModal();
+          openAuthModal();
+        });
+      }
+
+      // Signup password strength validation
+      const signupPasswordInput = $('#signupPassword');
+      const signupPasswordConfirmInput = $('#signupPasswordConfirm');
+      
+      if (signupPasswordInput) {
+        signupPasswordInput.addEventListener('input', (e) => {
+          updateSignupPasswordStrength(e.target.value);
+          // Also update password match if confirm field has content
+          if (signupPasswordConfirmInput && signupPasswordConfirmInput.value) {
+            updateSignupPasswordMatch(e.target.value, signupPasswordConfirmInput.value);
+          }
+        });
+      }
+      
+      if (signupPasswordConfirmInput) {
+        signupPasswordConfirmInput.addEventListener('input', (e) => {
+          if (signupPasswordInput && signupPasswordInput.value) {
+            updateSignupPasswordMatch(signupPasswordInput.value, e.target.value);
+          }
+        });
       }
       
       const updatePasswordBtn = $('#updatePasswordBtn');
@@ -1943,9 +2011,220 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
+    // Open signup modal
+    function openSignupModal() {
+      const modal = document.getElementById('signupModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.classList.add('no-scroll');
+        // Hide auth modal if it's open
+        closeAuthModal();
+      }
+    }
+
+    // Close signup modal
+    function closeSignupModal() {
+      const modal = document.getElementById('signupModal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+      }
+    }
+
+    // Handle signup
+    async function handleSignup() {
+      const name = $('#signupName').value;
+      const email = $('#signupEmail').value;
+      const password = $('#signupPassword').value;
+      const confirmPassword = $('#signupPasswordConfirm').value;
+      const currency = $('#signupCurrency').value;
+
+      // Validate inputs
+      if (!name || !email || !password || !confirmPassword || !currency) {
+        showSignupStatus('Please fill in all fields', 'error');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showSignupStatus('Passwords do not match', 'error');
+        return;
+      }
+
+      if (password.length < 8) {
+        showSignupStatus('Password must be at least 8 characters', 'error');
+        return;
+      }
+
+      // Show loading
+      showSignupLoading(true);
+
+      try {
+        // Create account using Supabase
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              full_name: name,
+              currency: currency
+            }
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.user) {
+          // Set currency in localStorage
+          localStorage.setItem('selectedCurrency', currency);
+          const selectedOption = document.querySelector(`#signupCurrency option[value="${currency}"]`);
+          const currencySymbol = selectedOption?.dataset.symbol || currency;
+          localStorage.setItem('currencySymbol', currencySymbol);
+          
+          // Update currency button
+          updateCurrencyButton(currency, currencySymbol);
+          
+          showSignupStatus('Account created successfully! Please check your email to verify your account.', 'success');
+          
+          // Close signup modal and show auth modal for sign in
+          setTimeout(() => {
+            closeSignupModal();
+            openAuthModal();
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Signup error:', error);
+        showSignupStatus(error.message || 'Failed to create account', 'error');
+      } finally {
+        showSignupLoading(false);
+      }
+    }
+
+    // Show signup status
+    function showSignupStatus(message, type = 'success') {
+      const status = $('#signupStatus');
+      if (status) {
+        status.textContent = message;
+        status.className = `auth-status ${type}`;
+        status.style.display = 'block';
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+          status.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    // Show signup loading
+    function showSignupLoading(show) {
+      const loading = $('#signupLoading');
+      const form = $('#signupForm');
+      const signupBtn = $('#signupBtn');
+      
+      if (loading && form && signupBtn) {
+        if (show) {
+          loading.style.display = 'flex';
+          form.style.display = 'none';
+          signupBtn.disabled = true;
+        } else {
+          loading.style.display = 'none';
+          form.style.display = 'block';
+          signupBtn.disabled = false;
+        }
+      }
+    }
+
+    // Update signup password strength
+    function updateSignupPasswordStrength(password) {
+      const strengthFill = $('#signupPasswordStrengthFill');
+      const strengthText = $('#signupPasswordStrengthText');
+      const requirementsContainer = $('#signupPasswordRequirements');
+      
+      if (!strengthFill || !strengthText || !requirementsContainer) return;
+      
+      const checks = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /\d/.test(password)
+      };
+      
+      let score = 0;
+      Object.values(checks).forEach(check => {
+        if (check) score++;
+      });
+      
+      // Update strength bar and text
+      const percentage = (score / 4) * 100;
+      strengthFill.style.width = `${percentage}%`;
+      
+      if (score === 0) {
+        strengthText.textContent = 'Enter a password';
+        strengthFill.style.background = '#ef4444';
+      } else if (score < 2) {
+        strengthText.textContent = 'Weak';
+        strengthFill.style.background = '#ef4444';
+      } else if (score < 3) {
+        strengthText.textContent = 'Fair';
+        strengthFill.style.background = '#f59e0b';
+      } else if (score < 4) {
+        strengthText.textContent = 'Good';
+        strengthFill.style.background = '#10b981';
+      } else {
+        strengthText.textContent = 'Strong';
+        strengthFill.style.background = '#10b981';
+      }
+      
+      // Only show missing requirements
+      const missingRequirements = [];
+      if (!checks.length) missingRequirements.push({ type: 'length', text: 'At least 8 characters' });
+      if (!checks.uppercase) missingRequirements.push({ type: 'uppercase', text: 'One uppercase letter' });
+      if (!checks.lowercase) missingRequirements.push({ type: 'lowercase', text: 'One lowercase letter' });
+      if (!checks.number) missingRequirements.push({ type: 'number', text: 'One number' });
+      
+      // Update requirements container to only show missing ones
+      if (missingRequirements.length === 0) {
+        requirementsContainer.innerHTML = '<div class="requirement valid"><span class="requirement-icon">✓</span><span class="requirement-text">All requirements met!</span></div>';
+      } else {
+        requirementsContainer.innerHTML = missingRequirements.map(req => 
+          `<div class="requirement" data-requirement="${req.type}">
+            <span class="requirement-icon">○</span>
+            <span class="requirement-text">${req.text}</span>
+          </div>`
+        ).join('');
+      }
+    }
+
+    // Update signup password match
+    function updateSignupPasswordMatch(password, confirmPassword) {
+      const matchContainer = $('#signupPasswordMatch');
+      if (!matchContainer) return;
+      
+      const icon = matchContainer.querySelector('.match-icon');
+      const text = matchContainer.querySelector('.match-text');
+      
+      if (password === confirmPassword && password.length > 0) {
+        matchContainer.className = 'auth-password-match password-match';
+        icon.textContent = '✓';
+        text.textContent = 'Passwords match';
+      } else if (confirmPassword.length > 0) {
+        matchContainer.className = 'auth-password-match password-mismatch';
+        icon.textContent = '✗';
+        text.textContent = 'Passwords do not match';
+      } else {
+        matchContainer.className = 'auth-password-match';
+        icon.textContent = '';
+        text.textContent = 'Passwords must match';
+      }
+    }
+
     // Make functions globally available
     window.openAuthModal = openAuthModal;
     window.closeAuthModal = closeAuthModal;
+    window.openSignupModal = openSignupModal;
+    window.closeSignupModal = closeSignupModal;
+    window.handleSignup = handleSignup;
     
     function showAuthStatus(message, type = 'success') {
       const status = $('#authStatus');
@@ -3079,6 +3358,20 @@ async function saveProfile({ fullName, file }) {
           }
           columnOrder = settings.column_order || ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
           
+          // Load preferred currency from user_settings
+          if (settings.preferred_currency) {
+            state.selectedCurrency = settings.preferred_currency;
+            state.currencySymbol = currencySymbols[settings.preferred_currency] || settings.preferred_currency;
+            // Update currency rate if available
+            if (currencyRates && currencyRates[settings.preferred_currency]) {
+              state.currencyRate = currencyRates[settings.preferred_currency];
+            }
+            // Save to localStorage for consistency
+            localStorage.setItem('selectedCurrency', settings.preferred_currency);
+            // Update currency UI
+            updateCurrency(settings.preferred_currency);
+          }
+          
           // Update UI elements to reflect loaded settings
           updateSettingsUI();
           
@@ -3497,7 +3790,8 @@ async function saveProfile({ fullName, file }) {
             include_annual_in_monthly: state.includeAnnualInMonthly,
             column_order: columnOrder,
             available_years: availableYears,
-            inputs_locked: state.inputsLocked
+            inputs_locked: state.inputsLocked,
+            preferred_currency: state.selectedCurrency || 'EGP'
           }, {
             onConflict: 'user_id'
           });
@@ -5218,37 +5512,96 @@ async function saveProfile({ fullName, file }) {
     // Manual refresh button
     $('#btnRefresh').addEventListener('click', refreshData);
     
-    // Currency dropdown functionality
-    const currencyBtn = document.getElementById('btnCurrency');
-    const currencyDropdown = document.getElementById('currencyDropdown');
-    
-    currencyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      currencyDropdown.style.display = currencyDropdown.style.display === 'none' ? 'block' : 'none';
-    });
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!currencyBtn.contains(e.target) && !currencyDropdown.contains(e.target)) {
-        currencyDropdown.style.display = 'none';
+    // Initialize currency dropdown functionality
+    function initializeCurrencyDropdown() {
+      const currencyBtn = document.getElementById('btnCurrency');
+      const currencyDropdown = document.getElementById('currencyDropdown');
+      
+      if (!currencyBtn || !currencyDropdown) {
+        console.warn('Currency dropdown elements not found, retrying...');
+        setTimeout(initializeCurrencyDropdown, 100);
+        return;
       }
-    });
-    
-    // Currency option selection
-    document.querySelectorAll('.currency-option').forEach(option => {
-      option.addEventListener('click', (e) => {
-        e.preventDefault();
-        const currency = option.dataset.currency;
-        const symbol = option.dataset.symbol;
-        const rate = parseFloat(option.dataset.rate);
-        
-        updateCurrency(currency);
-        currencyDropdown.style.display = 'none';
-        
-        // Save to localStorage
-        localStorage.setItem('selectedCurrency', currency);
+      
+      // Remove any existing event listeners to prevent duplicates
+      const newCurrencyBtn = currencyBtn.cloneNode(true);
+      currencyBtn.parentNode.replaceChild(newCurrencyBtn, currencyBtn);
+      
+      // Add click handler for currency button
+      newCurrencyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currencyDropdown.style.display = currencyDropdown.style.display === 'none' ? 'block' : 'none';
       });
-    });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!newCurrencyBtn.contains(e.target) && !currencyDropdown.contains(e.target)) {
+          currencyDropdown.style.display = 'none';
+        }
+      });
+      
+      // Currency option selection with cloud sync
+      document.querySelectorAll('.currency-option').forEach(option => {
+        // Remove any existing listeners
+        const newOption = option.cloneNode(true);
+        option.parentNode.replaceChild(newOption, option);
+        
+        newOption.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const currency = newOption.dataset.currency;
+          const symbol = newOption.dataset.symbol;
+          const rate = parseFloat(newOption.dataset.rate);
+          
+          console.log('🔄 Currency changed to:', currency);
+          
+          // Update currency in application state
+          updateCurrency(currency);
+          currencyDropdown.style.display = 'none';
+          
+          // Save to localStorage
+          localStorage.setItem('selectedCurrency', currency);
+          localStorage.setItem('currencySymbol', symbol);
+          
+          // Save to cloud if user is signed in
+          if (currentUser && supabaseReady) {
+            try {
+              await window.supabaseClient
+                .from('user_settings')
+                .upsert({
+                  user_id: currentUser.id,
+                  preferred_currency: currency
+                }, {
+                  onConflict: 'user_id'
+                });
+              console.log('✅ Currency preference saved to cloud:', currency);
+              
+              // Show success notification
+              if (typeof showNotification === 'function') {
+                showNotification(`Currency changed to ${currency}`, 'success', 2000);
+              }
+            } catch (error) {
+              console.warn('⚠️ Failed to save currency preference to cloud:', error);
+              // Show warning but continue
+              if (typeof showNotification === 'function') {
+                showNotification('Currency changed locally (cloud sync failed)', 'warning', 3000);
+              }
+            }
+          } else {
+            console.log('💾 Currency saved locally (not signed in)');
+            if (typeof showNotification === 'function') {
+              showNotification(`Currency changed to ${currency}`, 'success', 2000);
+            }
+          }
+        });
+      });
+      
+      console.log('✅ Currency dropdown initialized');
+    }
+    
+    // Initialize currency dropdown
+    initializeCurrencyDropdown();
     
     // Load saved currency on startup (moved after function definitions)
 
@@ -6323,9 +6676,9 @@ async function saveProfile({ fullName, file }) {
         return;
       }
       
-      // Hide loading indicator
+      // Hide loading indicator immediately
       if (loading) {
-        loading.classList.add('hidden');
+        loading.style.display = 'none';
       }
       
       // Destroy existing chart if it exists
@@ -7707,6 +8060,9 @@ async function saveProfile({ fullName, file }) {
 
     // Analytics Page Functions
     function updateAnalyticsPage() {
+      // Initialize income flow chart FIRST for faster rendering
+      updateIncomeFlowChart();
+      
       // Get current data
       const p = totals(state.personal);
       const b = totals(state.biz);
@@ -7726,6 +8082,7 @@ async function saveProfile({ fullName, file }) {
         ySelected: usdToSelectedCurrency(incomeTotals.yearly - allExpenses.yUSD)
       };
       
+      // Update KPI values immediately for faster display
       setText('analyticsCashFlowMonthlyUSD', nfUSD.format(netCashFlow.mUSD));
       setText('analyticsCashFlowMonthlyEGP', formatCurrency(netCashFlow.mSelected));
       setText('analyticsCashFlowYearlyUSD', nfUSD.format(netCashFlow.yUSD));
@@ -7734,6 +8091,12 @@ async function saveProfile({ fullName, file }) {
       // Cash flow status
       const cashFlowStatus = netCashFlow.mUSD > 0 ? 'Positive' : netCashFlow.mUSD < 0 ? 'Negative' : 'Neutral';
       setText('analyticsCashFlowStatus', cashFlowStatus);
+      
+      // Force immediate display update
+      requestAnimationFrame(() => {
+        // Trigger reflow to ensure values are visible
+        document.getElementById('analyticsCashFlowMonthlyUSD')?.offsetHeight;
+      });
       
       // Income vs Expenses bars
       const maxAmount = Math.max(incomeTotals.monthly, allExpenses.mUSD);
@@ -7753,8 +8116,14 @@ async function saveProfile({ fullName, file }) {
       const savingsRateMonthly = incomeTotals.monthly > 0 ? (netCashFlow.mUSD / incomeTotals.monthly) * 100 : 0;
       const savingsRateYearly = incomeTotals.yearly > 0 ? (netCashFlow.yUSD / incomeTotals.yearly) * 100 : 0;
       
+      // Update savings rate immediately
       setText('analyticsSavingsRateMonthly', savingsRateMonthly.toFixed(1) + '%');
       setText('analyticsSavingsRateYearly', savingsRateYearly.toFixed(1) + '%');
+      
+      // Force immediate display update for savings rate
+      requestAnimationFrame(() => {
+        document.getElementById('analyticsSavingsRateMonthly')?.offsetHeight;
+      });
       
       // Savings status
       const monthlyStatus = savingsRateMonthly >= 20 ? 'Excellent' : 
@@ -7873,9 +8242,6 @@ async function saveProfile({ fullName, file }) {
         
         // Update insight cards
         updateInsightCards();
-        
-        // Initialize income flow chart
-        updateIncomeFlowChart();
         
         // Update chart currency display
         updateChartCurrencyDisplay();
@@ -9412,6 +9778,9 @@ async function saveProfile({ fullName, file }) {
             
             saveToLocal(); // Save locally as well
             renderAll(true); // User action - enable animations
+            
+            // Check if onboarding should be shown again after deletion
+            checkAndShowOnboardingIfNeeded();
           } else {
             delBtn.classList.add('delete-confirm');
             delBtn.innerHTML = 'Sure?';
@@ -9900,6 +10269,9 @@ async function saveProfile({ fullName, file }) {
           renderAll(true); // User action - enable animations
           // Trigger live KPI updates when income row is deleted
           updateIncomeKPIsLive();
+          
+          // Check if onboarding should be shown again after deletion
+          checkAndShowOnboardingIfNeeded();
         } else {
           delBtn.classList.add('delete-confirm');
           delBtn.innerHTML = 'Confirm';
@@ -12733,32 +13105,133 @@ function loadNonCriticalResources() {
   };
   let onboardingMode = null; // 'new', 'existing', 'local'
 
+  // Check if user has minimum data rows (3+) across all tables
+  function hasMinimumDataRows() {
+    try {
+      // Check if user chose local option and set currency
+      const selectedCurrency = localStorage.getItem('selectedCurrency');
+      const onboardingCompleted = localStorage.getItem('onboardingCompleted');
+      
+      // If user has set a currency and completed onboarding locally
+      if (selectedCurrency && onboardingCompleted === 'true') {
+        return true;
+      }
+      
+      // Count personal expenses
+      const personalData = JSON.parse(localStorage.getItem('personalExpenses') || '[]');
+      const personalCount = personalData.length;
+      
+      // Count business expenses
+      const businessData = JSON.parse(localStorage.getItem('businessExpenses') || '[]');
+      const businessCount = businessData.length;
+      
+      // Count income entries
+      const incomeData = JSON.parse(localStorage.getItem('incomeData') || '[]');
+      const incomeCount = incomeData.length;
+      
+      // Check other data sources from the main state
+      const savedData = localStorage.getItem('finance-notion-v6');
+      let additionalDataCount = 0;
+      
+      if (savedData) {
+        try {
+          const data = JSON.parse(savedData);
+          additionalDataCount += (data.personal?.length || 0);
+          additionalDataCount += (data.biz?.length || 0);
+          additionalDataCount += (data.income?.length || 0);
+          additionalDataCount += (data.expenses?.length || 0);
+          additionalDataCount += (data.investments?.length || 0);
+          additionalDataCount += (data.debts?.length || 0);
+          additionalDataCount += (data.goals?.length || 0);
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+      
+      // Total rows across all tables
+      const totalRows = personalCount + businessCount + incomeCount + additionalDataCount;
+      
+      return totalRows >= 3;
+    } catch (error) {
+      console.error('Error checking data rows:', error);
+      return false;
+    }
+  }
+
+  // Check if onboarding should be hidden after adding rows
+  function checkAndHideOnboardingIfNeeded() {
+    // Only check for non-signed-in users
+    if (currentUser) return;
+    
+    // Check if user now has 3+ rows
+    if (hasMinimumDataRows()) {
+      // Hide onboarding modal if it's currently visible
+      const modal = document.getElementById('onboardingModal');
+      if (modal && modal.style.display === 'flex') {
+        hideOnboardingModal();
+        
+        // Show a subtle notification that they're now using local data
+        showNotification('You\'re now using local data! Onboarding disabled after adding 3+ entries.', 'info', 4000);
+      }
+    }
+  }
+
+  // Check if onboarding should be shown again after deleting rows
+  function checkAndShowOnboardingIfNeeded() {
+    // Only check for non-signed-in users
+    if (currentUser) return;
+    
+    // Check if user now has less than 3 rows
+    if (!hasMinimumDataRows()) {
+      // Show onboarding modal if it's not currently visible
+      const modal = document.getElementById('onboardingModal');
+      if (modal && modal.style.display === 'none') {
+        // Small delay to ensure the UI has updated
+        setTimeout(() => {
+          showOnboardingModal();
+        }, 500);
+      }
+    }
+  }
+
   // Initialize onboarding system
   function initializeOnboarding() {
-    // Check if user has completed onboarding
+    // Always show onboarding for non-signed-in users unless they have 3+ rows of data
     const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
-    const isFirstVisit = !hasCompletedOnboarding && !currentUser;
+    const hasEnoughData = hasMinimumDataRows();
     
-    // Show onboarding for new visitors (no completed onboarding flag and no authenticated user)
-    if (isFirstVisit) {
-      // Small delay to ensure all other initialization is complete
-      setTimeout(() => {
-        showOnboardingModal();
-      }, 1000); // Increased delay to ensure everything is loaded
-      
-      // Fallback: Show onboarding after 3 seconds if it hasn't been shown yet
-      setTimeout(() => {
-        const modal = document.getElementById('onboardingModal');
-        if (modal && modal.style.display === 'none') {
-          showOnboardingModal();
-        }
-      }, 3000);
+    // More robust check for currentUser - check if it's defined and not null
+    const isUserSignedIn = typeof currentUser !== 'undefined' && currentUser !== null;
+    const shouldShowOnboarding = !isUserSignedIn && !hasEnoughData;
+    
+    console.log('🔍 Onboarding Check:', {
+      currentUser: currentUser,
+      isUserSignedIn: isUserSignedIn,
+      hasCompletedOnboarding: hasCompletedOnboarding,
+      hasEnoughData: hasEnoughData,
+      shouldShowOnboarding: shouldShowOnboarding
+    });
+    
+    if (shouldShowOnboarding) {
+      console.log('✅ Showing onboarding for non-signed-in user');
+      // Hide main UI immediately
+      document.body.classList.add('onboarding-active');
+      // Show onboarding immediately
+      showOnboardingModal();
+    } else {
+      console.log('❌ Not showing onboarding:', {
+        reason: isUserSignedIn ? 'User is signed in' : hasEnoughData ? 'User has 3+ rows of data' : 'Unknown reason'
+      });
+      // Ensure main UI is visible
+      document.body.classList.remove('onboarding-active');
     }
   }
 
   // Show onboarding modal
   function showOnboardingModal() {
     const modal = document.getElementById('onboardingModal');
+    console.log('🎯 Attempting to show onboarding modal:', modal);
+    
     if (modal) {
       modal.style.display = 'flex';
       document.body.classList.add('no-scroll');
@@ -12767,6 +13240,10 @@ function loadNonCriticalResources() {
       // Ensure modal is visible and properly positioned
       modal.style.opacity = '1';
       modal.style.visibility = 'visible';
+      
+      console.log('✅ Onboarding modal shown successfully');
+    } else {
+      console.error('❌ Onboarding modal not found in DOM');
     }
   }
 
@@ -12776,6 +13253,8 @@ function loadNonCriticalResources() {
     if (modal) {
       modal.style.display = 'none';
       document.body.classList.remove('no-scroll');
+      // Show main UI when onboarding is hidden
+      document.body.classList.remove('onboarding-active');
     }
   }
 
@@ -13043,16 +13522,34 @@ function loadNonCriticalResources() {
   function updatePasswordStrength(password) {
     const strengthFill = document.getElementById('passwordStrengthFill');
     const strengthText = document.getElementById('passwordStrengthText');
-    const requirements = document.querySelectorAll('.requirement');
+    const requirementsContainer = document.getElementById('passwordRequirements');
     
     if (!password) {
       strengthFill.className = 'password-strength-fill';
       strengthText.className = 'password-strength-text';
       strengthText.textContent = 'Enter a password';
       
-      requirements.forEach(req => {
-        req.classList.remove('valid', 'invalid');
-      });
+      // Show all requirements when no password
+      if (requirementsContainer) {
+        requirementsContainer.innerHTML = `
+          <div class="requirement" data-requirement="length">
+            <span class="requirement-icon">○</span>
+            <span class="requirement-text">At least 8 characters</span>
+          </div>
+          <div class="requirement" data-requirement="uppercase">
+            <span class="requirement-icon">○</span>
+            <span class="requirement-text">One uppercase letter</span>
+          </div>
+          <div class="requirement" data-requirement="lowercase">
+            <span class="requirement-icon">○</span>
+            <span class="requirement-text">One lowercase letter</span>
+          </div>
+          <div class="requirement" data-requirement="number">
+            <span class="requirement-icon">○</span>
+            <span class="requirement-text">One number</span>
+          </div>
+        `;
+      }
       return;
     }
     
@@ -13070,7 +13567,7 @@ function loadNonCriticalResources() {
     strengthText.className = `password-strength-text ${strength}`;
     strengthText.textContent = level.text;
     
-    // Update requirements
+    // Check what's missing and only show those requirements
     const checks = {
       length: password.length >= 8,
       uppercase: /[A-Z]/.test(password),
@@ -13078,16 +13575,25 @@ function loadNonCriticalResources() {
       number: /[0-9]/.test(password)
     };
     
-    requirements.forEach(req => {
-      const requirement = req.dataset.requirement;
-      if (checks[requirement]) {
-        req.classList.add('valid');
-        req.classList.remove('invalid');
+    const missingRequirements = [];
+    if (!checks.length) missingRequirements.push({ type: 'length', text: 'At least 8 characters' });
+    if (!checks.uppercase) missingRequirements.push({ type: 'uppercase', text: 'One uppercase letter' });
+    if (!checks.lowercase) missingRequirements.push({ type: 'lowercase', text: 'One lowercase letter' });
+    if (!checks.number) missingRequirements.push({ type: 'number', text: 'One number' });
+    
+    // Update requirements container to only show missing ones
+    if (requirementsContainer) {
+      if (missingRequirements.length === 0) {
+        requirementsContainer.innerHTML = '<div class="requirement valid"><span class="requirement-icon">✓</span><span class="requirement-text">All requirements met!</span></div>';
       } else {
-        req.classList.add('invalid');
-        req.classList.remove('valid');
+        requirementsContainer.innerHTML = missingRequirements.map(req => 
+          `<div class="requirement" data-requirement="${req.type}">
+            <span class="requirement-icon">○</span>
+            <span class="requirement-text">${req.text}</span>
+          </div>`
+        ).join('');
       }
-    });
+    }
   }
 
   // Update password match indicator
@@ -13259,9 +13765,31 @@ function loadNonCriticalResources() {
         localStorage.setItem('onboardingCompleted', 'true');
         localStorage.setItem('onboardingMode', 'account');
         
-        // Step 4: Finalizing setup
-        updateProgressStep(4, 'Finalizing your setup...');
+        // Step 4: Create user_settings record with preferred currency
+        updateProgressStep(4, 'Setting up your preferences...');
         await new Promise(resolve => setTimeout(resolve, 400));
+        
+        // Create user_settings record with preferred currency
+        try {
+          await window.supabaseClient
+            .from('user_settings')
+            .upsert({
+              user_id: data.user.id,
+              preferred_currency: onboardingData.currency,
+              fx_rate: 48.1843, // Default rate
+              theme: 'dark',
+              autosave: true,
+              include_annual_in_monthly: true,
+              column_order: ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'],
+              inputs_locked: false
+            }, {
+              onConflict: 'user_id'
+            });
+          console.log('✅ User settings created with preferred currency:', onboardingData.currency);
+        } catch (settingsError) {
+          console.warn('⚠️ Failed to create user settings:', settingsError);
+          // Continue anyway - settings can be created later
+        }
       }
 
       // Update UI with new currency
@@ -13372,6 +13900,7 @@ function loadNonCriticalResources() {
 
   // Skip onboarding and go to sign-in
   function skipOnboarding() {
+    console.log('Skip onboarding clicked');
     hideOnboardingModal();
     if (typeof openAuthModal === 'function') {
       openAuthModal();
@@ -13383,6 +13912,14 @@ function loadNonCriticalResources() {
       }
     }
   }
+
+  // Set up skip button event listener with event delegation
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'onboardingSkipBtn') {
+      console.log('Skip button clicked via event delegation');
+      skipOnboarding();
+    }
+  });
 
 
 
@@ -13420,7 +13957,19 @@ function loadNonCriticalResources() {
     // Next button
     const nextBtn = document.getElementById('onboardingNextBtn');
     if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
+      nextBtn.addEventListener('click', (e) => {
+        // Check if the back icon was clicked
+        if (e.target.classList.contains('onboarding-back-icon') || e.target.closest('.onboarding-back-icon')) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (currentOnboardingStep > 0) {
+            currentOnboardingStep--;
+            updateOnboardingStep();
+          }
+          return;
+        }
+        
+        // Normal next button functionality
         if (validateOnboardingStep()) {
           if (currentOnboardingStep < 3) {
             currentOnboardingStep++;
@@ -13514,13 +14063,25 @@ function loadNonCriticalResources() {
 
   // Initialize custom date picker when DOM is loaded
   document.addEventListener('DOMContentLoaded', () => {
+    // Initialize onboarding first to hide main UI if needed
+    setupOnboardingEventListeners();
+    initializeOnboarding();
+    
+    // Initialize other components
     initCustomDatePicker();
     overrideDateInputs();
     applyDatePickerToNewInputs();
     
-    // Initialize onboarding
-    setupOnboardingEventListeners();
-    initializeOnboarding();
+    // Additional skip button setup as fallback
+    setTimeout(() => {
+      const skipBtn = document.getElementById('onboardingSkipBtn');
+      if (skipBtn) {
+        console.log('Skip button found, adding event listener');
+        skipBtn.addEventListener('click', skipOnboarding);
+      } else {
+        console.log('Skip button not found');
+      }
+    }, 100);
     
     // Update currency button if currency is already selected
     const selectedCurrency = localStorage.getItem('selectedCurrency');
