@@ -1,3 +1,7 @@
+// Global variables
+let state;
+let currencyRates;
+
 // Sticky Header Scroll Interactions
 let lastScrollY = 0;
 let ticking = false;
@@ -35,6 +39,32 @@ window.addEventListener('resize', () => {
   updateHeader();
 });
 
+// Progress bar loading animation system
+function initializeProgressBars() {
+  const progressBarIds = [
+    'sharePersonalBarContainer',
+    'shareBizBarContainer', 
+    'analyticsIncomeBarContainer',
+    'analyticsExpensesBarContainer',
+    'analyticsSavingsProgressBarContainer',
+    'analyticsEfficiencyBarContainer',
+    'analyticsHealthBarContainer'
+  ];
+  
+  progressBarIds.forEach(containerId => {
+    const container = document.getElementById(containerId);
+    if (container) {
+      // Start with loading state
+      container.classList.add('loading');
+      
+      // Simulate loading delay (similar to chart loading)
+      setTimeout(() => {
+        container.classList.remove('loading');
+      }, 2000 + Math.random() * 1000); // 2-3 seconds random delay
+    }
+  });
+}
+
 // Initialize header state
 document.addEventListener('DOMContentLoaded', () => {
   updateHeader();
@@ -47,12 +77,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ===== SPLASH SCREEN MANAGEMENT =====
 let splashScreenProgress = 0;
-let splashScreenVisible = true;
 let dataLoadingSteps = 0;
 let totalDataLoadingSteps = 6; // Authentication, Settings, Personal, Business, Income, Processing
 let isFirstLoad = true; // Track if this is the first time loading the app
 
-// Initialize splash screen
+// Smart splash screen system
+let splashLoadingState = {
+  isAuthenticated: false,
+  hasCloudData: false,
+  dataSteps: {
+    authentication: false,
+    settings: false,
+    personal: false,
+    business: false,
+    income: false,
+    rendering: false
+  },
+  totalSteps: 6,
+  currentStep: 0
+};
+
+// Initialize smart splash screen
 function initializeSplashScreen() {
   const splashScreen = document.getElementById('splashScreen');
   const progressFill = document.querySelector('.splash-progress-fill');
@@ -60,16 +105,178 @@ function initializeSplashScreen() {
   
   if (!splashScreen || !progressFill || !progressText) return;
   
-  // Reset progress
+  // Hide all content initially
+  document.body.classList.add('splash-active');
+  
+  // Reset splash state
   splashScreenProgress = 0;
-  dataLoadingSteps = 0;
-  updateSplashProgress(0, 'Preparing your financial dashboard...');
+  splashLoadingState = {
+    isAuthenticated: false,
+    hasCloudData: false,
+    dataSteps: {
+      authentication: false,
+      settings: false,
+      personal: false,
+      business: false,
+      income: false,
+      rendering: false
+    },
+    totalSteps: 6,
+    currentStep: 0
+  };
   
   // Show splash screen
   splashScreen.classList.remove('hidden');
   splashScreenVisible = true;
-  // Prevent scroll on mobile to avoid layout jank/blink
   document.body.classList.add('no-scroll');
+  
+  // Start smart loading process
+  startSmartLoadingProcess();
+}
+
+// Smart loading process that adapts based on user authentication
+async function startSmartLoadingProcess() {
+  try {
+    // Step 1: Check authentication status
+    updateSplashProgress(10, 'Checking authentication status...');
+    await checkAuthenticationStatus();
+    
+    if (splashLoadingState.isAuthenticated) {
+      // Authenticated user path
+      await loadAuthenticatedUserData();
+    } else {
+      // Local user path
+      await loadLocalUserData();
+    }
+    
+    // Final step: Ensure all data is rendered
+    await ensureAllDataRendered();
+    
+    // Hide splash screen only when everything is complete
+    hideSplashScreen();
+    
+  } catch (error) {
+    console.error('Smart loading process failed:', error);
+    // Fallback to local data
+    await loadLocalUserData();
+    hideSplashScreen();
+  }
+}
+
+// Check if user is authenticated
+async function checkAuthenticationStatus() {
+  try {
+    if (currentUser && supabaseReady) {
+      splashLoadingState.isAuthenticated = true;
+      splashLoadingState.dataSteps.authentication = true;
+      updateSplashProgress(20, 'User authenticated');
+    } else {
+      splashLoadingState.isAuthenticated = false;
+      updateSplashProgress(20, 'Using local workspace');
+    }
+  } catch (error) {
+    splashLoadingState.isAuthenticated = false;
+    updateSplashProgress(20, 'Using local workspace');
+  }
+}
+
+// Load data for authenticated users
+async function loadAuthenticatedUserData() {
+  updateSplashProgress(30, 'Connecting to cloud storage...');
+  
+  // Load user data from Supabase
+  await loadUserData();
+  
+  splashLoadingState.hasCloudData = true;
+  updateSplashProgress(90, 'Cloud data loaded');
+}
+
+// Load data for local users
+async function loadLocalUserData() {
+  updateSplashProgress(30, 'Loading local data...');
+  
+  // Load local data
+  loadLocalData();
+  
+  updateSplashProgress(70, 'Local data loaded');
+}
+
+// Ensure all data is properly rendered
+async function ensureAllDataRendered() {
+  updateSplashProgress(95, 'Rendering interface...');
+  
+  // Wait for all tables to be rendered
+  await waitForTablesRendered();
+  
+  // Wait for all KPIs to be populated
+  await waitForKPIsRendered();
+  
+  // Wait for charts if on analytics page
+  await waitForChartsRendered();
+  
+  updateSplashProgress(100, 'Ready!');
+}
+
+// Wait for all tables to be rendered with data
+async function waitForTablesRendered() {
+  return new Promise((resolve) => {
+    const checkTables = () => {
+      const personalTable = document.getElementById('list-personal');
+      const businessTable = document.getElementById('list-biz');
+      const incomeTable = document.getElementById('list-income');
+      
+      const personalRendered = personalTable && personalTable.children.length > 0;
+      const businessRendered = businessTable && businessTable.children.length > 0;
+      const incomeRendered = incomeTable && incomeTable.children.length > 0;
+      
+      if (personalRendered && businessRendered && incomeRendered) {
+        splashLoadingState.dataSteps.rendering = true;
+        resolve();
+      } else {
+        setTimeout(checkTables, 100);
+      }
+    };
+    checkTables();
+  });
+}
+
+// Wait for all KPIs to be populated
+async function waitForKPIsRendered() {
+  return new Promise((resolve) => {
+    const checkKPIs = () => {
+      const kpiElements = document.querySelectorAll('.kpi .value');
+      const allKPIsPopulated = Array.from(kpiElements).every(el => 
+        el.textContent && el.textContent.trim() !== '' && !el.textContent.includes('Loading')
+      );
+      
+      if (allKPIsPopulated && kpiElements.length > 0) {
+        resolve();
+      } else {
+        setTimeout(checkKPIs, 100);
+      }
+    };
+    checkKPIs();
+  });
+}
+
+// Wait for charts to be rendered (if on analytics page)
+async function waitForChartsRendered() {
+  return new Promise((resolve) => {
+    const analyticsPage = document.getElementById('pageAnalytics');
+    if (!analyticsPage || analyticsPage.style.display === 'none') {
+      resolve();
+      return;
+    }
+    
+    const checkCharts = () => {
+      if (incomeFlowChart !== null) {
+        resolve();
+      } else {
+        setTimeout(checkCharts, 100);
+      }
+    };
+    checkCharts();
+  });
 }
 
 // Update splash screen progress
@@ -144,17 +351,18 @@ function hideSplashScreen() {
     splashScreen.classList.add('hidden');
     splashScreenVisible = false;
     isFirstLoad = false; // Mark that first load is complete
-    // Re-enable scrolling
+    
+    // Remove no-scroll class to allow scrolling
     document.body.classList.remove('no-scroll');
     
-    // Show main content with a subtle fade-in
-    if (mainContent) {
-      mainContent.style.opacity = '0';
-      mainContent.style.transition = 'opacity 0.5s ease-in-out';
-      setTimeout(() => {
-        mainContent.style.opacity = '1';
-      }, 100);
-    }
+    // Show all content with proper transition
+    document.body.classList.remove('splash-active');
+    document.body.classList.add('splash-complete');
+    
+    // Clean up splash classes after transition
+    setTimeout(() => {
+      document.body.classList.remove('splash-complete');
+    }, 1000);
   }, 500);
 }
 
@@ -2893,6 +3101,103 @@ async function saveProfile({ fullName, file }) {
           createYearTabsFromData(state.income);
         }
         
+        // Function to check and fix duplicates in the database
+        async function checkAndFixDuplicates() {
+          if (!currentUser || !supabaseReady) return;
+          
+          try {
+            // Check for duplicate personal expenses
+            const { data: personalData } = await window.supabaseClient
+              .from('personal_expenses')
+              .select('*')
+              .eq('user_id', currentUser.id);
+              
+            if (personalData) {
+              const seen = new Set();
+              const duplicates = [];
+              
+              personalData.forEach(expense => {
+                const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+                if (seen.has(key)) {
+                  duplicates.push(expense.id);
+                } else {
+                  seen.add(key);
+                }
+              });
+              
+              // Remove duplicates
+              if (duplicates.length > 0) {
+                await window.supabaseClient
+                  .from('personal_expenses')
+                  .delete()
+                  .in('id', duplicates);
+                console.log(`Removed ${duplicates.length} duplicate personal expenses`);
+              }
+            }
+            
+            // Check for duplicate business expenses
+            const { data: businessData } = await window.supabaseClient
+              .from('business_expenses')
+              .select('*')
+              .eq('user_id', currentUser.id);
+              
+            if (businessData) {
+              const seen = new Set();
+              const duplicates = [];
+              
+              businessData.forEach(expense => {
+                const key = `${expense.name}_${expense.cost}_${expense.billing}`;
+                if (seen.has(key)) {
+                  duplicates.push(expense.id);
+                } else {
+                  seen.add(key);
+                }
+              });
+              
+              // Remove duplicates
+              if (duplicates.length > 0) {
+                await window.supabaseClient
+                  .from('business_expenses')
+                  .delete()
+                  .in('id', duplicates);
+                console.log(`Removed ${duplicates.length} duplicate business expenses`);
+              }
+            }
+            
+            // Check for duplicate income data
+            const { data: incomeData } = await window.supabaseClient
+              .from('income')
+              .select('*')
+              .eq('user_id', currentUser.id);
+              
+            if (incomeData) {
+              const seen = new Set();
+              const duplicates = [];
+              
+              incomeData.forEach(income => {
+                const key = `${income.name}_${income.amount}_${income.year}_${income.month}`;
+                if (seen.has(key)) {
+                  duplicates.push(income.id);
+                } else {
+                  seen.add(key);
+                }
+              });
+              
+              // Remove duplicates
+              if (duplicates.length > 0) {
+                await window.supabaseClient
+                  .from('income')
+                  .delete()
+                  .in('id', duplicates);
+                console.log(`Removed ${duplicates.length} duplicate income records`);
+              }
+            }
+            
+          } catch (error) {
+            console.error('Error checking for duplicates:', error);
+          }
+        }
+
         // Show intermediate loading message
         showIntermediateLoading('Validating data integrity and checking for duplicates...');
         
@@ -2911,8 +3216,7 @@ async function saveProfile({ fullName, file }) {
         renderAll();
         showSuccessNotification('Data loaded from cloud!');
         
-        // Hide splash screen after all data is loaded
-        hideSplashScreen();
+        // Don't hide splash screen here - let smart system handle it
         // Ensure heatmap reflects freshly loaded income data
         try { heatmapCache && heatmapCache.clear && heatmapCache.clear(); } catch {}
         updateHeatmap();
@@ -2938,103 +3242,6 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
-    // Function to check and fix duplicates in the database
-    async function checkAndFixDuplicates() {
-      if (!currentUser || !supabaseReady) return;
-      
-
-      
-      try {
-        // Check for duplicate personal expenses
-        const { data: personalData } = await window.supabaseClient
-          .from('personal_expenses')
-          .select('*')
-          .eq('user_id', currentUser.id);
-          
-        if (personalData) {
-          const seen = new Set();
-          const duplicates = [];
-          
-          personalData.forEach(expense => {
-            const key = `${expense.name}_${expense.cost}_${expense.billing}`;
-            if (seen.has(key)) {
-              duplicates.push(expense.id);
-            } else {
-              seen.add(key);
-            }
-          });
-          
-          if (duplicates.length > 0) {
-
-            await window.supabaseClient
-              .from('personal_expenses')
-              .delete()
-              .in('id', duplicates);
-          }
-        }
-        
-        // Check for duplicate business expenses
-        const { data: businessData } = await window.supabaseClient
-          .from('business_expenses')
-          .select('*')
-          .eq('user_id', currentUser.id);
-          
-        if (businessData) {
-          const seen = new Set();
-          const duplicates = [];
-          
-          businessData.forEach(expense => {
-            const key = `${expense.name}_${expense.cost}_${expense.billing}`;
-            if (seen.has(key)) {
-              duplicates.push(expense.id);
-            } else {
-              seen.add(key);
-            }
-          });
-          
-          if (duplicates.length > 0) {
-
-            await window.supabaseClient
-              .from('business_expenses')
-              .delete()
-              .in('id', duplicates);
-          }
-        }
-        
-        // Check for duplicate income
-        const { data: incomeData } = await window.supabaseClient
-          .from('income')
-          .select('*')
-          .eq('user_id', currentUser.id);
-          
-        if (incomeData) {
-          const seen = new Set();
-          const duplicates = [];
-          
-          incomeData.forEach(income => {
-            const key = `${income.name}_${income.date}_${income.all_payment}`;
-            if (seen.has(key)) {
-              duplicates.push(income.id);
-            } else {
-              seen.add(key);
-            }
-          });
-          
-          if (duplicates.length > 0) {
-
-            await window.supabaseClient
-              .from('income')
-              .delete()
-              .in('id', duplicates);
-          }
-        }
-        
-
-        
-      } catch (error) {
-
-      }
-    }
     
     function loadLocalData() {
       // Initialize splash screen if visible
@@ -3124,8 +3331,7 @@ async function saveProfile({ fullName, file }) {
       
       renderAll();
       
-      // Hide splash screen after local data is loaded
-      hideSplashScreen();
+      // Don't hide splash screen here - let smart system handle it
       // Make sure heatmap initializes immediately with local data
       try { heatmapCache && heatmapCache.clear && heatmapCache.clear(); } catch {}
       updateHeatmap();
@@ -3482,10 +3688,10 @@ async function saveProfile({ fullName, file }) {
       // Initialize currency system before rendering
       initializeCurrencySystem();
       
-      // Complete splash and show UI for first-time local mode
-      updateSplashProgress(100, 'Ready — starting with empty workspace');
-      renderAll();
-      hideSplashScreen();
+       // Complete splash and show UI for first-time local mode
+       updateSplashProgress(100, 'Ready — starting with empty workspace');
+       renderAll();
+       // Don't hide splash screen here - let smart system handle it
     }
     
     function save(source = 'general'){ 
@@ -5074,6 +5280,9 @@ async function saveProfile({ fullName, file }) {
       // Update income flow chart with new currency
       updateIncomeFlowChart();
       
+      // Update chart currency display
+      updateChartCurrencyDisplay();
+      
       // Update heatmap with new currency
       updateHeatmap();
     };
@@ -5899,6 +6108,7 @@ async function saveProfile({ fullName, file }) {
 
     // Income Flow Chart Functions
     let incomeFlowChart = null;
+    let chartViewMode = 'income'; // 'income' or 'both'
 
     function generateIncomeFlowChartData() {
       // Get all income data organized by year
@@ -5929,6 +6139,7 @@ async function saveProfile({ fullName, file }) {
           yearlyData[year] = yearTotal;
         }
       });
+      
       
       // Determine if we should show monthly or yearly data
       const hasMultipleYears = Object.keys(yearlyData).length > 1;
@@ -5964,15 +6175,22 @@ async function saveProfile({ fullName, file }) {
         cumulativeData.push(cumulative);
       });
       
-      return {
+      const result = {
         labels,
         data: convertedData,
         cumulativeData,
         isYearly: hasMultipleYears && !hasMultipleMonths
       };
+      
+      return result;
     }
 
     function initializeIncomeFlowChart() {
+      // Prevent multiple initializations
+      if (incomeFlowChart !== null) {
+        return;
+      }
+      
       const canvas = document.getElementById('incomeFlowChart');
       const loading = document.getElementById('chartLoading');
       const currencyDisplay = document.getElementById('chartCurrencyDisplay');
@@ -6016,23 +6234,11 @@ async function saveProfile({ fullName, file }) {
       
       const chartData = generateIncomeFlowChartData();
       
-      // If no data, show empty state or create sample data for testing
+      // If no data, show empty state
       if (chartData.labels.length === 0) {
-        // For testing purposes, create some sample data in selected currency
-        console.log('No income data found, creating sample data for testing');
-        const sampleUSD = [5000, 7500, 6200, 8800, 9200, 7800];
-        const sampleConverted = sampleUSD.map(amount => usdToSelectedCurrency(amount));
-        
-        const currentYear = new Date().getFullYear();
-        chartData.labels = [`Jan ${currentYear}`, `Feb ${currentYear}`, `Mar ${currentYear}`, `Apr ${currentYear}`, `May ${currentYear}`, `Jun ${currentYear}`];
-        chartData.data = sampleConverted;
-        
-        // Calculate cumulative data
-        let cumulative = 0;
-        chartData.cumulativeData = sampleConverted.map(value => {
-          cumulative += value;
-          return cumulative;
-        });
+        chartData.labels = ['No Data'];
+        chartData.data = [0];
+        chartData.cumulativeData = [0];
         chartData.isYearly = false;
       }
       
@@ -6052,16 +6258,40 @@ async function saveProfile({ fullName, file }) {
             pointBackgroundColor: 'rgba(99, 102, 241, 0.9)',
             pointBorderColor: 'rgba(255, 255, 255, 0.8)',
             pointBorderWidth: 2,
-            pointRadius: 6,
-            pointHoverRadius: 8,
+            pointRadius: window.innerWidth <= 768 ? 3 : 6,
+            pointHoverRadius: window.innerWidth <= 768 ? 5 : 8,
             pointHoverBackgroundColor: 'rgba(99, 102, 241, 1)',
             pointHoverBorderColor: 'rgba(255, 255, 255, 1)',
             pointHoverBorderWidth: 3
+          }, {
+            label: 'Cumulative Total',
+            data: chartData.cumulativeData,
+            borderColor: 'rgba(56, 189, 248, 0.8)',
+            backgroundColor: 'rgba(56, 189, 248, 0.05)',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            pointBackgroundColor: 'rgba(56, 189, 248, 0.8)',
+            pointBorderColor: 'rgba(255, 255, 255, 0.8)',
+            pointBorderWidth: 2,
+            pointRadius: window.innerWidth <= 768 ? 2 : 4,
+            pointHoverRadius: window.innerWidth <= 768 ? 4 : 6,
+            pointHoverBackgroundColor: 'rgba(56, 189, 248, 1)',
+            pointHoverBorderColor: 'rgba(255, 255, 255, 1)',
+            pointHoverBorderWidth: 2
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: {
+            duration: 1500,
+            easing: 'easeOutQuart',
+            delay: (context) => {
+              // Animate from bottom to top (reverse order)
+              return context.dataIndex * 100;
+            }
+          },
           interaction: {
             intersect: false,
             mode: 'index'
@@ -6083,7 +6313,11 @@ async function saveProfile({ fullName, file }) {
                   return context[0].label;
                 },
                 label: function(context) {
-                  return `Income: ${formatCompact(context.parsed.y)}`;
+                  if (context.datasetIndex === 0) {
+                    return `Income: ${formatCompact(context.parsed.y)}`;
+                  } else {
+                    return `Cumulative: ${formatCompact(context.parsed.y)}`;
+                  }
                 }
               }
             }
@@ -6130,10 +6364,20 @@ async function saveProfile({ fullName, file }) {
       
       // Create the chart
       try {
-        console.log('Initializing chart with data:', chartData);
-        console.log('Chart.js available:', typeof Chart);
         incomeFlowChart = new Chart(canvas, config);
-        console.log('Chart created successfully');
+        
+        // Set up chart view toggle
+        setupChartViewToggle();
+        
+        // Apply default view mode (Income Only)
+        updateChartView();
+        
+        // Update currency display
+        updateChartCurrencyDisplay();
+        
+        // Handle window resize for responsive chart points
+        setupChartResponsiveHandling();
+        
       } catch (error) {
         console.error('Error initializing income flow chart:', error);
         // Show error message on canvas
@@ -6146,6 +6390,110 @@ async function saveProfile({ fullName, file }) {
       }
     }
 
+    function toggleChartView() {
+      chartViewMode = chartViewMode === 'both' ? 'income' : 'both';
+      
+      // Update button text and state
+      const toggleBtn = document.getElementById('chartViewToggle');
+      const toggleText = document.getElementById('chartViewText');
+      
+      if (toggleBtn && toggleText) {
+        toggleText.textContent = chartViewMode === 'both' ? 'Both Lines' : 'Income Only';
+        toggleBtn.classList.toggle('active', chartViewMode === 'both');
+      }
+      
+      // Update chart if it exists
+      if (incomeFlowChart) {
+        updateChartView();
+      }
+    }
+
+    function setupChartViewToggle() {
+      const toggleBtn = document.getElementById('chartViewToggle');
+      if (toggleBtn) {
+        // Remove existing event listener if any
+        toggleBtn.removeEventListener('click', toggleChartView);
+        // Add new event listener
+        toggleBtn.addEventListener('click', toggleChartView);
+        
+        // Set initial state
+        const toggleText = document.getElementById('chartViewText');
+        if (toggleText) {
+          toggleText.textContent = chartViewMode === 'both' ? 'Both Lines' : 'Income Only';
+        }
+        toggleBtn.classList.toggle('active', chartViewMode === 'both');
+      }
+    }
+
+    function updateChartCurrencyDisplay() {
+      const currencyDisplay = document.getElementById('chartCurrencyDisplay');
+      if (currencyDisplay && state.currencySymbol) {
+        currencyDisplay.textContent = state.currencySymbol;
+      }
+    }
+
+    function setupChartResponsiveHandling() {
+      let resizeTimeout;
+      
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          updateChartPointSizes();
+        }, 250);
+      });
+    }
+
+    function updateChartPointSizes() {
+      if (!incomeFlowChart) return;
+      
+      const isMobile = window.innerWidth <= 768;
+      const isSmallMobile = window.innerWidth <= 480;
+      
+      // Update Income Flow dataset
+      const incomeDataset = incomeFlowChart.data.datasets[0];
+      if (incomeDataset) {
+        incomeDataset.pointRadius = isSmallMobile ? 2 : isMobile ? 3 : 6;
+        incomeDataset.pointHoverRadius = isSmallMobile ? 4 : isMobile ? 5 : 8;
+      }
+      
+      // Update Cumulative dataset
+      const cumulativeDataset = incomeFlowChart.data.datasets[1];
+      if (cumulativeDataset) {
+        cumulativeDataset.pointRadius = isSmallMobile ? 1 : isMobile ? 2 : 4;
+        cumulativeDataset.pointHoverRadius = isSmallMobile ? 3 : isMobile ? 4 : 6;
+      }
+      
+      // Update the chart
+      incomeFlowChart.update('none'); // Update without animation
+    }
+
+    function updateChartView() {
+      if (!incomeFlowChart) return;
+      
+      // Show/hide cumulative dataset based on view mode
+      const cumulativeDataset = incomeFlowChart.data.datasets[1];
+      if (cumulativeDataset) {
+        cumulativeDataset.hidden = chartViewMode === 'income';
+      }
+      
+      // Update chart
+      incomeFlowChart.update();
+    }
+
+    function updateExistingIncomeFlowChart() {
+      if (incomeFlowChart && typeof incomeFlowChart.update === 'function') {
+        const chartData = generateIncomeFlowChartData();
+        
+        // Update chart data
+        incomeFlowChart.data.labels = chartData.labels;
+        incomeFlowChart.data.datasets[0].data = chartData.data;
+        incomeFlowChart.data.datasets[1].data = chartData.cumulativeData;
+        
+        // Apply current view mode
+        updateChartView();
+      }
+    }
+
     function updateIncomeFlowChart() {
       // Only update if we're on the analytics page
       const analyticsPage = document.getElementById('pageAnalytics');
@@ -6155,7 +6503,12 @@ async function saveProfile({ fullName, file }) {
           const checkChart = setInterval(() => {
             if (typeof Chart !== 'undefined') {
               clearInterval(checkChart);
-              initializeIncomeFlowChart();
+              if (incomeFlowChart === null) {
+                initializeIncomeFlowChart();
+              } else {
+                // Update existing chart with new data
+                updateExistingIncomeFlowChart();
+              }
             }
           }, 100);
           
@@ -6173,7 +6526,12 @@ async function saveProfile({ fullName, file }) {
         } else {
           // Small delay to ensure DOM is ready
           setTimeout(() => {
-            initializeIncomeFlowChart();
+            if (incomeFlowChart === null) {
+              initializeIncomeFlowChart();
+            } else {
+              // Update existing chart with new data
+              updateExistingIncomeFlowChart();
+            }
           }, 100);
         }
       }
@@ -6200,13 +6558,22 @@ async function saveProfile({ fullName, file }) {
         const dayKey = `${date.getMonth()}-${date.getDate()}`;
         const amount = Number(entry.paidUsd || 0);
         const projectName = entry.name || '—';
+        const tags = (entry.tags || '').split(',').map(tag => tag.trim()).filter(tag => tag);
         let dayObj = dailyData[dayKey];
         if (!dayObj) {
-          dayObj = { usdTotal: 0, projects: [] };
+          dayObj = { usdTotal: 0, projects: [], tags: [] };
           dailyData[dayKey] = dayObj;
         }
         dayObj.usdTotal += amount;
-        if (amount > 0) dayObj.projects.push(projectName);
+        if (amount > 0) {
+          dayObj.projects.push(projectName);
+          // Add unique tags for this day
+          tags.forEach(tag => {
+            if (!dayObj.tags.includes(tag)) {
+              dayObj.tags.push(tag);
+            }
+          });
+        }
       }
       // Convert to selected currency
       const convertedData = {};
@@ -6214,7 +6581,7 @@ async function saveProfile({ fullName, file }) {
       for (let i = 0; i < dayKeys.length; i++) {
         const k = dayKeys[i];
         const d = dailyData[k];
-        convertedData[k] = { amount: usdToSelectedCurrency(d.usdTotal), projects: d.projects };
+        convertedData[k] = { amount: usdToSelectedCurrency(d.usdTotal), projects: d.projects, tags: d.tags };
       }
       heatmapCache.set(cacheKey, convertedData);
       return convertedData;
@@ -6259,15 +6626,17 @@ async function saveProfile({ fullName, file }) {
         // month days
         for (let d = 1; d <= daysInMonth; d++) {
           const dayKey = `${m}-${d}`;
-          const dayObj = yearData[dayKey] || { amount: 0, projects: [] };
-          const amount = dayObj.amount || 0;
-          const intensity = calculateIntensity(amount, maxAmount);
-          const currentDate = new Date(year, m, d);
-          const formattedAmount = formatCurrency(amount);
-          const projects = dayObj.projects || [];
-          const projectPreview = projects.slice(0, 2).join(', ');
-          const moreCount = Math.max(0, projects.length - 2);
-          const projectsAttr = (projects.length > 0 ? `${projectPreview}${moreCount ? `, +${moreCount} more` : ''}` : 'No projects').replace(/"/g, '&quot;');
+        const dayObj = yearData[dayKey] || { amount: 0, projects: [], tags: [] };
+        const amount = dayObj.amount || 0;
+        const intensity = calculateIntensity(amount, maxAmount);
+        const currentDate = new Date(year, m, d);
+        const formattedAmount = formatCurrency(amount);
+        const projects = dayObj.projects || [];
+        const tags = dayObj.tags || [];
+        const projectPreview = projects.slice(0, 2).join(', ');
+        const moreCount = Math.max(0, projects.length - 2);
+        const projectsAttr = (projects.length > 0 ? `${projectPreview}${moreCount ? `, +${moreCount} more` : ''}` : 'No projects').replace(/"/g, '&quot;');
+        const tagsAttr = tags.length > 0 ? tags.join(', ').replace(/"/g, '&quot;') : '';
           const dateString = currentDate.toLocaleDateString('en-US', {
             weekday: 'short',
             year: 'numeric',
@@ -6280,7 +6649,8 @@ async function saveProfile({ fullName, file }) {
             data-amount="${amount}" 
             data-date="${dateString}"
             data-formatted="${formattedAmount}"
-            data-projects="${projectsAttr}">
+            data-projects="${projectsAttr}"
+            data-tags="${tagsAttr}">
           </div>`;
         }
 
@@ -6517,11 +6887,30 @@ async function saveProfile({ fullName, file }) {
         const date = day.getAttribute('data-date');
         const formatted = day.getAttribute('data-formatted');
         const projects = day.getAttribute('data-projects') || 'No projects';
+        const tags = day.getAttribute('data-tags') || '';
+        
+        // Create tags HTML with same styling as income table
+        let tagsHtml = '';
+        if (tags) {
+          const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+          if (tagList.length > 0) {
+            tagsHtml = `
+              <div class="heatmap-tip-row heatmap-tip-tags">
+                <span class="muted">Tags</span>
+                <div class="heatmap-tags-container">
+                  ${tagList.map(tag => `<span class="tag-chip">${tag}</span>`).join('')}
+                </div>
+              </div>
+            `;
+          }
+        }
+        
         return `
           <div class="heatmap-tip">
             <div class="heatmap-tip-row heatmap-tip-date">${date}</div>
             <div class="heatmap-tip-row"><span class="muted">Amount</span><span class="val">${formatted}</span></div>
             <div class="heatmap-tip-row heatmap-tip-projects">${projects}</div>
+            ${tagsHtml}
           </div>
         `;
       };
@@ -6571,31 +6960,6 @@ async function saveProfile({ fullName, file }) {
       }
     }
 
-    // Progress bar loading animation system
-    function initializeProgressBars() {
-      const progressBarIds = [
-        'sharePersonalBarContainer',
-        'shareBizBarContainer', 
-        'analyticsIncomeBarContainer',
-        'analyticsExpensesBarContainer',
-        'analyticsSavingsProgressBarContainer',
-        'analyticsEfficiencyBarContainer',
-        'analyticsHealthBarContainer'
-      ];
-      
-      progressBarIds.forEach(containerId => {
-        const container = document.getElementById(containerId);
-        if (container) {
-          // Start with loading state
-          container.classList.add('loading');
-          
-          // Simulate loading delay (similar to chart loading)
-          setTimeout(() => {
-            container.classList.remove('loading');
-          }, 2000 + Math.random() * 1000); // 2-3 seconds random delay
-        }
-      });
-    }
     
     function animateProgressBar(containerId, targetWidth, duration = 800) {
       const container = document.getElementById(containerId);
@@ -7402,6 +7766,9 @@ async function saveProfile({ fullName, file }) {
         
         // Initialize income flow chart
         updateIncomeFlowChart();
+        
+        // Update chart currency display
+        updateChartCurrencyDisplay();
     }
 
     function updateInsightCards() {
@@ -9003,9 +9370,8 @@ async function saveProfile({ fullName, file }) {
   // Smoothly hide splash screen after initial render
   // Legacy no-fade behavior: keep for compatibility
   function hideSplashScreenSmoothly() {
-    const splash = document.getElementById('splashScreen');
-    if (!splash) return;
-    splash.classList.add('hidden');
+    // Use the smart hide function instead
+    hideSplashScreen();
   }
 
   function renderIncomeList(containerId, arr) {
@@ -9655,50 +10021,63 @@ function loadNonCriticalResources() {
   // This can include analytics, additional icons, etc.
 }
 
+  // Debounce renderAll to prevent multiple rapid calls
+  let renderTimeout = null;
+  
   function renderAll(shouldAnimate = false){
-      renderList('list-personal', state.personal, false);
-      renderList('list-biz', state.biz, true);
-      const currentYearData = state.income[currentYear] || [];
-      renderIncomeList('list-income', currentYearData);
-    renderKPIs();
-    updateGridTemplate();
-    
-    // Apply lock state to all inputs after rendering
-    updateInputsLockState();
-    
-    // Update insight cards after rendering
-    updateInsightCards();
-    
-    // Ensure income KPIs are live and up-to-date
-    updateIncomeKPIsLive();
-    
-    // Re-add event listeners after rendering
-    addRowButtonListeners();
-    
-    // Update analytics page if it's currently visible
-    if (currentPage === 'analytics') {
-      updateAnalyticsPage();
-    }
-    
-    // Only animate if explicitly requested (user actions)
-    if (shouldAnimate) {
-      // Add smooth animations to KPI cards
-      animateKPICards();
+      // Clear any pending render
+      if (renderTimeout) {
+        clearTimeout(renderTimeout);
+      }
       
-      // Add smooth animations to table rows
-      animateTableRows();
-    }
-    
-    // Ensure all inputs have instant cloud sync after rendering
-    setTimeout(() => {
-      // ensureLiveSaveOnAllInputs(); // DISABLED: This was causing duplicate event listeners and cross-row interference
-      ensureInstantSyncOnToggles();
-    }, 100);
-    
-    // Apply custom date picker to any new date inputs
-    if (typeof applyDatePickerToNewInputs === 'function') {
-      applyDatePickerToNewInputs();
-    }
+      // Debounce rendering to prevent multiple rapid calls
+      renderTimeout = setTimeout(() => {
+        renderList('list-personal', state.personal, false);
+        renderList('list-biz', state.biz, true);
+        const currentYearData = state.income[currentYear] || [];
+        renderIncomeList('list-income', currentYearData);
+        renderKPIs();
+        updateGridTemplate();
+        
+        // Apply lock state to all inputs after rendering
+        updateInputsLockState();
+        
+        // Update insight cards after rendering
+        updateInsightCards();
+        
+        // Ensure income KPIs are live and up-to-date
+        updateIncomeKPIsLive();
+        
+        // Re-add event listeners after rendering
+        addRowButtonListeners();
+        
+        // Update analytics page if it's currently visible
+        if (currentPage === 'analytics') {
+          updateAnalyticsPage();
+        }
+        
+        // Only animate if explicitly requested (user actions)
+        if (shouldAnimate) {
+          // Add smooth animations to KPI cards
+          animateKPICards();
+          
+          // Add smooth animations to table rows
+          animateTableRows();
+        }
+        
+        // Ensure all inputs have instant cloud sync after rendering
+        setTimeout(() => {
+          // ensureLiveSaveOnAllInputs(); // DISABLED: This was causing duplicate event listeners and cross-row interference
+          ensureInstantSyncOnToggles();
+        }, 100);
+        
+        // Apply custom date picker to any new date inputs
+        if (typeof applyDatePickerToNewInputs === 'function') {
+          applyDatePickerToNewInputs();
+        }
+        
+        renderTimeout = null;
+      }, 10); // 10ms debounce
   }
 
   function updateGridTemplate() {
@@ -10235,7 +10614,6 @@ function loadNonCriticalResources() {
     }
     
     // Performance optimization: Debounced rendering
-    let renderTimeout = null;
     function debouncedRender() {
       if (renderTimeout) {
         clearTimeout(renderTimeout);
@@ -10511,60 +10889,6 @@ function loadNonCriticalResources() {
       }
     }
     
-    // Function to test currency API and show available currencies
-    async function testCurrencyAPI() {
-      try {
-        console.log('🧪 Testing currency API...');
-        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-        const data = await response.json();
-        
-        if (data && data.rates) {
-          const availableCurrencies = Object.keys(data.rates);
-          console.log('📊 Available currencies from API:', availableCurrencies);
-          
-          // Check if our supported currencies are available
-          const supportedCurrencies = ['EGP', 'KWD', 'SAR', 'AED', 'QAR', 'BHD', 'EUR'];
-          const availableSupported = supportedCurrencies.filter(currency => 
-            availableCurrencies.includes(currency)
-          );
-          
-          console.log('✅ Our supported currencies available in API:', availableSupported);
-          
-          // Test specific rates
-          supportedCurrencies.forEach(currency => {
-            if (data.rates[currency]) {
-              console.log(`💰 ${currency}: ${data.rates[currency]}`);
-            }
-          });
-          
-          return availableSupported;
-        }
-      } catch (error) {
-        console.warn('❌ Currency API test failed:', error);
-        return [];
-      }
-    }
-    
-    // Function to test a specific currency rate
-    async function testSpecificCurrency(currency) {
-      try {
-        console.log(`🧪 Testing specific currency: ${currency}`);
-        const response = await fetch(`https://api.exchangerate.host/latest?base=USD&symbols=${currency}`);
-        const data = await response.json();
-        console.log(`📊 Response for ${currency}:`, data);
-        
-        if (data && data.rates && data.rates[currency]) {
-          console.log(`✅ Rate for ${currency}: ${data.rates[currency]}`);
-          return data.rates[currency];
-        } else {
-          console.warn(`❌ No rate found for ${currency}`);
-          return null;
-        }
-      } catch (error) {
-        console.warn(`❌ Test failed for ${currency}:`, error);
-        return null;
-      }
-    }
     
     // Function to update FX display in KPIs and other UI elements
     function updateFXDisplay(rate) {
@@ -12289,12 +12613,799 @@ function loadNonCriticalResources() {
     }
   }
 
+  // ===== ONBOARDING SYSTEM =====
+  let currentOnboardingStep = 0; // Start with welcome step
+  let onboardingData = {
+    name: '',
+    email: '',
+    password: '',
+    currency: ''
+  };
+  let onboardingMode = null; // 'new', 'existing', 'local'
+
+  // Initialize onboarding system
+  function initializeOnboarding() {
+    // Check if user has completed onboarding
+    const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
+    const isFirstVisit = !hasCompletedOnboarding && !currentUser;
+    
+    // Only show onboarding if it's a first visit and user is not authenticated
+    if (isFirstVisit) {
+      // Small delay to ensure all other initialization is complete
+      setTimeout(() => {
+        showOnboardingModal();
+      }, 500);
+    }
+  }
+
+  // Show onboarding modal
+  function showOnboardingModal() {
+    const modal = document.getElementById('onboardingModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      document.body.classList.add('no-scroll');
+      resetOnboarding();
+    }
+  }
+
+  // Hide onboarding modal
+  function hideOnboardingModal() {
+    const modal = document.getElementById('onboardingModal');
+    if (modal) {
+      modal.style.display = 'none';
+      document.body.classList.remove('no-scroll');
+    }
+  }
+
+  // Show specific onboarding step
+  function showOnboardingStep(step) {
+    // Hide all steps
+    for (let i = 0; i <= 4; i++) {
+      const stepEl = document.getElementById(`onboardingStep${i}`);
+      if (stepEl) {
+        stepEl.style.display = 'none';
+      }
+    }
+    
+    // Show the specified step
+    const targetStep = document.getElementById(`onboardingStep${step}`);
+    if (targetStep) {
+      targetStep.style.display = 'block';
+    }
+    
+    // Update current step
+    currentOnboardingStep = step;
+    updateOnboardingStep();
+  }
+
+  // Reset onboarding to step 0 (welcome)
+  function resetOnboarding() {
+    currentOnboardingStep = 0;
+    onboardingMode = null;
+    onboardingData = { name: '', email: '', password: '', currency: '' };
+    updateOnboardingStep();
+  }
+
+  // Update onboarding step display
+  function updateOnboardingStep() {
+    // Hide all steps
+    document.querySelectorAll('.onboarding-step').forEach(step => {
+      step.style.display = 'none';
+    });
+
+    // Show current step
+    const currentStepElement = document.getElementById(`onboardingStep${currentOnboardingStep}`);
+    if (currentStepElement) {
+      currentStepElement.style.display = 'block';
+    }
+
+    // Update progress bar (0-4 steps now: welcome + 3 main steps)
+    const progressFill = document.getElementById('onboardingProgressFill');
+    if (progressFill) {
+      if (currentOnboardingStep === 0) {
+        progressFill.style.width = '0%';
+      } else {
+        progressFill.style.width = `${(currentOnboardingStep / 3) * 100}%`;
+      }
+    }
+
+    // Update step indicator
+    const stepIndicator = document.getElementById('onboardingCurrentStep');
+    if (stepIndicator) {
+      if (currentOnboardingStep === 0) {
+        stepIndicator.textContent = 'Welcome';
+      } else {
+        stepIndicator.textContent = `${currentOnboardingStep} of 3`;
+      }
+    }
+
+    // Update buttons
+    const backBtn = document.getElementById('onboardingBackBtn');
+    const nextBtn = document.getElementById('onboardingNextBtn');
+    
+    if (backBtn) {
+      backBtn.style.display = currentOnboardingStep <= 1 ? 'none' : 'flex';
+    }
+    
+    if (nextBtn) {
+      if (currentOnboardingStep === 0) {
+        nextBtn.style.display = 'none'; // Hide next button on welcome step
+      } else {
+        nextBtn.style.display = 'flex';
+        if (currentOnboardingStep === 3) {
+          nextBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M9 12l2 2 4-4"/>
+              <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+            </svg>
+            Complete
+          `;
+        } else {
+          nextBtn.innerHTML = `
+            Next
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          `;
+        }
+      }
+    }
+  }
+
+  // Handle welcome option selection
+  function handleWelcomeOption(mode) {
+    onboardingMode = mode;
+    
+    switch (mode) {
+      case 'new':
+        // Continue to step 1 (user profile)
+        currentOnboardingStep = 1;
+        updateOnboardingStep();
+        break;
+        
+      case 'existing':
+        // Go directly to sign-in
+        hideOnboardingModal();
+        // Use the existing sign-in function
+        if (typeof openAuthModal === 'function') {
+          openAuthModal();
+        } else {
+          // Fallback to the sign-in button click
+          const signInBtn = document.getElementById('btnSignIn') || document.getElementById('btnLogin');
+          if (signInBtn) {
+            signInBtn.click();
+          }
+        }
+        break;
+        
+      case 'local':
+        // Set up for local usage and skip to currency selection
+        currentOnboardingStep = 3; // Skip to currency selection
+        updateOnboardingStep();
+        break;
+    }
+  }
+
+  // Validate current step
+  function validateOnboardingStep() {
+    switch (currentOnboardingStep) {
+      case 0:
+        // Welcome step - no validation needed
+        return true;
+        
+      case 1:
+        const name = document.getElementById('onboardingName').value.trim();
+        if (!name) {
+          showOnboardingError('Please enter your name');
+          return false;
+        }
+        onboardingData.name = name;
+        return true;
+      
+      case 2:
+        const email = document.getElementById('onboardingEmail').value.trim();
+        const password = document.getElementById('onboardingPassword').value;
+        const passwordConfirm = document.getElementById('onboardingPasswordConfirm').value;
+        
+        if (!email) {
+          showOnboardingError('Please enter your email address');
+          return false;
+        }
+        
+        if (!isValidEmail(email)) {
+          showOnboardingError('Please enter a valid email address');
+          return false;
+        }
+        
+        if (!password || password.length < 8) {
+          showOnboardingError('Password must be at least 8 characters long');
+          return false;
+        }
+        
+        if (!isPasswordStrong(password)) {
+          showOnboardingError('Password must meet all security requirements');
+          return false;
+        }
+        
+        if (password !== passwordConfirm) {
+          showOnboardingError('Passwords do not match');
+          return false;
+        }
+        
+        onboardingData.email = email;
+        onboardingData.password = password;
+        return true;
+      
+      case 3:
+        const currency = document.getElementById('onboardingCurrency').value;
+        if (!currency) {
+          showOnboardingError('Please select your currency');
+          return false;
+        }
+        onboardingData.currency = currency;
+        return true;
+      
+      default:
+        return false;
+    }
+  }
+
+  // Show onboarding error
+  function showOnboardingError(message) {
+    // Remove existing error
+    const existingError = document.querySelector('.onboarding-error');
+    if (existingError) {
+      existingError.remove();
+    }
+
+    // Create error element
+    const errorElement = document.createElement('div');
+    errorElement.className = 'onboarding-error';
+    errorElement.style.cssText = `
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      margin-top: 16px;
+      text-align: center;
+    `;
+    errorElement.textContent = message;
+
+    // Insert error after current step content
+    const currentStep = document.getElementById(`onboardingStep${currentOnboardingStep}`);
+    const stepContent = currentStep.querySelector('.onboarding-step-content');
+    if (stepContent) {
+      stepContent.appendChild(errorElement);
+    }
+
+    // Auto-remove error after 5 seconds
+    setTimeout(() => {
+      if (errorElement.parentNode) {
+        errorElement.remove();
+      }
+    }, 5000);
+  }
+
+  // Email validation
+  function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  // Password strength validation
+  function isPasswordStrong(password) {
+    return password.length >= 8 && 
+           /[A-Z]/.test(password) && 
+           /[a-z]/.test(password) && 
+           /[0-9]/.test(password);
+  }
+
+  // Get password strength level
+  function getPasswordStrength(password) {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    
+    if (score <= 1) return 'weak';
+    if (score <= 2) return 'fair';
+    if (score <= 3) return 'good';
+    return 'strong';
+  }
+
+  // Update password strength indicator
+  function updatePasswordStrength(password) {
+    const strengthFill = document.getElementById('passwordStrengthFill');
+    const strengthText = document.getElementById('passwordStrengthText');
+    const requirements = document.querySelectorAll('.requirement');
+    
+    if (!password) {
+      strengthFill.className = 'password-strength-fill';
+      strengthText.className = 'password-strength-text';
+      strengthText.textContent = 'Enter a password';
+      
+      requirements.forEach(req => {
+        req.classList.remove('valid', 'invalid');
+      });
+      return;
+    }
+    
+    const strength = getPasswordStrength(password);
+    const strengthLevels = {
+      weak: { width: '25%', color: '#ef4444', text: 'Weak password' },
+      fair: { width: '50%', color: '#f59e0b', text: 'Fair password' },
+      good: { width: '75%', color: '#3b82f6', text: 'Good password' },
+      strong: { width: '100%', color: '#10b981', text: 'Strong password' }
+    };
+    
+    const level = strengthLevels[strength];
+    strengthFill.className = `password-strength-fill ${strength}`;
+    strengthFill.style.width = level.width;
+    strengthText.className = `password-strength-text ${strength}`;
+    strengthText.textContent = level.text;
+    
+    // Update requirements
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password)
+    };
+    
+    requirements.forEach(req => {
+      const requirement = req.dataset.requirement;
+      if (checks[requirement]) {
+        req.classList.add('valid');
+        req.classList.remove('invalid');
+      } else {
+        req.classList.add('invalid');
+        req.classList.remove('valid');
+      }
+    });
+  }
+
+  // Update password match indicator
+  function updatePasswordMatch(password, confirmPassword) {
+    const matchContainer = document.getElementById('passwordMatch');
+    
+    if (!confirmPassword) {
+      matchContainer.className = 'onboarding-password-match';
+      return;
+    }
+    
+    if (password === confirmPassword) {
+      matchContainer.className = 'onboarding-password-match password-match';
+    } else {
+      matchContainer.className = 'onboarding-password-match password-mismatch';
+    }
+  }
+
+  // Complete onboarding
+  async function completeOnboarding() {
+    try {
+      // Show detailed loading state
+      const nextBtn = document.getElementById('onboardingNextBtn');
+      const stepContent = document.querySelector(`#onboardingStep${currentOnboardingStep} .onboarding-step-content`);
+      
+      if (nextBtn) {
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = `
+          <div class="onboarding-loading-spinner"></div>
+          ${onboardingMode === 'local' ? 'Setting up...' : 'Creating Account...'}
+        `;
+      }
+
+      // Add progress steps
+      if (stepContent) {
+        const progressSteps = document.createElement('div');
+        progressSteps.className = 'onboarding-progress-steps';
+        progressSteps.innerHTML = `
+          <div class="progress-step active" id="step1">
+            <span class="step-number">1</span>
+          </div>
+          <div class="progress-step" id="step2">
+            <span class="step-number">2</span>
+          </div>
+          <div class="progress-step" id="step3">
+            <span class="step-number">3</span>
+          </div>
+          <div class="progress-step" id="step4">
+            <span class="step-number">4</span>
+          </div>
+        `;
+        stepContent.appendChild(progressSteps);
+      }
+
+      if (onboardingMode === 'local') {
+        // Local mode - just set up currency
+        updateProgressStep(1, 'Setting up local preferences...');
+        await new Promise(resolve => setTimeout(resolve, 600));
+        
+        updateProgressStep(2, 'Configuring currency...');
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        updateProgressStep(3, 'Finalizing setup...');
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        // Set currency in localStorage
+        localStorage.setItem('selectedCurrency', onboardingData.currency);
+        const selectedOption = document.querySelector(`#onboardingCurrency option[value="${onboardingData.currency}"]`);
+        const currencySymbol = selectedOption?.dataset.symbol || onboardingData.currency;
+        localStorage.setItem('currencySymbol', currencySymbol);
+        
+        // Update the application state and UI
+        if (typeof updateCurrency === 'function') {
+          updateCurrency(onboardingData.currency);
+        }
+        
+        // Update the currency button in the header
+        updateCurrencyButton(onboardingData.currency, currencySymbol);
+        
+        // Mark onboarding as completed
+        localStorage.setItem('onboardingCompleted', 'true');
+        localStorage.setItem('onboardingMode', 'local');
+        
+        updateProgressStep(4, 'Ready to use!');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+      } else {
+        // Account creation mode
+        // Step 1: Validating information
+        updateProgressStep(1, 'Validating your information...');
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Step 2: Creating account
+        updateProgressStep(2, 'Creating your secure account...');
+        const { data, error } = await window.supabaseClient.auth.signUp({
+          email: onboardingData.email,
+          password: onboardingData.password,
+          options: {
+            data: {
+              full_name: onboardingData.name,
+              currency: onboardingData.currency
+            }
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        // Check if email confirmation is required
+        if (data.user && !data.session) {
+          // Email confirmation required - show verification step
+          showOnboardingStep(4); // Show email verification step
+          
+          // Update the email in the verification step
+          const verificationEmailEl = document.getElementById('verificationEmail');
+          if (verificationEmailEl) {
+            verificationEmailEl.textContent = onboardingData.email;
+          }
+          
+          // Update progress indicator
+          updateProgressStep(4, 'Verification email sent!');
+          
+          // Hide the next button and show a different action
+          const nextBtn = document.getElementById('onboardingNextBtn');
+          if (nextBtn) {
+            nextBtn.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                <path d="M3 21v-5h5"/>
+              </svg>
+              Refresh Page
+            `;
+            nextBtn.onclick = () => {
+              window.location.reload();
+            };
+          }
+          
+          // Hide back button
+          const backBtn = document.getElementById('onboardingBackBtn');
+          if (backBtn) {
+            backBtn.style.display = 'none';
+          }
+          
+          return; // Exit early for email verification flow
+        }
+
+        // Step 3: Setting up preferences
+        updateProgressStep(3, 'Setting up your preferences...');
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // Set currency in localStorage
+        localStorage.setItem('selectedCurrency', onboardingData.currency);
+        const selectedOption = document.querySelector(`#onboardingCurrency option[value="${onboardingData.currency}"]`);
+        const currencySymbol = selectedOption?.dataset.symbol || onboardingData.currency;
+        localStorage.setItem('currencySymbol', currencySymbol);
+        
+        // Update the application state and UI
+        if (typeof updateCurrency === 'function') {
+          updateCurrency(onboardingData.currency);
+        }
+        
+        // Update the currency button in the header
+        updateCurrencyButton(onboardingData.currency, currencySymbol);
+        
+        // Mark onboarding as completed
+        localStorage.setItem('onboardingCompleted', 'true');
+        localStorage.setItem('onboardingMode', 'account');
+        
+        // Step 4: Finalizing setup
+        updateProgressStep(4, 'Finalizing your setup...');
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+
+      // Update UI with new currency
+      if (typeof updateCurrencyDisplay === 'function') {
+        updateCurrencyDisplay();
+      }
+      
+      // Also update the currency button text
+      const currencyBtn = document.getElementById('currencySymbol');
+      if (currencyBtn) {
+        currencyBtn.textContent = currencySymbol;
+      }
+      
+      // Show success state
+      if (nextBtn) {
+        nextBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+            <path d="M9 12l2 2 4-4"/>
+            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+          </svg>
+          ${onboardingMode === 'local' ? 'Ready to Use!' : 'Account Created!'}
+        `;
+        nextBtn.style.background = '#10b981';
+      }
+
+      // Hide onboarding modal after success
+      setTimeout(() => {
+        hideOnboardingModal();
+        const message = onboardingMode === 'local' 
+          ? 'Local setup complete! You can now use Financial Tool offline.' 
+          : 'Account created successfully! Welcome to Financial Tool.';
+        // Show success notification with fallback
+        if (typeof showSuccessNotification === 'function') {
+          showSuccessNotification(message);
+        } else if (typeof showNotification === 'function') {
+          showNotification(message, 'success');
+        } else {
+          // Fallback to console log if notification system is not available
+          console.log('✅ ' + message);
+        }
+        
+        // Refresh the page to load with new settings
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }, 1500);
+
+    } catch (error) {
+      console.error('Onboarding error:', error);
+      showOnboardingError(error.message || 'Failed to complete setup. Please try again.');
+      
+      // Reset button
+      const nextBtn = document.getElementById('onboardingNextBtn');
+      if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+            <path d="M9 12l2 2 4-4"/>
+            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+          </svg>
+          Complete
+        `;
+        nextBtn.style.background = '';
+      }
+
+      // Remove progress steps on error
+      const progressSteps = document.querySelector('.onboarding-progress-steps');
+      if (progressSteps) {
+        progressSteps.remove();
+      }
+    }
+  }
+
+  // Update progress step
+  function updateProgressStep(step, message) {
+    // Update step indicators
+    for (let i = 1; i <= 4; i++) {
+      const stepEl = document.getElementById(`step${i}`);
+      if (stepEl) {
+        if (i < step) {
+          stepEl.className = 'progress-step completed';
+        } else if (i === step) {
+          stepEl.className = 'progress-step active';
+        } else {
+          stepEl.className = 'progress-step';
+        }
+      }
+    }
+
+    // Update loading message
+    const loadingEl = document.querySelector('.onboarding-loading');
+    if (loadingEl) {
+      loadingEl.querySelector('span').textContent = message;
+    } else {
+      // Create loading element if it doesn't exist
+      const stepContent = document.querySelector(`#onboardingStep${currentOnboardingStep} .onboarding-step-content`);
+      if (stepContent) {
+        const loadingEl = document.createElement('div');
+        loadingEl.className = 'onboarding-loading';
+        loadingEl.innerHTML = `
+          <div class="onboarding-loading-spinner"></div>
+          <span>${message}</span>
+        `;
+        stepContent.appendChild(loadingEl);
+      }
+    }
+  }
+
+  // Skip onboarding and go to sign-in
+  function skipOnboarding() {
+    hideOnboardingModal();
+    if (typeof openAuthModal === 'function') {
+      openAuthModal();
+    } else {
+      // Fallback to the sign-in button click
+      const signInBtn = document.getElementById('btnSignIn') || document.getElementById('btnLogin');
+      if (signInBtn) {
+        signInBtn.click();
+      }
+    }
+  }
+
+
+
+  // Update currency button in header
+  function updateCurrencyButton(currency, symbol) {
+    const currencyBtn = document.getElementById('currencySymbol');
+    if (currencyBtn) {
+      currencyBtn.textContent = symbol;
+    }
+    
+    // Also update the currency dropdown selection
+    const currencyDropdown = document.getElementById('currencyDropdown');
+    if (currencyDropdown) {
+      // Remove active class from all options
+      const allOptions = currencyDropdown.querySelectorAll('.currency-option');
+      allOptions.forEach(option => option.classList.remove('active'));
+      
+      // Add active class to selected option
+      const selectedOption = currencyDropdown.querySelector(`[data-currency="${currency}"]`);
+      if (selectedOption) {
+        selectedOption.classList.add('active');
+      }
+    }
+    
+    // Update currency display in other parts of the UI
+    if (typeof updateCurrencyDisplay === 'function') {
+      updateCurrencyDisplay();
+    }
+  }
+
+
+
+  // Event listeners for onboarding
+  function setupOnboardingEventListeners() {
+    // Next button
+    const nextBtn = document.getElementById('onboardingNextBtn');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (validateOnboardingStep()) {
+          if (currentOnboardingStep < 3) {
+            currentOnboardingStep++;
+            updateOnboardingStep();
+          } else {
+            completeOnboarding();
+          }
+        }
+      });
+    }
+
+    // Back button
+    const backBtn = document.getElementById('onboardingBackBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        if (currentOnboardingStep > 1) {
+          currentOnboardingStep--;
+          updateOnboardingStep();
+        }
+      });
+    }
+
+    // Skip button
+    const skipBtn = document.getElementById('onboardingSkipBtn');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', skipOnboarding);
+    }
+
+    // Password strength validation
+    const passwordInput = document.getElementById('onboardingPassword');
+    if (passwordInput) {
+      passwordInput.addEventListener('input', (e) => {
+        updatePasswordStrength(e.target.value);
+        // Also update password match if confirm field has content
+        const confirmInput = document.getElementById('onboardingPasswordConfirm');
+        if (confirmInput && confirmInput.value) {
+          updatePasswordMatch(e.target.value, confirmInput.value);
+        }
+      });
+    }
+
+    // Password confirmation validation
+    const passwordConfirmInput = document.getElementById('onboardingPasswordConfirm');
+    if (passwordConfirmInput) {
+      passwordConfirmInput.addEventListener('input', (e) => {
+        const passwordInput = document.getElementById('onboardingPassword');
+        if (passwordInput) {
+          updatePasswordMatch(passwordInput.value, e.target.value);
+        }
+      });
+    }
+
+    // Welcome option click handlers
+    const welcomeNewUser = document.getElementById('welcomeNewUser');
+    const welcomeExistingUser = document.getElementById('welcomeExistingUser');
+    const welcomeLocalUser = document.getElementById('welcomeLocalUser');
+    
+    if (welcomeNewUser) {
+      welcomeNewUser.addEventListener('click', () => handleWelcomeOption('new'));
+    }
+    
+    if (welcomeExistingUser) {
+      welcomeExistingUser.addEventListener('click', () => handleWelcomeOption('existing'));
+    }
+    
+    if (welcomeLocalUser) {
+      welcomeLocalUser.addEventListener('click', () => handleWelcomeOption('local'));
+    }
+
+    // Enter key support
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.getElementById('onboardingModal').style.display === 'flex') {
+        e.preventDefault();
+        const nextBtn = document.getElementById('onboardingNextBtn');
+        if (nextBtn && !nextBtn.disabled) {
+          nextBtn.click();
+        }
+      }
+    });
+
+    // Close on overlay click
+    const overlay = document.querySelector('.onboarding-modal-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          skipOnboarding();
+        }
+      });
+    }
+  }
+
   // Initialize custom date picker when DOM is loaded
   document.addEventListener('DOMContentLoaded', () => {
     initCustomDatePicker();
     overrideDateInputs();
     applyDatePickerToNewInputs();
     
+    // Initialize onboarding
+    setupOnboardingEventListeners();
+    initializeOnboarding();
+    
+    // Update currency button if currency is already selected
+    const selectedCurrency = localStorage.getItem('selectedCurrency');
+    const currencySymbol = localStorage.getItem('currencySymbol');
+    if (selectedCurrency && currencySymbol) {
+      updateCurrencyButton(selectedCurrency, currencySymbol);
+    }
     
     // Initialize lock state
     if (typeof updateLockIcon === 'function') {

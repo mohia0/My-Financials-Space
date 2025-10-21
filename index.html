@@ -27,7 +27,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="h-full">
+<body class="h-full splash-active">
 
   <!-- Splash Screen -->
   <div id="splashScreen" class="splash-screen">
@@ -827,10 +827,23 @@
               Income Flow Over Time
               <div class="tooltip">Visual representation of your income trends across time periods</div>
             </h2>
-            <div class="flex items-center gap-2 text-xs tooltip-trigger" style="color:var(--muted)">
-              <span id="chartCurrencyDisplay">EGP</span>
-              <div class="w-2 h-2 rounded-full" style="background:linear-gradient(90deg, rgba(99,102,241,.9), rgba(56,189,248,.9))"></div>
-              <div class="tooltip tooltip-left">Chart displays values in selected currency</div>
+            <div class="flex items-center gap-3">
+              <!-- Chart View Toggle -->
+              <div class="flex items-center gap-2">
+                <button id="chartViewToggle" class="text-xs px-3 py-1 rounded-lg border transition-all duration-200" 
+                        style="background:var(--card); border-color:var(--stroke); color:var(--fg);">
+                  <span id="chartViewText">Income Only</span>
+                </button>
+                <div class="tooltip tooltip-left">
+                  <div class="tooltip-content">Toggle between Income Flow only or with Cumulative Total</div>
+                </div>
+              </div>
+              <!-- Currency Display -->
+              <div class="flex items-center gap-2 text-xs tooltip-trigger" style="color:var(--muted)">
+                <span id="chartCurrencyDisplay">EGP</span>
+                <div class="w-2 h-2 rounded-full" style="background:linear-gradient(90deg, rgba(99,102,241,.9), rgba(56,189,248,.9))"></div>
+                <div class="tooltip tooltip-left">Chart displays values in selected currency</div>
+              </div>
             </div>
           </div>
           <div class="relative">
@@ -1237,6 +1250,291 @@
       </div>
     </div>
     
+  </div>
+
+  <!-- Onboarding Modal -->
+  <div id="onboardingModal" class="onboarding-modal" style="display: none;">
+    <div class="onboarding-modal-overlay"></div>
+    <div class="onboarding-modal-content">
+      <div class="onboarding-modal-header">
+        <div class="onboarding-progress">
+          <div class="onboarding-progress-bar">
+            <div class="onboarding-progress-fill" id="onboardingProgressFill"></div>
+          </div>
+          <div class="onboarding-step-indicator">
+            <span id="onboardingCurrentStep">1</span> of 3
+          </div>
+        </div>
+        <button class="onboarding-skip-btn" id="onboardingSkipBtn">
+          Skip
+        </button>
+      </div>
+      
+      <div class="onboarding-modal-body">
+        <!-- Step 0: Welcome -->
+        <div class="onboarding-step" id="onboardingStep0">
+          <div class="onboarding-step-content">
+            <div class="onboarding-logo-container">
+              <img src="Images/Logo.svg" alt="Financial Tool" class="onboarding-logo">
+            </div>
+            <p class="onboarding-subtitle">Your personal financial dashboard for tracking expenses, income, and analytics</p>
+            
+            <div class="onboarding-welcome-options">
+              <div class="welcome-option" id="welcomeNewUser">
+                <div class="welcome-option-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <div class="welcome-option-content">
+                  <h3 class="welcome-option-title">I'm new here</h3>
+                  <p class="welcome-option-description">Create a new account to sync your data across devices</p>
+                </div>
+                <div class="welcome-option-arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="welcome-option" id="welcomeExistingUser">
+                <div class="welcome-option-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10,17 15,12 10,7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                  </svg>
+                </div>
+                <div class="welcome-option-content">
+                  <h3 class="welcome-option-title">I already have an account</h3>
+                  <p class="welcome-option-description">Sign in to access your existing data</p>
+                </div>
+                <div class="welcome-option-arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="welcome-option" id="welcomeLocalUser">
+                <div class="welcome-option-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                </div>
+                <div class="welcome-option-content">
+                  <h3 class="welcome-option-title">I want to use locally</h3>
+                  <p class="welcome-option-description">Skip account creation and use the tool offline</p>
+                </div>
+                <div class="welcome-option-arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 1: User Profile -->
+        <div class="onboarding-step" id="onboardingStep1">
+          <div class="onboarding-step-content">
+            <div class="onboarding-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Let's get to know you</h2>
+            <p class="onboarding-subtitle">Tell us your name to personalize your experience</p>
+            
+            <div class="onboarding-form">
+              <div class="onboarding-form-group">
+                <label for="onboardingName" class="onboarding-label">Full Name</label>
+                <input type="text" id="onboardingName" class="onboarding-input" placeholder="Enter your full name" required>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Email and Password -->
+        <div class="onboarding-step" id="onboardingStep2" style="display: none;">
+          <div class="onboarding-step-content">
+            <div class="onboarding-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Secure your account</h2>
+            <p class="onboarding-subtitle">Create your account to sync data across devices</p>
+            
+            <div class="onboarding-form">
+              <div class="onboarding-form-group">
+                <label for="onboardingEmail" class="onboarding-label">Email Address</label>
+                <input type="email" id="onboardingEmail" class="onboarding-input" placeholder="Enter your email" required>
+              </div>
+              <div class="onboarding-form-group">
+                <label for="onboardingPassword" class="onboarding-label">Password</label>
+                <input type="password" id="onboardingPassword" class="onboarding-input" placeholder="Create a strong password" required minlength="8">
+                <div class="onboarding-password-strength" id="passwordStrength">
+                  <div class="password-strength-bar">
+                    <div class="password-strength-fill" id="passwordStrengthFill"></div>
+                  </div>
+                  <div class="password-strength-text" id="passwordStrengthText">Enter a password</div>
+                </div>
+                <div class="onboarding-password-requirements" id="passwordRequirements">
+                  <div class="requirement" data-requirement="length">
+                    <span class="requirement-icon"></span>
+                    <span class="requirement-text">At least 8 characters</span>
+                  </div>
+                  <div class="requirement" data-requirement="uppercase">
+                    <span class="requirement-icon"></span>
+                    <span class="requirement-text">One uppercase letter</span>
+                  </div>
+                  <div class="requirement" data-requirement="lowercase">
+                    <span class="requirement-icon"></span>
+                    <span class="requirement-text">One lowercase letter</span>
+                  </div>
+                  <div class="requirement" data-requirement="number">
+                    <span class="requirement-icon"></span>
+                    <span class="requirement-text">One number</span>
+                  </div>
+                </div>
+              </div>
+              <div class="onboarding-form-group">
+                <label for="onboardingPasswordConfirm" class="onboarding-label">Confirm Password</label>
+                <input type="password" id="onboardingPasswordConfirm" class="onboarding-input" placeholder="Confirm your password" required>
+                <div class="onboarding-password-match" id="passwordMatch">
+                  <span class="match-icon"></span>
+                  <span class="match-text">Passwords must match</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Currency Selection -->
+        <div class="onboarding-step" id="onboardingStep3" style="display: none;">
+          <div class="onboarding-step-content">
+            <div class="onboarding-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Choose your currency</h2>
+            <p class="onboarding-subtitle">Select your primary currency alongside USD</p>
+            
+            <div class="onboarding-form">
+              <div class="onboarding-form-group">
+                <label for="onboardingCurrency" class="onboarding-label">Primary Currency</label>
+                <select id="onboardingCurrency" class="onboarding-select" required>
+                  <option value="">Select your currency</option>
+                  <option value="EGP" data-symbol="EGP">EGP - Egyptian Pound</option>
+                  <option value="KWD" data-symbol="KWD">KWD - Kuwaiti Dinar</option>
+                  <option value="SAR" data-symbol="SAR">SAR - Saudi Riyal</option>
+                  <option value="AED" data-symbol="AED">AED - UAE Dirham</option>
+                  <option value="QAR" data-symbol="QAR">QAR - Qatari Riyal</option>
+                  <option value="BHD" data-symbol="BHD">BHD - Bahraini Dinar</option>
+                  <option value="EUR" data-symbol="€">EUR - Euro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Email Verification -->
+        <div class="onboarding-step" id="onboardingStep4" style="display: none;">
+          <div class="onboarding-step-content">
+            <div class="onboarding-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Check your email</h2>
+            <p class="onboarding-subtitle">We've sent a verification link to <strong id="verificationEmail"></strong></p>
+            
+            <div class="onboarding-verification-info">
+              <div class="verification-steps">
+                <div class="verification-step">
+                  <div class="verification-step-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                  </div>
+                  <div class="verification-step-content">
+                    <h4>1. Check your inbox</h4>
+                    <p>Look for an email from Financial Tool</p>
+                  </div>
+                </div>
+                
+                <div class="verification-step">
+                  <div class="verification-step-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                      <path d="M9 12l2 2 4-4"/>
+                      <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                    </svg>
+                  </div>
+                  <div class="verification-step-content">
+                    <h4>2. Click the verification link</h4>
+                    <p>This will confirm your email address</p>
+                  </div>
+                </div>
+                
+                <div class="verification-step">
+                  <div class="verification-step-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                      <path d="M21 3v5h-5"/>
+                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                      <path d="M3 21v-5h5"/>
+                    </svg>
+                  </div>
+                  <div class="verification-step-content">
+                    <h4>3. Return to this page</h4>
+                    <p>Refresh the page after clicking the link</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="verification-note">
+                <p><strong>Didn't receive the email?</strong></p>
+                <ul>
+                  <li>Check your spam/junk folder</li>
+                  <li>Make sure the email address is correct</li>
+                  <li>Wait a few minutes and try again</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="onboarding-modal-footer">
+        <div class="onboarding-actions">
+          <button class="onboarding-btn onboarding-btn-secondary" id="onboardingBackBtn" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back
+          </button>
+          <button class="onboarding-btn onboarding-btn-primary" id="onboardingNextBtn">
+            Next
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
   
   <!-- Custom Date Picker Modal -->
