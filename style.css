@@ -8625,3 +8625,27 @@ body.splash-complete .mobile-bottom-nav {
   box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
   transform: scale(1.05);
 }
+
+/* ===== INCOME FLOW CHART RESPONSIVE SPACING ===== */
+/* Mobile-first responsive spacing for Income Flow Chart header */
+@media (max-width: 640px) {
+  .flex.flex-col.sm\\:flex-row.sm\\:justify-between.sm\\:items-center.gap-3 {
+    gap: 1rem !important;
+  }
+  
+  .flex.flex-col.sm\\:flex-row.sm\\:items-center.gap-3 {
+    gap: 0.75rem !important;
+  }
+  
+  /* Ensure proper spacing between total display and buttons on mobile */
+  .flex.items-center.gap-3 {
+    margin-top: 0.5rem;
+  }
+}
+
+/* Tablet and desktop spacing */
+@media (min-width: 641px) {
+  .flex.flex-col.sm\\:flex-row.sm\\:justify-between.sm\\:items-center.gap-3 {
+    gap: 1.5rem;
+  }
+}
