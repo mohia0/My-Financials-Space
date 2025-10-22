@@ -9,7 +9,8 @@ sync/
 ├── README.md                    # This documentation
 ├── sync-loader.js              # Main loader - loads all sync components
 ├── sync_optimization.js        # Core sync classes and algorithms
-└── optimized_sync_integration.js # Integration functions for the main app
+├── optimized_sync_integration.js # Integration functions for the main app
+└── test_sync_functionality.js  # Comprehensive sync testing suite
 ```
 
 ## 🔄 Loading Order
@@ -60,12 +61,32 @@ window.syncSystemStatus
 4. **Maintainable**: Easy to update individual components
 5. **Fallback**: App works even if sync optimization fails
 
+## 🧪 Testing
+
+The sync system includes comprehensive testing:
+
+```javascript
+// Run all sync tests
+runComprehensiveSyncTest();
+
+// Run individual tests
+testSyncSystemStatus();
+testFXRateExclusion();
+testChangeTracker();
+testBatchProcessor();
+testRealtimeSync();
+testPerformanceMonitor();
+```
+
+Tests automatically run in development mode (localhost).
+
 ## 🚨 Important Notes
 
 - **Don't change the loading order** - it's critical for proper initialization
 - **All files must be in the sync folder** - the loader expects this structure
 - **Test after changes** - make sure the sync system still works
 - **Check console** - look for sync system loading messages
+- **FX Rate Exclusion** - FX rates are no longer synced to cloud (fetched from API)
 
 ## 🎮 Usage in Main App
 

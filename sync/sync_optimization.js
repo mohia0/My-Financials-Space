@@ -27,8 +27,13 @@ class ChangeTracker {
     return Array.from(this.changes.values());
   }
   
-  // Clear changes after successful sync
+  // Clear changes after successful sync and store last sync data
   clearChanges() {
+    // Store the last sync data before clearing changes
+    this.changes.forEach((change, key) => {
+      this.lastSync.set(key, change.data);
+    });
+    
     this.changes.clear();
   }
   
@@ -55,24 +60,37 @@ class BatchProcessor {
   
   // Batch insert/update operations
   async batchUpsert(table, items, conflictColumn = 'id') {
+    if (!items || items.length === 0) {
+      console.log(`No items to upsert for ${table}`);
+      return [];
+    }
+    
     const batches = this.chunkArray(items, this.batchSize);
     const results = [];
     
-    for (const batch of batches) {
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
       try {
+        console.log(`Processing batch ${i + 1}/${batches.length} for ${table} (${batch.length} items)`);
+        
         const { data, error } = await this.client
           .from(table)
           .upsert(batch, { onConflict: conflictColumn });
         
-        if (error) throw error;
+        if (error) {
+          console.error(`Batch upsert error for ${table} batch ${i + 1}:`, error);
+          throw error;
+        }
+        
         results.push(data);
+        console.log(`✅ Batch ${i + 1}/${batches.length} completed for ${table}`);
         
         // Small delay between batches to avoid overwhelming the server
-        if (batches.length > 1) {
+        if (i < batches.length - 1) {
           await this.delay(this.batchDelay);
         }
       } catch (error) {
-        console.error(`Batch upsert error for ${table}:`, error);
+        console.error(`Batch upsert error for ${table} batch ${i + 1}:`, error);
         throw error;
       }
     }
@@ -226,20 +244,26 @@ class SmartSyncManager {
   handleRealtimeChange(table, payload) {
     console.log(`Real-time change detected in ${table}:`, payload);
     
-    // Update local state based on real-time changes
-    switch (table) {
-      case 'personal_expenses':
-        this.updatePersonalExpenseFromRealtime(payload);
-        break;
-      case 'business_expenses':
-        this.updateBusinessExpenseFromRealtime(payload);
-        break;
-      case 'income':
-        this.updateIncomeFromRealtime(payload);
-        break;
-      case 'user_settings':
-        this.updateSettingsFromRealtime(payload);
-        break;
+    // Use the global realtime handler if available
+    if (typeof window.handleRealtimeUpdate === 'function') {
+      window.handleRealtimeUpdate(table, payload);
+    } else {
+      console.warn('Global realtime handler not available, using fallback');
+      // Fallback: Update local state based on real-time changes
+      switch (table) {
+        case 'personal_expenses':
+          this.updatePersonalExpenseFromRealtime(payload);
+          break;
+        case 'business_expenses':
+          this.updateBusinessExpenseFromRealtime(payload);
+          break;
+        case 'income':
+          this.updateIncomeFromRealtime(payload);
+          break;
+        case 'user_settings':
+          this.updateSettingsFromRealtime(payload);
+          break;
+      }
     }
   }
   
@@ -297,35 +321,65 @@ class SmartSyncManager {
   
   // Sync changes by type using batch operations
   async syncChangesByType(type, changes) {
-    const items = changes.map(change => change.data);
+    if (!changes || changes.length === 0) {
+      console.log(`No changes to sync for type: ${type}`);
+      return;
+    }
     
-    switch (type) {
-      case 'personal_expense':
-        await this.batchProcessor.batchUpsert('personal_expenses', items);
-        break;
-      case 'business_expense':
-        await this.batchProcessor.batchUpsert('business_expenses', items);
-        break;
-      case 'income':
-        await this.batchProcessor.batchUpsert('income', items);
-        break;
-      case 'settings':
-        await this.syncSettings(items[0]);
-        break;
+    const items = changes.map(change => change.data);
+    console.log(`Syncing ${items.length} ${type} items...`);
+    
+    try {
+      switch (type) {
+        case 'personal_expense':
+          await this.batchProcessor.batchUpsert('personal_expenses', items);
+          break;
+        case 'business_expense':
+          await this.batchProcessor.batchUpsert('business_expenses', items);
+          break;
+        case 'income':
+          await this.batchProcessor.batchUpsert('income', items);
+          break;
+        case 'settings':
+          await this.syncSettings(items[0]);
+          break;
+        default:
+          console.warn(`Unknown sync type: ${type}`);
+      }
+      console.log(`✅ Successfully synced ${items.length} ${type} items`);
+    } catch (error) {
+      console.error(`❌ Failed to sync ${type} items:`, error);
+      throw error;
     }
   }
   
-  // Sync settings (single item)
+  // Sync settings (single item) - FX rate excluded since it's from API
   async syncSettings(settings) {
-    await this.client
+    // Remove fx_rate from settings before syncing
+    const settingsToSync = { ...settings };
+    delete settingsToSync.fx_rate;
+    
+    console.log('Syncing settings (FX rate excluded):', settingsToSync);
+    
+    const { data, error } = await this.client
       .from('user_settings')
-      .upsert(settings, { onConflict: 'user_id' });
+      .upsert(settingsToSync, { onConflict: 'user_id' });
+    
+    if (error) {
+      console.error('Settings sync error:', error);
+      throw error;
+    }
+    
+    console.log('✅ Settings synced successfully');
+    return data;
   }
   
-  // Start periodic sync
+  // Start periodic sync with better controls
   startPeriodicSync() {
     setInterval(() => {
-      if (this.changeTracker.getChanges().length > 0) {
+      // Only sync if there are changes and we're not already syncing
+      if (!this.isSyncing && this.changeTracker.getChanges().length > 0) {
+        console.log('🔄 Periodic sync triggered');
         this.smartSync();
       }
     }, this.syncInterval);

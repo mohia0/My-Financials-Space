@@ -19,6 +19,17 @@ syncScript.onload = function() {
     console.log('✅ Sync integration loaded');
     window.syncSystemStatus.integrationLoaded = true;
     
+    // Load test file for development/testing
+    const testScript = document.createElement('script');
+    testScript.src = 'sync/test_sync_functionality.js';
+    testScript.onload = function() {
+      console.log('✅ Sync tests loaded');
+    };
+    testScript.onerror = function() {
+      console.warn('⚠️ Sync tests not loaded (this is optional)');
+    };
+    document.head.appendChild(testScript);
+    
     // Check if all classes are available
     setTimeout(() => {
       const classesAvailable = typeof window.SmartSyncManager !== 'undefined' && 
@@ -33,6 +44,16 @@ syncScript.onload = function() {
           ChangeTracker: typeof window.ChangeTracker,
           BatchProcessor: typeof window.BatchProcessor
         });
+        
+        // Auto-run basic tests in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          setTimeout(() => {
+            if (typeof window.runComprehensiveSyncTest === 'function') {
+              console.log('🧪 Auto-running sync tests in development mode...');
+              window.runComprehensiveSyncTest();
+            }
+          }, 1000);
+        }
       } else {
         console.warn('⚠️ Sync classes not fully loaded yet');
       }

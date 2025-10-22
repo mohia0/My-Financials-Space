@@ -710,22 +710,7 @@ async function saveProfile({ fullName, file }) {
     // Optimize initial loading performance
     optimizeInitialLoad();
     
-    // Fallback: Initialize onboarding after a delay in case splash screen doesn't show
-    setTimeout(() => {
-      initializeOnboarding();
-    }, 3000);
-    
-    // Final fallback: Force show onboarding for non-signed-in users after 5 seconds
-    setTimeout(() => {
-      const isUserSignedIn = typeof currentUser !== 'undefined' && currentUser !== null;
-      const hasEnoughData = hasMinimumDataRows();
-      const modal = document.getElementById('onboardingModal');
-      
-      if (!isUserSignedIn && !hasEnoughData && modal && modal.style.display === 'none') {
-        console.log('🚨 Final fallback: Force showing onboarding for non-signed-in user');
-        showOnboardingModal();
-      }
-    }, 5000);
+    // Note: Onboarding is now handled by initializeOnboarding() called after splash screen
     
     // Initialize tooltips after DOM is fully loaded
     setTimeout(() => {
@@ -1654,6 +1639,9 @@ async function saveProfile({ fullName, file }) {
           updateAuthUI();
           updateUserDisplay();
           loadUserData();
+          
+          // Hide onboarding modal if user signs in
+          hideOnboardingModal();
           
           // Initialize optimized sync system when user signs in (stable version)
           if (typeof window.initializeOptimizedSync === 'function') {
@@ -13629,7 +13617,7 @@ function loadNonCriticalResources() {
   // Check if onboarding should be hidden after adding rows
   function checkAndHideOnboardingIfNeeded() {
     // Only check for non-signed-in users
-    if (currentUser) return;
+    if (typeof currentUser !== 'undefined' && currentUser !== null) return;
     
     // Check if user now has 3+ rows
     if (hasMinimumDataRows()) {
@@ -13647,7 +13635,7 @@ function loadNonCriticalResources() {
   // Check if onboarding should be shown again after deleting rows
   function checkAndShowOnboardingIfNeeded() {
     // Only check for non-signed-in users
-    if (currentUser) return;
+    if (typeof currentUser !== 'undefined' && currentUser !== null) return;
     
     // Check if user now has less than 3 rows
     if (!hasMinimumDataRows()) {
@@ -13664,16 +13652,23 @@ function loadNonCriticalResources() {
 
   // Initialize onboarding system
   function initializeOnboarding() {
-    // Always show onboarding for non-signed-in users unless they have 3+ rows of data
+    // Check if user is currently authenticated
+    const isUserSignedIn = typeof currentUser !== 'undefined' && currentUser !== null;
+    
+    // If user is signed in, don't show onboarding
+    if (isUserSignedIn) {
+      console.log('✅ User is signed in, skipping onboarding');
+      document.body.classList.remove('onboarding-active');
+      return;
+    }
+    
+    // Only show onboarding for non-signed-in users unless they have 3+ rows of data
     const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
     const hasEnoughData = hasMinimumDataRows();
-    
-    // More robust check for currentUser - check if it's defined and not null
-    const isUserSignedIn = typeof currentUser !== 'undefined' && currentUser !== null;
-    const shouldShowOnboarding = !isUserSignedIn && !hasEnoughData;
+    const shouldShowOnboarding = !hasEnoughData;
     
     console.log('🔍 Onboarding Check:', {
-      currentUser: currentUser,
+      currentUser: typeof currentUser !== 'undefined' ? currentUser : 'undefined',
       isUserSignedIn: isUserSignedIn,
       hasCompletedOnboarding: hasCompletedOnboarding,
       hasEnoughData: hasEnoughData,
@@ -13688,7 +13683,7 @@ function loadNonCriticalResources() {
       showOnboardingModal();
     } else {
       console.log('❌ Not showing onboarding:', {
-        reason: isUserSignedIn ? 'User is signed in' : hasEnoughData ? 'User has 3+ rows of data' : 'Unknown reason'
+        reason: hasEnoughData ? 'User has 3+ rows of data' : 'Unknown reason'
       });
       // Ensure main UI is visible
       document.body.classList.remove('onboarding-active');

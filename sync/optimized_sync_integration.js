@@ -16,6 +16,48 @@ window.optimizedSyncIntegrationLoaded = true;
 const processedRecords = new Set();
 const syncInProgress = new Set();
 
+// Global render debouncing to prevent infinite loops
+let renderDebounceTimeout = null;
+let isRendering = false;
+let syncSystemActive = false;
+
+// Data backup system to prevent data loss
+let dataBackup = null;
+let lastBackupTime = 0;
+const BACKUP_INTERVAL = 30000; // 30 seconds
+
+// Debounced render function to prevent infinite loops
+function debouncedRenderAll() {
+  if (isRendering) {
+    console.log('🔄 Render already in progress, skipping duplicate render');
+    return;
+  }
+  
+  // Clear any pending render
+  if (renderDebounceTimeout) {
+    clearTimeout(renderDebounceTimeout);
+  }
+  
+  // Debounce rendering to prevent rapid successive calls
+  renderDebounceTimeout = setTimeout(() => {
+    if (typeof renderAll === 'function') {
+      isRendering = true;
+      console.log('🎨 Rendering UI after realtime update...');
+      
+      try {
+        renderAll();
+      } catch (error) {
+        console.error('❌ Render error:', error);
+      } finally {
+        // Reset rendering flag after a short delay
+        setTimeout(() => {
+          isRendering = false;
+        }, 200);
+      }
+    }
+  }, 150); // 150ms debounce
+}
+
 // Wait for core sync classes to be loaded
 function waitForSyncClasses() {
   return new Promise((resolve) => {
@@ -68,6 +110,11 @@ async function initializeOptimizedSync() {
   await smartSyncManager.initialize();
   
   isInitialized = true;
+  syncSystemActive = true;
+  
+  // Start data backup system
+  startDataBackupSystem();
+  
   console.log('✅ Optimized sync system initialized');
 }
 
@@ -90,10 +137,9 @@ async function saveToSupabaseOptimized() {
   const startTime = performance.now();
   
   try {
-    // Track settings change
+    // Track settings change (FX rate excluded since it's fetched from API)
     const settingsData = {
       user_id: currentUser.id,
-      fx_rate: state.fx,
       theme: state.theme,
       autosave: state.autosave === 'on',
       include_annual_in_monthly: state.includeAnnualInMonthly,
@@ -103,9 +149,13 @@ async function saveToSupabaseOptimized() {
       updated_at: new Date().toISOString()
     };
     
-    smartSyncManager.trackChange('settings', currentUser.id, settingsData);
+    // Only track settings if they've actually changed
+    if (smartSyncManager.changeTracker.hasChanged('settings', currentUser.id, settingsData)) {
+      smartSyncManager.trackChange('settings', currentUser.id, settingsData);
+    }
     
     // Track personal expenses changes with deduplication
+    let personalChanges = 0;
     state.personal.forEach(expense => {
       const recordKey = `personal_${expense.id}`;
       if (smartSyncManager.changeTracker.hasChanged('personal_expense', expense.id, expense) && 
@@ -128,10 +178,16 @@ async function saveToSupabaseOptimized() {
         
         smartSyncManager.trackChange('personal_expense', expense.id, expenseData);
         processedRecords.add(recordKey);
+        personalChanges++;
       }
     });
     
+    if (personalChanges > 0) {
+      console.log(`📝 Tracking ${personalChanges} personal expense changes`);
+    }
+    
     // Track business expenses changes with deduplication
+    let businessChanges = 0;
     state.biz.forEach(expense => {
       const recordKey = `business_${expense.id}`;
       if (smartSyncManager.changeTracker.hasChanged('business_expense', expense.id, expense) && 
@@ -155,10 +211,16 @@ async function saveToSupabaseOptimized() {
         
         smartSyncManager.trackChange('business_expense', expense.id, expenseData);
         processedRecords.add(recordKey);
+        businessChanges++;
       }
     });
     
+    if (businessChanges > 0) {
+      console.log(`📝 Tracking ${businessChanges} business expense changes`);
+    }
+    
     // Track income changes with deduplication
+    let incomeChanges = 0;
     Object.keys(state.income).forEach(year => {
       state.income[year].forEach(income => {
         const recordKey = `income_${income.id}`;
@@ -182,12 +244,23 @@ async function saveToSupabaseOptimized() {
           
           smartSyncManager.trackChange('income', income.id, incomeData);
           processedRecords.add(recordKey);
+          incomeChanges++;
         }
       });
     });
     
-    // Force immediate sync
-    await smartSyncManager.forceSync();
+    if (incomeChanges > 0) {
+      console.log(`📝 Tracking ${incomeChanges} income changes`);
+    }
+    
+    // Only sync if there are actual changes
+    const totalChanges = personalChanges + businessChanges + incomeChanges;
+    if (totalChanges > 0) {
+      console.log(`🔄 Syncing ${totalChanges} total changes...`);
+      await smartSyncManager.forceSync();
+    } else {
+      console.log('✅ No changes detected, skipping sync');
+    }
     
     const duration = performance.now() - startTime;
     syncPerformanceMonitor.recordSync(duration, true);
@@ -271,6 +344,12 @@ async function instantSaveAllOptimized(source = 'general') {
 function handleRealtimeUpdate(table, payload) {
   console.log(`📡 Real-time update from ${table}:`, payload);
   
+  // Prevent sync during realtime updates to avoid loops
+  if (!syncSystemActive) {
+    console.log('🔄 Sync system not active, skipping realtime update');
+    return;
+  }
+  
   // Create a unique key for this update to prevent duplicates
   const updateKey = `${table}_${payload.new?.id || payload.old?.id}_${Date.now()}`;
   
@@ -302,8 +381,8 @@ function handleRealtimeUpdate(table, payload) {
       break;
   }
   
-  // Re-render the UI
-  renderAll();
+  // Re-render the UI with proper debouncing to prevent infinite loops
+  debouncedRenderAll();
 }
 
 // Update personal expense from real-time
@@ -312,6 +391,16 @@ function updatePersonalExpenseFromRealtime(payload) {
   
   switch (eventType) {
     case 'INSERT':
+      if (newRecord) {
+        // Check if this record already exists to prevent duplicates
+        const existingIndex = state.personal.findIndex(expense => expense.id === newRecord.id);
+        if (existingIndex === -1) {
+          // Only add if it doesn't already exist
+          const mappedRecord = mapSupabaseToLocal(newRecord, 'personal');
+          state.personal.push(mappedRecord);
+        }
+      }
+      break;
     case 'UPDATE':
       if (newRecord) {
         // Check if this record already exists to prevent duplicates
@@ -320,7 +409,7 @@ function updatePersonalExpenseFromRealtime(payload) {
           // Update existing record
           state.personal[existingIndex] = mapSupabaseToLocal(newRecord, 'personal');
         } else {
-          // Only add if it doesn't already exist
+          // Add if it doesn't exist
           const mappedRecord = mapSupabaseToLocal(newRecord, 'personal');
           state.personal.push(mappedRecord);
         }
@@ -340,6 +429,16 @@ function updateBusinessExpenseFromRealtime(payload) {
   
   switch (eventType) {
     case 'INSERT':
+      if (newRecord) {
+        // Check if this record already exists to prevent duplicates
+        const existingIndex = state.biz.findIndex(expense => expense.id === newRecord.id);
+        if (existingIndex === -1) {
+          // Only add if it doesn't already exist
+          const mappedRecord = mapSupabaseToLocal(newRecord, 'business');
+          state.biz.push(mappedRecord);
+        }
+      }
+      break;
     case 'UPDATE':
       if (newRecord) {
         // Check if this record already exists to prevent duplicates
@@ -348,7 +447,7 @@ function updateBusinessExpenseFromRealtime(payload) {
           // Update existing record
           state.biz[existingIndex] = mapSupabaseToLocal(newRecord, 'business');
         } else {
-          // Only add if it doesn't already exist
+          // Add if it doesn't exist
           const mappedRecord = mapSupabaseToLocal(newRecord, 'business');
           state.biz.push(mappedRecord);
         }
@@ -368,6 +467,21 @@ function updateIncomeFromRealtime(payload) {
   
   switch (eventType) {
     case 'INSERT':
+      if (newRecord) {
+        const year = newRecord.year.toString();
+        if (!state.income[year]) {
+          state.income[year] = [];
+        }
+        
+        // Check if this record already exists to prevent duplicates
+        const existingIndex = state.income[year].findIndex(income => income.id === newRecord.id);
+        if (existingIndex === -1) {
+          // Only add if it doesn't already exist
+          const mappedRecord = mapSupabaseToLocal(newRecord, 'income');
+          state.income[year].push(mappedRecord);
+        }
+      }
+      break;
     case 'UPDATE':
       if (newRecord) {
         const year = newRecord.year.toString();
@@ -381,7 +495,7 @@ function updateIncomeFromRealtime(payload) {
           // Update existing record
           state.income[year][existingIndex] = mapSupabaseToLocal(newRecord, 'income');
         } else {
-          // Only add if it doesn't already exist
+          // Add if it doesn't exist
           const mappedRecord = mapSupabaseToLocal(newRecord, 'income');
           state.income[year].push(mappedRecord);
         }
@@ -404,7 +518,7 @@ function updateSettingsFromRealtime(payload) {
   
   if (eventType === 'INSERT' || eventType === 'UPDATE') {
     if (newRecord) {
-      state.fx = newRecord.fx_rate || 48.1843;
+      // Note: FX rate is not synced from cloud since it's fetched from API
       state.theme = newRecord.theme || 'dark';
       state.autosave = newRecord.autosave ? 'on' : 'off';
       state.includeAnnualInMonthly = newRecord.include_annual_in_monthly !== undefined ? newRecord.include_annual_in_monthly : true;
@@ -526,7 +640,7 @@ function mapSupabaseToLocal(supabaseData, type) {
 // 7. INTEGRATION FUNCTIONS
 // ========================================
 
-// Replace the current save function
+// Replace the current save function with enhanced data persistence
 function saveOptimized(source = 'general') {
   console.log('🚀 saveOptimized called:', { source, hasSmartSync: !!smartSyncManager });
   
@@ -539,12 +653,19 @@ function saveOptimized(source = 'general') {
     return Promise.resolve();
   }
   
+  // ALWAYS save locally first to prevent data loss
+  if (typeof saveToLocal === 'function') {
+    try {
+      saveToLocal();
+      console.log('💾 Local save completed successfully');
+    } catch (error) {
+      console.error('❌ Local save failed:', error);
+    }
+  }
+  
   // Check if lock is active - if so, only save locally, not to cloud
   if (state.inputsLocked && currentUser && supabaseReady) {
-    console.log('Lock is active - saving locally only, not to cloud');
-    if (typeof saveToLocal === 'function') {
-      saveToLocal();
-    }
+    console.log('🔒 Lock is active - saving locally only, not to cloud');
     return Promise.resolve();
   }
   
@@ -552,9 +673,7 @@ function saveOptimized(source = 'general') {
   if (currentUser && supabaseReady && smartSyncManager) {
     return instantSaveAllOptimized(source);
   } else {
-    console.log('⚠️ No smart sync manager, using local save');
-    // Fallback to local save
-    saveToLocal();
+    console.log('⚠️ No smart sync manager, using local save only');
     return Promise.resolve();
   }
 }
@@ -595,6 +714,7 @@ function cleanupOptimizedSync() {
   
   syncPerformanceMonitor = null;
   isInitialized = false;
+  syncSystemActive = false;
   
   // Clear processed records and sync locks
   processedRecords.clear();
@@ -775,5 +895,95 @@ window.deduplicatePersonalExpenses = deduplicatePersonalExpenses;
 window.deduplicateBusinessExpenses = deduplicateBusinessExpenses;
 window.deduplicateIncome = deduplicateIncome;
 window.deduplicateAllData = deduplicateAllData;
+window.debouncedRenderAll = debouncedRenderAll;
+
+// ========================================
+// 13. DATA BACKUP SYSTEM
+// ========================================
+
+// Start data backup system to prevent data loss
+function startDataBackupSystem() {
+  console.log('🔄 Starting data backup system...');
+  
+  // Create initial backup
+  createDataBackup();
+  
+  // Set up periodic backups
+  setInterval(() => {
+    createDataBackup();
+  }, BACKUP_INTERVAL);
+  
+  // Backup before page unload
+  window.addEventListener('beforeunload', () => {
+    createDataBackup();
+  });
+}
+
+// Create a data backup
+function createDataBackup() {
+  if (typeof state === 'undefined' || !state) {
+    console.log('⚠️ State not available for backup');
+    return;
+  }
+  
+  try {
+    const backup = {
+      timestamp: Date.now(),
+      state: JSON.parse(JSON.stringify(state)), // Deep clone
+      columnOrder: typeof columnOrder !== 'undefined' ? columnOrder : null,
+      currentYear: typeof currentYear !== 'undefined' ? currentYear : null
+    };
+    
+    dataBackup = backup;
+    lastBackupTime = Date.now();
+    
+    // Store in localStorage as emergency backup
+    localStorage.setItem('finance-backup', JSON.stringify(backup));
+    
+    console.log('💾 Data backup created successfully');
+  } catch (error) {
+    console.error('❌ Data backup failed:', error);
+  }
+}
+
+// Restore data from backup if needed
+function restoreDataFromBackup() {
+  if (!dataBackup) {
+    console.log('⚠️ No data backup available');
+    return false;
+  }
+  
+  try {
+    console.log('🔄 Restoring data from backup...');
+    
+    if (typeof state !== 'undefined' && dataBackup.state) {
+      Object.assign(state, dataBackup.state);
+    }
+    
+    if (typeof columnOrder !== 'undefined' && dataBackup.columnOrder) {
+      columnOrder = dataBackup.columnOrder;
+    }
+    
+    if (typeof currentYear !== 'undefined' && dataBackup.currentYear) {
+      currentYear = dataBackup.currentYear;
+    }
+    
+    console.log('✅ Data restored from backup successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Data restoration failed:', error);
+    return false;
+  }
+}
+
+// Check if backup is recent and valid
+function isBackupRecent() {
+  return dataBackup && (Date.now() - lastBackupTime) < BACKUP_INTERVAL * 2;
+}
+
+// Make backup functions globally available
+window.createDataBackup = createDataBackup;
+window.restoreDataFromBackup = restoreDataFromBackup;
+window.isBackupRecent = isBackupRecent;
 
 console.log('✅ Sync integration functions loaded and made globally available');
