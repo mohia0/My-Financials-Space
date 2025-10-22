@@ -43,7 +43,11 @@ let isInitialized = false;
 // ========================================
 
 async function initializeOptimizedSync() {
-  if (!currentUser || !supabaseReady) return;
+  // Check if currentUser is defined and not null
+  if (typeof currentUser === 'undefined' || currentUser === null || !supabaseReady) {
+    console.log('❌ Failed to initialize optimized sync: currentUser not defined or supabase not ready');
+    return;
+  }
   
   // Prevent multiple initialization
   if (isInitialized) {
@@ -208,9 +212,20 @@ async function saveToSupabaseOptimized() {
 
 // Replace instantSaveAll with optimized version
 async function instantSaveAllOptimized(source = 'general') {
+  // Check if state and inputsLocked are properly defined
+  if (typeof state === 'undefined' || typeof state.inputsLocked === 'undefined') {
+    console.warn('⚠️ State or inputsLocked not properly initialized, falling back to local save');
+    if (typeof saveToLocal === 'function') {
+      saveToLocal();
+    }
+    return;
+  }
+  
   if (state.inputsLocked) {
     console.log('Lock is active - saving locally only, not to cloud');
-    saveToLocal();
+    if (typeof saveToLocal === 'function') {
+      saveToLocal();
+    }
     return;
   }
   
@@ -515,10 +530,21 @@ function mapSupabaseToLocal(supabaseData, type) {
 function saveOptimized(source = 'general') {
   console.log('🚀 saveOptimized called:', { source, hasSmartSync: !!smartSyncManager });
   
+  // Check if state and inputsLocked are properly defined
+  if (typeof state === 'undefined' || typeof state.inputsLocked === 'undefined') {
+    console.warn('⚠️ State or inputsLocked not properly initialized, falling back to local save');
+    if (typeof saveToLocal === 'function') {
+      saveToLocal();
+    }
+    return Promise.resolve();
+  }
+  
   // Check if lock is active - if so, only save locally, not to cloud
   if (state.inputsLocked && currentUser && supabaseReady) {
     console.log('Lock is active - saving locally only, not to cloud');
-    saveToLocal();
+    if (typeof saveToLocal === 'function') {
+      saveToLocal();
+    }
     return Promise.resolve();
   }
   

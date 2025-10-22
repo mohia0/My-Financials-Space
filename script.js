@@ -191,12 +191,70 @@ async function loadAuthenticatedUserData() {
   updateSplashProgress(90, 'Cloud data loaded');
 }
 
+// Fallback function for loading data when loadLocalData is not yet defined
+function loadDataFromLocalStorage() {
+  // Load custom icons from localStorage
+  if (typeof loadCustomIcons === 'function') {
+    loadCustomIcons();
+  }
+  
+  // Fallback to localStorage - COMPLETELY REPLACE state, don't merge
+  const stored = localStorage.getItem('finance-notion-v6');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      
+      // Completely reset state to avoid merging
+      // Preserve current lock state if it exists
+      const currentLockState = state.inputsLocked !== undefined ? state.inputsLocked : false;
+      state = {
+        personal: parsed.personal || [],
+        biz: parsed.biz || [],
+        income: {},
+        fx: parsed.fx || 48.1843,
+        theme: parsed.theme || 'dark',
+        autosave: parsed.autosave || 'on',
+        selectedCurrency: parsed.selectedCurrency || 'EGP',
+        currencySymbol: parsed.currencySymbol || 'EGP',
+        currencyRate: parsed.currencyRate || parsed.fx || 48.1843,
+        includeAnnualInMonthly: parsed.includeAnnualInMonthly !== undefined ? parsed.includeAnnualInMonthly : true,
+        inputsLocked: currentLockState
+      };
+      
+      // Load income data
+      if (parsed.income) {
+        state.income = parsed.income;
+      }
+      
+      console.log('✅ Local data loaded from localStorage fallback');
+    } catch (error) {
+      console.error('❌ Error loading local data:', error);
+    }
+  }
+  
+  // Initialize theme
+  if (typeof initializeTheme === 'function') {
+    initializeTheme();
+  }
+  
+  // Initialize currency
+  if (typeof initializeCurrency === 'function') {
+    initializeCurrency();
+  }
+}
+
 // Load data for local users
 async function loadLocalUserData() {
   updateSplashProgress(30, 'Loading local data...');
   
-  // Load local data
+  // Load local data - check if function exists
+  if (typeof loadLocalData === 'function') {
   loadLocalData();
+  } else {
+    console.warn('loadLocalData function not yet defined, using fallback');
+    // Fallback: load data directly
+    loadDataFromLocalStorage();
+  }
   
   updateSplashProgress(70, 'Local data loaded');
 }
@@ -1212,15 +1270,24 @@ async function saveProfile({ fullName, file }) {
     }
     
     function createYearTabsFromData(incomeData) {
+      console.log('🔧 createYearTabsFromData called with:', incomeData);
       const yearTabsContainer = $('#yearTabsContainer');
-      if (!yearTabsContainer) return;
+      if (!yearTabsContainer) {
+        console.error('❌ Year tabs container not found!');
+        return;
+      }
       
       // Clear existing year tabs (except the manage button)
       const existingTabs = yearTabsContainer.querySelectorAll('.year-tab');
       existingTabs.forEach(tab => tab.remove());
       
+      // Use provided data or fall back to state.income
+      const dataToUse = incomeData || state.income || {};
+      console.log('📊 Using data:', dataToUse);
+      
       // Get years from data
-      const dataYears = Object.keys(incomeData).map(year => parseInt(year));
+      const dataYears = Object.keys(dataToUse).map(year => parseInt(year));
+      console.log('📅 Found years:', dataYears);
       
       let years = [];
       
@@ -1239,7 +1306,9 @@ async function saveProfile({ fullName, file }) {
       years.sort((a, b) => a - b);
       
       // Create year tabs for all years
+      console.log('🔧 Creating year tabs for years:', years);
       years.forEach(year => {
+        console.log(`🔧 Creating tab for year ${year}`);
         const yearTab = document.createElement('button');
         yearTab.className = 'year-tab';
         yearTab.setAttribute('data-year', year);
@@ -1249,6 +1318,7 @@ async function saveProfile({ fullName, file }) {
         // Insert before manage button
         const manageBtn = $('#manageYearsBtn');
         yearTabsContainer.insertBefore(yearTab, manageBtn);
+        console.log(`✅ Tab created for year ${year}`);
       });
       
       // Set current year as active if no current year is set
@@ -10898,6 +10968,17 @@ function loadNonCriticalResources() {
 
     // Settings modal
     $('#btnSettings').addEventListener('click', ()=>{ 
+      console.log('🔧 Settings button clicked');
+      
+      // Check if settings modal exists
+      const settingsModal = $('#settings');
+      if (!settingsModal) {
+        console.error('❌ Settings modal not found!');
+        return;
+      }
+      
+      console.log('✅ Settings modal found, opening...');
+      
       $('#inputFx').value = state.currencyRate; 
       $('#inputIncludeAnnual').value = state.includeAnnualInMonthly ? 'true' : 'false';
       $('#inputDeleteConfirm').value = '';
@@ -10914,12 +10995,21 @@ function loadNonCriticalResources() {
       }
       
       // Update last refresh time display
+      if (typeof updateLastRefreshDisplay === 'function') {
       updateLastRefreshDisplay();
+      }
       
       // Test API connection and log available currencies
+      if (typeof testCurrencyAPI === 'function') {
       testCurrencyAPI();
+      }
       
+      try {
       $('#settings').showModal(); 
+        console.log('✅ Settings modal opened successfully');
+      } catch (error) {
+        console.error('❌ Error opening settings modal:', error);
+      }
     });
     
     // Click outside to close modal
@@ -11935,19 +12025,19 @@ function loadNonCriticalResources() {
           
           <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-              <input type="checkbox" id="importPersonal" style="accent-color: var(--primary);">
+              <input type="checkbox" id="importPersonal" checked style="accent-color: var(--primary);">
               <span style="color: var(--fg); font-size: 0.8rem;">Personal Expenses</span>
             </label>
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-              <input type="checkbox" id="importBiz" style="accent-color: var(--primary);">
+              <input type="checkbox" id="importBiz" checked style="accent-color: var(--primary);">
               <span style="color: var(--fg); font-size: 0.8rem;">Business Expenses</span>
             </label>
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-              <input type="checkbox" id="importIncome" style="accent-color: var(--primary);">
+              <input type="checkbox" id="importIncome" checked style="accent-color: var(--primary);">
               <span style="color: var(--fg); font-size: 0.8rem;">Income Data (All Years)</span>
             </label>
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-              <input type="checkbox" id="importSettings" style="accent-color: var(--primary);">
+              <input type="checkbox" id="importSettings" checked style="accent-color: var(--primary);">
               <span style="color: var(--fg); font-size: 0.8rem;">Settings & Preferences</span>
             </label>
           </div>
@@ -11994,10 +12084,30 @@ function loadNonCriticalResources() {
           reader.onload = (e) => {
             try {
               const importedData = JSON.parse(e.target.result);
+              console.log('📥 Importing data:', importedData);
+              
+              // Validate the imported data structure
+              if (!importedData || typeof importedData !== 'object') {
+                throw new Error('Invalid JSON structure - data must be an object');
+              }
+              
               const replaceExisting = document.getElementById('replaceExisting').checked;
+              
+              // Check if at least one import option is selected
+              const importPersonal = document.getElementById('importPersonal').checked;
+              const importBiz = document.getElementById('importBiz').checked;
+              const importIncome = document.getElementById('importIncome').checked;
+              const importSettings = document.getElementById('importSettings').checked;
+              
+              if (!importPersonal && !importBiz && !importIncome && !importSettings) {
+                throw new Error('Please select at least one data type to import');
+              }
+              
+              console.log('📥 Import options:', { importPersonal, importBiz, importIncome, importSettings, replaceExisting });
               
               // Import selected data
               if (document.getElementById('importPersonal').checked && importedData.personal) {
+                console.log('📥 Importing personal data:', importedData.personal.length, 'items');
                 if (replaceExisting) {
                   // Clear existing data first
                   state.personal = [];
@@ -12009,9 +12119,11 @@ function loadNonCriticalResources() {
                   return cleanItem;
                 });
                 state.personal = [...state.personal, ...newPersonalData];
+                console.log('✅ Personal data imported successfully');
               }
               
               if (document.getElementById('importBiz').checked && importedData.biz) {
+                console.log('📥 Importing business data:', importedData.biz.length, 'items');
                 if (replaceExisting) {
                   // Clear existing data first
                   state.biz = [];
@@ -12023,15 +12135,18 @@ function loadNonCriticalResources() {
                   return cleanItem;
                 });
                 state.biz = [...state.biz, ...newBizData];
+                console.log('✅ Business data imported successfully');
               }
               
               if (document.getElementById('importIncome').checked && importedData.income) {
+                console.log('📥 Importing income data:', Object.keys(importedData.income).length, 'years');
                 if (replaceExisting) {
                   // Clear existing income data first
                   state.income = {};
                 }
                 // Merge income data by year and clear IDs to prevent duplicates
                 Object.keys(importedData.income).forEach(year => {
+                  console.log(`📥 Importing year ${year}:`, importedData.income[year].length, 'items');
                   if (!state.income[year]) {
                     state.income[year] = [];
                   }
@@ -12051,7 +12166,9 @@ function loadNonCriticalResources() {
                 
                 
                 // Update year tabs UI to show imported years
+                console.log('📅 Creating year tabs for imported data');
                 createYearTabsFromData(state.income);
+                console.log('✅ Year tabs created successfully');
                 
                 // Save imported income rows to Supabase sequentially
                 if (currentUser && supabaseReady) {
@@ -12084,13 +12201,30 @@ function loadNonCriticalResources() {
                 window.deduplicateAllData();
               }
               
+              // Final validation - check if any data was actually imported
+              let importedCount = 0;
+              if (importPersonal && importedData.personal) importedCount += importedData.personal.length;
+              if (importBiz && importedData.biz) importedCount += importedData.biz.length;
+              if (importIncome && importedData.income) {
+                Object.values(importedData.income).forEach(yearData => {
+                  importedCount += yearData.length;
+                });
+              }
+              
+              if (importedCount === 0) {
+                throw new Error('No data found to import. Please check your file format.');
+              }
+              
+              console.log(`✅ Import completed: ${importedCount} items imported`);
+              
               save();
               renderAll(true); // User action - enable animations
               document.body.removeChild(modal);
-              showNotification('📥 Data imported successfully', 'success', 2000, { force: true });
+              showNotification(`📥 Data imported successfully (${importedCount} items)`, 'success', 2000, { force: true });
               
             } catch (error) {
-              showNotification('Invalid file format', 'error', 3000);
+              console.error('❌ Import error:', error);
+              showNotification(`Import failed: ${error.message}`, 'error', 5000);
             }
           };
           reader.readAsText(file);
@@ -12111,17 +12245,45 @@ function loadNonCriticalResources() {
       reader.onload = (e)=>{
         try {
           const importedData = JSON.parse(e.target.result);
+          console.log('📥 Importing data (old method):', importedData);
+          
+          // Validate the imported data structure
+          if (!importedData || typeof importedData !== 'object') {
+            throw new Error('Invalid JSON structure - data must be an object');
+          }
+          
           if (confirm('This will replace all current data. Continue?')) {
             state = importedData;
-            // Clear IDs for new data to be created in Firebase
-            state.personal.forEach(item => delete item.id);
-            state.biz.forEach(item => delete item.id);
+            
+            // Clear IDs for new data to be created in Firebase/Supabase
+            if (state.personal) {
+              state.personal.forEach(item => delete item.id);
+            }
+            if (state.biz) {
+              state.biz.forEach(item => delete item.id);
+            }
+            
+            // Clear IDs for income data and create year tabs
+            if (state.income) {
+              Object.keys(state.income).forEach(year => {
+                if (state.income[year]) {
+                  state.income[year].forEach(item => delete item.id);
+                }
+              });
+              
+              // Create year tabs for imported income data
+              if (typeof createYearTabsFromData === 'function') {
+                createYearTabsFromData(state.income);
+              }
+            }
+            
             save();
             renderAll(true); // User action - enable animations
-            showNotification('Data imported', 'success', 2000);
+            showNotification('Data imported successfully', 'success', 2000);
           }
         } catch (error) {
-          showNotification('Invalid file format', 'error', 3000);
+          console.error('❌ Import error:', error);
+          showNotification(`Import failed: ${error.message}`, 'error', 5000);
         }
       };
       reader.readAsText(file);
