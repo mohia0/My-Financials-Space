@@ -882,6 +882,8 @@ async function saveProfile({ fullName, file }) {
         // Re-initialize tooltips for the new page
         setTimeout(() => {
           initializeTooltips();
+          // Trigger first-time page animations
+          triggerFirstTimePageAnimations('expenses');
         }, 100);
       } else if (page === 'income') {
         tabExpenses?.classList.remove('active');
@@ -902,6 +904,8 @@ async function saveProfile({ fullName, file }) {
         // Re-initialize tooltips for the new page
         setTimeout(() => {
           initializeTooltips();
+          // Trigger first-time page animations
+          triggerFirstTimePageAnimations('income');
         }, 100);
       } else if (page === 'analytics') {
         tabExpenses?.classList.remove('active');
@@ -916,6 +920,8 @@ async function saveProfile({ fullName, file }) {
         // Re-initialize tooltips for the new page
         setTimeout(() => {
           initializeTooltips();
+          // Trigger first-time page animations
+          triggerFirstTimePageAnimations('analytics');
         }, 100);
         
         // Update analytics page data
@@ -939,6 +945,35 @@ async function saveProfile({ fullName, file }) {
         activeBtn.classList.add('active');
       }
     }
+
+    // Ensure mobile navigation stays within viewport bounds
+    function ensureMobileNavPositioning() {
+      const mobileNav = document.querySelector('.mobile-bottom-nav');
+      if (!mobileNav) return;
+      
+      // Force proper positioning
+      mobileNav.style.position = 'fixed';
+      mobileNav.style.bottom = '0';
+      mobileNav.style.left = '0';
+      mobileNav.style.right = '0';
+      mobileNav.style.width = '100%';
+      mobileNav.style.maxWidth = '100vw';
+      mobileNav.style.zIndex = '1000';
+      
+      // Ensure it doesn't go outside viewport
+      const viewportWidth = window.innerWidth;
+      const navWidth = mobileNav.offsetWidth;
+      
+      if (navWidth > viewportWidth) {
+        mobileNav.style.width = `${viewportWidth}px`;
+        mobileNav.style.maxWidth = '100vw';
+      }
+    }
+
+    // Call on window resize and load
+    window.addEventListener('resize', ensureMobileNavPositioning);
+    window.addEventListener('load', ensureMobileNavPositioning);
+    document.addEventListener('DOMContentLoaded', ensureMobileNavPositioning);
     
     // Mobile navigation function (called from HTML onclick)
     function switchPage(page) {
@@ -1121,6 +1156,7 @@ async function saveProfile({ fullName, file }) {
       const existingPanel = document.querySelector('.year-management-panel');
       if (existingPanel) {
         existingPanel.remove();
+        return; // Toggle off if already open
       }
       
       // Create year management panel
@@ -1199,19 +1235,78 @@ async function saveProfile({ fullName, file }) {
         </div>
       `;
       
-      // Position panel
-      manageBtn.style.position = 'relative';
-      manageBtn.appendChild(panel);
+      // Position panel using fixed positioning to avoid table conflicts
+      const btnRect = manageBtn.getBoundingClientRect();
+      const panelWidth = 160; // min-width from CSS
+      const panelHeight = 200; // estimated height
       
-      // Close panel when clicking outside
+      // Calculate position to avoid going off-screen
+      let left = btnRect.right - panelWidth;
+      let top = btnRect.bottom + 4;
+      
+      // Ensure panel doesn't go off the right edge
+      if (left < 10) {
+        left = 10;
+      }
+      
+      // Ensure panel doesn't go off the bottom edge
+      if (top + panelHeight > window.innerHeight - 10) {
+        top = btnRect.top - panelHeight - 4;
+      }
+      
+      // Fallback for very small screens - center the panel
+      if (window.innerWidth < 300) {
+        left = Math.max(10, (window.innerWidth - panelWidth) / 2);
+      }
+      
+      // Apply fixed positioning
+      panel.style.position = 'fixed';
+      panel.style.top = `${top}px`;
+      panel.style.left = `${left}px`;
+      panel.style.zIndex = '99999';
+      
+      // Append to body instead of button to avoid clipping
+      document.body.appendChild(panel);
+      
+      // Close panel when clicking outside with improved event handling
       setTimeout(() => {
-        document.addEventListener('click', function closePanel(e) {
-          if (!panel.contains(e.target) && e.target !== manageBtn) {
+        const closePanel = (e) => {
+          if (!panel.contains(e.target) && e.target !== manageBtn && !manageBtn.contains(e.target)) {
             panel.remove();
             document.removeEventListener('click', closePanel);
+            document.removeEventListener('touchstart', closePanel);
+            window.removeEventListener('resize', repositionPanel);
           }
+        };
+        
+        // Function to reposition panel on window resize
+        const repositionPanel = () => {
+          const btnRect = manageBtn.getBoundingClientRect();
+          const panelWidth = 160;
+          const panelHeight = 200;
+          
+          let left = btnRect.right - panelWidth;
+          let top = btnRect.bottom + 4;
+          
+          if (left < 10) left = 10;
+          if (top + panelHeight > window.innerHeight - 10) {
+            top = btnRect.top - panelHeight - 4;
+          }
+          
+          panel.style.top = `${top}px`;
+          panel.style.left = `${left}px`;
+        };
+        
+        // Add both click and touch events for better mobile support
+        document.addEventListener('click', closePanel);
+        document.addEventListener('touchstart', closePanel);
+        window.addEventListener('resize', repositionPanel);
+        
+        // Prevent panel clicks from bubbling up
+        panel.addEventListener('click', (e) => {
+          e.stopPropagation();
         });
-      }, 100);
+      }, 50);
     }
     
     function refreshYearManagementPanel() {
@@ -3454,13 +3549,10 @@ async function saveProfile({ fullName, file }) {
         // Authentication step
         incrementSplashProgress('authentication');
         
-        // CRITICAL: Only clear existing data on first load, not during refresh
-        // This prevents the jarring reset to 0 during refresh operations
-        if (isFirstLoad) {
-          state.personal = [];
-          state.biz = [];
-          state.income = {};
-        }
+        // CRITICAL: Clear existing data to prevent duplication
+        state.personal = [];
+        state.biz = [];
+        state.income = {};
         
         // Load custom icons from localStorage first
         loadCustomIcons();
@@ -5675,164 +5767,6 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
-    // Smooth refresh function that doesn't cause visual disruption
-    function smoothRefreshData() {
-      const refreshIcon = document.getElementById('iconRefresh');
-      const syncStatus = document.getElementById('syncStatus');
-      const originalTransform = refreshIcon.style.transform;
-      
-      // Update sync status
-      updateSyncStatus('syncing');
-      
-      // Add spinning animation
-      refreshIcon.style.transform = 'rotate(360deg)';
-      refreshIcon.style.transition = 'transform 0.5s ease';
-      
-      // Only load fresh data from cloud - no saving, no visual disruption
-      if (currentUser && supabaseReady) {
-        // Use new sync system if available
-        if (typeof window.loadFromSupabase === 'function' && window.syncSystemReady) {
-          window.loadFromSupabase().then(() => {
-            updateSyncStatus('success');
-            showNotification('Data synced from cloud', 'success', 2000, { force: true });
-            resetRefreshIcon();
-          }).catch((error) => {
-            console.error('❌ Sync load failed, falling back to regular load:', error);
-            loadUserData().then(() => {
-              updateSyncStatus('success');
-              showNotification('Data synced from cloud', 'success', 2000, { force: true });
-              resetRefreshIcon();
-            }).catch((error) => {
-              updateSyncStatus('error');
-              showNotification('Cloud sync failed', 'error', 2000);
-              resetRefreshIcon();
-            });
-          });
-        } else {
-          // Fallback to regular load
-          loadUserData().then(() => {
-            updateSyncStatus('success');
-            showNotification('Data synced from cloud', 'success', 2000, { force: true });
-            resetRefreshIcon();
-          }).catch((error) => {
-            updateSyncStatus('error');
-            showNotification('Cloud sync failed', 'error', 2000);
-            resetRefreshIcon();
-          });
-        }
-      } else {
-        updateSyncStatus('offline');
-        showNotification('Not connected to cloud', 'info', 2000);
-        resetRefreshIcon();
-      }
-      
-      function resetRefreshIcon() {
-        setTimeout(() => {
-          refreshIcon.style.transform = originalTransform;
-          // Keep success status for 2 seconds, then hide
-          if (syncStatus.classList.contains('success')) {
-            setTimeout(() => {
-              updateSyncStatus('');
-            }, 2000);
-          }
-        }, 500);
-      }
-    }
-    
-    // Smooth data update function that preserves existing data during refresh
-    function smoothUpdateData(newData) {
-      // Update data without clearing existing values
-      if (newData.personal && Array.isArray(newData.personal)) {
-        // Merge new personal data with existing, preserving order
-        const existingPersonal = state.personal || [];
-        const newPersonal = newData.personal;
-        
-        // Update existing items and add new ones
-        newPersonal.forEach(newItem => {
-          const existingIndex = existingPersonal.findIndex(item => item.id === newItem.id);
-          if (existingIndex !== -1) {
-            // Update existing item
-            existingPersonal[existingIndex] = newItem;
-          } else {
-            // Add new item
-            existingPersonal.push(newItem);
-          }
-        });
-        
-        state.personal = existingPersonal;
-      }
-      
-      if (newData.business && Array.isArray(newData.business)) {
-        // Merge new business data with existing, preserving order
-        const existingBusiness = state.biz || [];
-        const newBusiness = newData.business;
-        
-        // Update existing items and add new ones
-        newBusiness.forEach(newItem => {
-          const existingIndex = existingBusiness.findIndex(item => item.id === newItem.id);
-          if (existingIndex !== -1) {
-            // Update existing item
-            existingBusiness[existingIndex] = newItem;
-          } else {
-            // Add new item
-            existingBusiness.push(newItem);
-          }
-        });
-        
-        state.biz = existingBusiness;
-      }
-      
-      if (newData.income && Array.isArray(newData.income)) {
-        // Update income data by year
-        const incomeByYear = {};
-        newData.income.forEach(income => {
-          const year = income.year.toString();
-          if (!incomeByYear[year]) {
-            incomeByYear[year] = [];
-          }
-          incomeByYear[year].push(income);
-        });
-        
-        // Merge with existing income data
-        Object.keys(incomeByYear).forEach(year => {
-          if (state.income[year]) {
-            // Update existing year data
-            const existingYearData = state.income[year];
-            const newYearData = incomeByYear[year];
-            
-            newYearData.forEach(newItem => {
-              const existingIndex = existingYearData.findIndex(item => item.id === newItem.id);
-              if (existingIndex !== -1) {
-                // Update existing item
-                existingYearData[existingIndex] = newItem;
-              } else {
-                // Add new item
-                existingYearData.push(newItem);
-              }
-            });
-          } else {
-            // Add new year data
-            state.income[year] = incomeByYear[year];
-          }
-        });
-      }
-      
-      // Update settings if provided
-      if (newData.settings) {
-        if (newData.settings.fx_rate !== undefined) state.fx = newData.settings.fx_rate;
-        if (newData.settings.theme !== undefined) state.theme = newData.settings.theme;
-        if (newData.settings.autosave !== undefined) state.autosave = newData.settings.autosave ? 'on' : 'off';
-        if (newData.settings.include_annual_in_monthly !== undefined) state.includeAnnualInMonthly = newData.settings.include_annual_in_monthly;
-        if (newData.settings.inputs_locked !== undefined) state.inputsLocked = newData.settings.inputs_locked;
-        if (newData.settings.preferred_currency !== undefined) {
-          state.selectedCurrency = newData.settings.preferred_currency;
-          if (typeof updateCurrency === 'function') {
-            updateCurrency(newData.settings.preferred_currency);
-          }
-        }
-      }
-    }
-    
     function updateSyncStatus(status) {
       const syncStatus = document.getElementById('syncStatus');
       if (!syncStatus) return;
@@ -5899,8 +5833,8 @@ async function saveProfile({ fullName, file }) {
     // Initial connection check
     checkConnectionStatus();
 
-    // Manual refresh button - use smooth refresh to prevent visual disruption
-    $('#btnRefresh').addEventListener('click', smoothRefreshData);
+    // Manual refresh button
+    $('#btnRefresh').addEventListener('click', refreshData);
     
     // Initialize currency dropdown functionality
     function initializeCurrencyDropdown() {
@@ -8105,6 +8039,42 @@ async function saveProfile({ fullName, file }) {
       container.classList.add('loading');
     }
 
+    // Animation state tracking for first-time page visits
+    let animationState = {
+      hasAnimated: {
+        expenses: false,
+        income: false,
+        analytics: false
+      }
+    };
+
+    // Reset animation state for a specific page
+    function resetPageAnimationState(page) {
+      if (page && animationState.hasAnimated[page] !== undefined) {
+        animationState.hasAnimated[page] = false;
+      }
+    }
+
+    // Reset all animation states
+    function resetAllAnimationStates() {
+      animationState.hasAnimated.expenses = false;
+      animationState.hasAnimated.income = false;
+      animationState.hasAnimated.analytics = false;
+    }
+
+    // Reset animation state when data changes significantly
+    function resetAnimationsOnDataChange() {
+      // Reset all animation states so users can see animations again
+      resetAllAnimationStates();
+      
+      // If currently on a page, trigger animations again
+      if (currentPage && animationState.hasAnimated[currentPage] === false) {
+        setTimeout(() => {
+          triggerFirstTimePageAnimations(currentPage);
+        }, 100);
+      }
+    }
+
     // Synchronized animation for numbers and progress bars
     // Usage example:
     // animateCardSynchronized({
@@ -8139,6 +8109,209 @@ async function saveProfile({ fullName, file }) {
           animateProgressBar(bar.containerId, bar.targetWidth, 1200);
         }, barDelay);
       });
+    }
+
+    // First-time page loading animations
+    function triggerFirstTimePageAnimations(page) {
+      if (animationState.hasAnimated[page]) return;
+      
+      setTimeout(() => {
+        if (page === 'expenses') {
+          animateExpensesPageFirstTime();
+        } else if (page === 'income') {
+          animateIncomePageFirstTime();
+        } else if (page === 'analytics') {
+          animateAnalyticsPageFirstTime();
+        }
+        
+        animationState.hasAnimated[page] = true;
+      }, 300); // Small delay to ensure page is fully loaded
+    }
+
+    // Expenses page first-time animation
+    function animateExpensesPageFirstTime() {
+      const p = totals(state.personal);
+      const b = totals(state.biz);
+      const all = totals([...state.personal, ...state.biz]);
+      
+      // All KPI Card
+      const allCardData = {
+        numbers: [
+          { id: 'kpiAllMonthlyUSD', value: nfUSD.format(all.mUSD) },
+          { id: 'kpiAllMonthlyEGP', value: formatCurrency(all.mSelected) },
+          { id: 'kpiAllYearlyUSD', value: nfUSD.format(all.yUSD) },
+          { id: 'kpiAllYearlyEGP', value: formatCurrency(all.ySelected) }
+        ],
+        progressBars: [
+          { containerId: 'sharePersonalBarContainer', targetWidth: Math.round((p.mUSD/all.mUSD)*100) || 0 },
+          { containerId: 'shareBizBarContainer', targetWidth: Math.round((b.mUSD/all.mUSD)*100) || 0 }
+        ]
+      };
+      
+      animateCardSynchronized(allCardData, 0);
+      
+      // Personal KPI Card
+      const personalCardData = {
+        numbers: [
+          { id: 'kpiPersonalMonthly', value: nfUSD.format(p.mUSD) },
+          { id: 'kpiPersonalMonthlyEGP', value: formatCurrency(p.mSelected) },
+          { id: 'kpiPersonalYearly', value: nfUSD.format(p.yUSD) },
+          { id: 'kpiPersonalYearlyEGP', value: formatCurrency(p.ySelected) }
+        ],
+        progressBars: []
+      };
+      
+      animateCardSynchronized(personalCardData, 200);
+      
+      // Business KPI Card
+      const bizCardData = {
+        numbers: [
+          { id: 'kpiBizMonthly', value: nfUSD.format(b.mUSD) },
+          { id: 'kpiBizMonthlyEGP', value: formatCurrency(b.mSelected) },
+          { id: 'kpiBizYearly', value: nfUSD.format(b.yUSD) },
+          { id: 'kpiBizYearlyEGP', value: formatCurrency(b.ySelected) }
+        ],
+        progressBars: []
+      };
+      
+      animateCardSynchronized(bizCardData, 400);
+    }
+
+    // Income page first-time animation
+    function animateIncomePageFirstTime() {
+      const i = totals(state.income);
+      const lifetimeIncome = calculateLifetimeIncome();
+      
+      // Lifetime Income Card
+      const lifetimeCardData = {
+        numbers: [
+          { id: 'kpiIncomeAllMonthlyUSD', value: nfUSD.format(lifetimeIncome.monthlyUSD) },
+          { id: 'kpiIncomeAllMonthlyEGP', value: formatCurrency(lifetimeIncome.monthlySelected) },
+          { id: 'kpiIncomeAllYearlyUSD', value: nfUSD.format(lifetimeIncome.yearlyUSD) },
+          { id: 'kpiIncomeAllYearlyEGP', value: formatCurrency(lifetimeIncome.yearlySelected) }
+        ],
+        progressBars: []
+      };
+      
+      animateCardSynchronized(lifetimeCardData, 0);
+      
+      // Monthly Income Card
+      const monthlyCardData = {
+        numbers: [
+          { id: 'kpiIncomeMonthlyCurrent', value: nfUSD.format(i.mUSD) },
+          { id: 'kpiIncomeMonthlyCurrentEGP', value: formatCurrency(i.mSelected) },
+          { id: 'kpiIncomeMonthlyAvg', value: nfUSD.format(lifetimeIncome.monthlyUSD) },
+          { id: 'kpiIncomeMonthlyAvgEGP', value: formatCurrency(lifetimeIncome.monthlySelected) }
+        ],
+        progressBars: []
+      };
+      
+      animateCardSynchronized(monthlyCardData, 200);
+      
+      // Yearly Income Card
+      const yearlyCardData = {
+        numbers: [
+          { id: 'kpiIncomeYearlyCurrent', value: nfUSD.format(i.yUSD) },
+          { id: 'kpiIncomeYearlyCurrentEGP', value: formatCurrency(i.ySelected) },
+          { id: 'kpiIncomeYearlyTarget', value: nfUSD.format(lifetimeIncome.yearlyUSD * 1.2) },
+          { id: 'kpiIncomeYearlyTargetEGP', value: formatCurrency(lifetimeIncome.yearlySelected * 1.2) }
+        ],
+        progressBars: []
+      };
+      
+      animateCardSynchronized(yearlyCardData, 400);
+    }
+
+    // Analytics page first-time animation
+    function animateAnalyticsPageFirstTime() {
+      const p = totals(state.personal);
+      const b = totals(state.biz);
+      const all = totals([...state.personal, ...state.biz]);
+      const i = totals(state.income);
+      const lifetimeIncome = calculateLifetimeIncome();
+      
+      // Calculate analytics values
+      const netCashFlow = {
+        mUSD: i.mUSD - all.mUSD,
+        yUSD: i.yUSD - all.yUSD,
+        mSelected: i.mSelected - all.mSelected,
+        ySelected: i.ySelected - all.ySelected
+      };
+      
+      const savingsRateMonthly = i.mUSD > 0 ? ((netCashFlow.mUSD / i.mUSD) * 100) : 0;
+      const savingsRateYearly = i.yUSD > 0 ? ((netCashFlow.yUSD / i.yUSD) * 100) : 0;
+      
+      const personalEfficiency = i.mUSD > 0 ? (p.mUSD / i.mUSD) * 100 : 0;
+      const businessEfficiency = i.mUSD > 0 ? (b.mUSD / i.mUSD) * 100 : 0;
+      const totalEfficiency = personalEfficiency + businessEfficiency;
+      
+      // Calculate health score
+      let healthScore = 0;
+      if (savingsRateMonthly > 0) healthScore += Math.min(40, savingsRateMonthly * 2);
+      if (totalEfficiency < 70) healthScore += 30;
+      if (netCashFlow.mUSD > 0) healthScore += 30;
+      
+      // Cash Flow Card
+      const cashFlowData = {
+        numbers: [
+          { id: 'analyticsCashFlowMonthlyUSD', value: nfUSD.format(netCashFlow.mUSD) },
+          { id: 'analyticsCashFlowMonthlyEGP', value: formatCurrency(netCashFlow.mSelected) },
+          { id: 'analyticsCashFlowYearlyUSD', value: nfUSD.format(netCashFlow.yUSD) },
+          { id: 'analyticsCashFlowYearlyEGP', value: formatCurrency(netCashFlow.ySelected) }
+        ],
+        progressBars: [
+          { containerId: 'analyticsIncomeBarContainer', targetWidth: Math.min(100, (i.mUSD / Math.max(i.mUSD, all.mUSD)) * 100) },
+          { containerId: 'analyticsExpensesBarContainer', targetWidth: Math.min(100, (all.mUSD / Math.max(i.mUSD, all.mUSD)) * 100) }
+        ]
+      };
+      
+      animateCardSynchronized(cashFlowData, 0);
+      
+      // Savings Rate Card
+      const savingsData = {
+        numbers: [
+          { id: 'analyticsSavingsRateMonthly', value: savingsRateMonthly.toFixed(1) + '%' },
+          { id: 'analyticsSavingsRateYearly', value: savingsRateYearly.toFixed(1) + '%' },
+          { id: 'analyticsSavingsTarget', value: savingsRateMonthly.toFixed(1) + '%' }
+        ],
+        progressBars: [
+          { containerId: 'analyticsSavingsProgressBarContainer', targetWidth: Math.min(100, (savingsRateMonthly / 20) * 100) }
+        ]
+      };
+      
+      animateCardSynchronized(savingsData, 200);
+      
+      // Efficiency Card
+      const efficiencyData = {
+        numbers: [
+          { id: 'analyticsPersonalEfficiency', value: personalEfficiency.toFixed(1) + '%' },
+          { id: 'analyticsBusinessEfficiency', value: businessEfficiency.toFixed(1) + '%' },
+          { id: 'analyticsTotalEfficiency', value: totalEfficiency.toFixed(1) + '%' }
+        ],
+        progressBars: [
+          { containerId: 'analyticsEfficiencyBarContainer', targetWidth: Math.max(0, 100 - totalEfficiency) }
+        ]
+      };
+      
+      animateCardSynchronized(efficiencyData, 400);
+      
+      // Health Card
+      const healthGrade = healthScore >= 90 ? 'A+' : healthScore >= 80 ? 'A' : healthScore >= 70 ? 'B+' : 
+                         healthScore >= 60 ? 'B' : healthScore >= 50 ? 'C+' : healthScore >= 40 ? 'C' : 
+                         healthScore >= 30 ? 'D+' : healthScore >= 20 ? 'D' : 'F';
+      
+      const healthData = {
+        numbers: [
+          { id: 'analyticsHealthScore', value: Math.round(healthScore) },
+          { id: 'analyticsHealthGrade', value: healthGrade },
+          { id: 'analyticsHealthProgress', value: Math.round(healthScore) + '%' }
+        ],
+        progressBars: [
+          { containerId: 'analyticsHealthBarContainer', targetWidth: healthScore }
+        ]
+      };
+      
+      animateCardSynchronized(healthData, 600);
     }
     
     function resetAllProgressBars() {
@@ -12925,29 +13098,26 @@ function loadNonCriticalResources() {
       }
     });
     
-    // Show loading skeletons for optimized duration (only on first load, not during refresh)
+    // Show loading skeletons for optimized duration
     const loadingSkeleton = document.getElementById('loading-skeleton');
     const loadingSkeletonBiz = document.getElementById('loading-skeleton-biz');
     
-    // Only show skeletons on first load, not during refresh operations
-    if (isFirstLoad) {
+    if (loadingSkeleton) {
+      loadingSkeleton.classList.remove('hidden');
+    }
+    if (loadingSkeletonBiz) {
+      loadingSkeletonBiz.classList.remove('hidden');
+    }
+    
+    // Hide skeletons after optimized loading time (reduced from 2000ms to 800ms)
+    setTimeout(() => {
       if (loadingSkeleton) {
-        loadingSkeleton.classList.remove('hidden');
+        loadingSkeleton.classList.add('hidden');
       }
       if (loadingSkeletonBiz) {
-        loadingSkeletonBiz.classList.remove('hidden');
+        loadingSkeletonBiz.classList.add('hidden');
       }
-      
-      // Hide skeletons after optimized loading time (reduced from 2000ms to 800ms)
-      setTimeout(() => {
-        if (loadingSkeleton) {
-          loadingSkeleton.classList.add('hidden');
-        }
-        if (loadingSkeletonBiz) {
-          loadingSkeletonBiz.classList.add('hidden');
-        }
-      }, 800);
-    }
+    }, 800);
     
     // Initialize column order on page load (after renderAll)
     applyColumnOrder();
@@ -15058,9 +15228,6 @@ function loadNonCriticalResources() {
   });
   }
 
-    // Make duplicate check function globally available
-    window.checkAndFixDuplicates = checkAndFixDuplicates;
-    
-    // Make smooth update function globally available
-    window.smoothUpdateData = smoothUpdateData;
+  // Make duplicate check function globally available
+  window.checkAndFixDuplicates = checkAndFixDuplicates;
 
