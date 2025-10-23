@@ -1119,6 +1119,11 @@ async function saveProfile({ fullName, file }) {
         // Update income data for selected year
         if (currentPage === 'income') {
           console.log('🔄 Updating income for year:', year);
+          // Clear any existing income table to prevent conflicts
+          const incomeTable = document.getElementById('list-income');
+          if (incomeTable) {
+            incomeTable.innerHTML = '';
+          }
           updateIncomeForYear(year);
         }
         
@@ -1584,8 +1589,9 @@ async function saveProfile({ fullName, file }) {
         console.log('🆕 Created empty array for year:', year);
       }
       
-      // Re-render the income list with year-specific data
-      renderIncomeList('list-income', state.income[year]);
+      // Force full re-render of income list with year-specific data
+      // Use forceFullRender=true to ensure we get fresh data for the new year
+      renderIncomeList('list-income', state.income[year], true, true);
       
       // Update KPIs for the selected year
       console.log('🔄 Calling renderKPIs for year:', year);
@@ -6436,7 +6442,8 @@ async function saveProfile({ fullName, file }) {
       renderList('list-personal', state.personal, false, false, false);
       renderList('list-biz', state.biz, true, false, false);
       const currentYearData = state.income[currentYear] || [];
-      renderIncomeList('list-income', currentYearData, false, false);
+      // Force full re-render for income to ensure year switching works properly
+      renderIncomeList('list-income', currentYearData, true, true);
     };
     
     const rowMonthlyUSD = (r)=> {
@@ -7927,42 +7934,65 @@ async function saveProfile({ fullName, file }) {
     function generateHeatmapData(year) {
       const cacheKey = `${year}:${state.selectedCurrency || 'EGP'}`;
       if (heatmapCache.has(cacheKey)) return heatmapCache.get(cacheKey);
+      
       const yearData = state.income[year] || [];
+      if (yearData.length === 0) {
+        heatmapCache.set(cacheKey, {});
+        return {};
+      }
+      
       const dailyData = {};
-      // Process income entries for the year and capture project names
+      const currency = state.selectedCurrency || 'EGP';
+      
+      // Optimized processing with early returns and reduced object creation
       for (let i = 0; i < yearData.length; i++) {
         const entry = yearData[i];
-        if (!entry || !entry.date) continue;
+        if (!entry?.date) continue;
+        
         const date = new Date(entry.date);
-        if (isNaN(date)) continue;
+        if (isNaN(date.getTime())) continue;
+        
         const dayKey = `${date.getMonth()}-${date.getDate()}`;
         const amount = Number(entry.paidUsd || 0);
-        const projectName = entry.name || '—';
-        const tags = (entry.tags || '').split(',').map(tag => tag.trim()).filter(tag => tag);
+        
+        if (amount <= 0) continue; // Skip zero amounts early
+        
         let dayObj = dailyData[dayKey];
         if (!dayObj) {
-          dayObj = { usdTotal: 0, projects: [], tags: [] };
+          dayObj = { usdTotal: 0, projects: new Set(), tags: new Set() };
           dailyData[dayKey] = dayObj;
         }
+        
         dayObj.usdTotal += amount;
-        if (amount > 0) {
-          dayObj.projects.push(projectName);
-          // Add unique tags for this day
-          tags.forEach(tag => {
-            if (!dayObj.tags.includes(tag)) {
-              dayObj.tags.push(tag);
-            }
-          });
+        
+        // Use Sets for better performance with unique values
+        const projectName = entry.name || '—';
+        dayObj.projects.add(projectName);
+        
+        // Process tags more efficiently
+        const tags = entry.tags;
+        if (tags && typeof tags === 'string') {
+          const tagArray = tags.split(',');
+          for (let j = 0; j < tagArray.length; j++) {
+            const tag = tagArray[j].trim();
+            if (tag) dayObj.tags.add(tag);
+          }
         }
       }
-      // Convert to selected currency
+      
+      // Convert to selected currency and finalize data structure
       const convertedData = {};
       const dayKeys = Object.keys(dailyData);
       for (let i = 0; i < dayKeys.length; i++) {
         const k = dayKeys[i];
         const d = dailyData[k];
-        convertedData[k] = { amount: usdToSelectedCurrency(d.usdTotal), projects: d.projects, tags: d.tags };
+        convertedData[k] = { 
+          amount: usdToSelectedCurrency(d.usdTotal), 
+          projects: Array.from(d.projects), 
+          tags: Array.from(d.tags) 
+        };
       }
+      
       heatmapCache.set(cacheKey, convertedData);
       return convertedData;
     }
@@ -7983,63 +8013,101 @@ async function saveProfile({ fullName, file }) {
     // Generate calendar heatmap HTML (months grouped as individual calendars)
     function generateHeatmapCalendar(year) {
       const yearData = generateHeatmapData(year);
-      const maxAmount = Math.max(...Object.values(yearData).map(v => v.amount || 0), 0);
+      const amounts = Object.values(yearData).map(v => v.amount || 0);
+      const maxAmount = Math.max(...amounts, 0);
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-      let calendarHTML = '';
-      calendarHTML += '<div class="heatmap-months">';
+      // Use DocumentFragment for much faster DOM creation
+      const fragment = document.createDocumentFragment();
+      const monthsContainer = document.createElement('div');
+      monthsContainer.className = 'heatmap-months';
+      fragment.appendChild(monthsContainer);
 
+      // Pre-calculate date formatting to avoid repeated calls
+      const dateFormatter = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+
+      // Batch DOM operations for better performance
+      const monthElements = [];
+      
       for (let m = 0; m < 12; m++) {
         const firstDayOfMonth = new Date(year, m, 1);
-        const firstWeekday = firstDayOfMonth.getDay(); // 0-6
+        const firstWeekday = firstDayOfMonth.getDay();
         const daysInMonth = new Date(year, m + 1, 0).getDate();
 
-        calendarHTML += '<div class="heatmap-month">';
-        calendarHTML += `<div class="heatmap-month-title">${months[m]}</div>`;
-        calendarHTML += '<div class="heatmap-month-days">';
+        const monthDiv = document.createElement('div');
+        monthDiv.className = 'heatmap-month';
 
-        // leading blanks
+        const monthTitle = document.createElement('div');
+        monthTitle.className = 'heatmap-month-title';
+        monthTitle.textContent = months[m];
+        monthDiv.appendChild(monthTitle);
+
+        const monthDays = document.createElement('div');
+        monthDays.className = 'heatmap-month-days';
+
+        // Create leading blanks
         for (let i = 0; i < firstWeekday; i++) {
-          calendarHTML += '<div class="heatmap-day" data-intensity="0"></div>';
+          const blankDay = document.createElement('div');
+          blankDay.className = 'heatmap-day';
+          blankDay.setAttribute('data-intensity', '0');
+          monthDays.appendChild(blankDay);
         }
 
-        // month days
+        // Create month days with optimized processing
         for (let d = 1; d <= daysInMonth; d++) {
           const dayKey = `${m}-${d}`;
-        const dayObj = yearData[dayKey] || { amount: 0, projects: [], tags: [] };
-        const amount = dayObj.amount || 0;
-        const intensity = calculateIntensity(amount, maxAmount);
-        const currentDate = new Date(year, m, d);
-        const formattedAmount = formatCurrency(amount);
-        const projects = dayObj.projects || [];
-        const tags = dayObj.tags || [];
-        const projectPreview = projects.slice(0, 2).join(', ');
-        const moreCount = Math.max(0, projects.length - 2);
-        const projectsAttr = (projects.length > 0 ? `${projectPreview}${moreCount ? `, +${moreCount} more` : ''}` : 'No projects').replace(/"/g, '&quot;');
-        const tagsAttr = tags.length > 0 ? tags.join(', ').replace(/"/g, '&quot;') : '';
-          const dateString = currentDate.toLocaleDateString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          });
-
-          calendarHTML += `<div class="heatmap-day" 
-            data-intensity="${intensity}" 
-            data-amount="${amount}" 
-            data-date="${dateString}"
-            data-formatted="${formattedAmount}"
-            data-projects="${projectsAttr}"
-            data-tags="${tagsAttr}">
-          </div>`;
+          const dayObj = yearData[dayKey] || { amount: 0, projects: [], tags: [] };
+          const amount = dayObj.amount || 0;
+          const intensity = calculateIntensity(amount, maxAmount);
+          
+          const dayElement = document.createElement('div');
+          dayElement.className = 'heatmap-day';
+          dayElement.setAttribute('data-intensity', intensity.toString());
+          dayElement.setAttribute('data-amount', amount.toString());
+          
+          // Only set data attributes if there's actual data to avoid empty attributes
+          if (amount > 0) {
+            const currentDate = new Date(year, m, d);
+            const dateString = dateFormatter.format(currentDate);
+            const formattedAmount = formatCurrency(amount);
+            
+            dayElement.setAttribute('data-date', dateString);
+            dayElement.setAttribute('data-formatted', formattedAmount);
+            
+            // Optimize project and tag data
+            const projects = dayObj.projects || [];
+            const tags = dayObj.tags || [];
+            
+            if (projects.length > 0) {
+              const projectPreview = projects.slice(0, 2).join(', ');
+              const moreCount = Math.max(0, projects.length - 2);
+              const projectsAttr = `${projectPreview}${moreCount ? `, +${moreCount} more` : ''}`;
+              dayElement.setAttribute('data-projects', projectsAttr);
+            }
+            
+            if (tags.length > 0) {
+              dayElement.setAttribute('data-tags', tags.join(', '));
+            }
+          }
+          
+          monthDays.appendChild(dayElement);
         }
 
-        calendarHTML += '</div>'; // .heatmap-month-days
-        calendarHTML += '</div>'; // .heatmap-month
+        monthDiv.appendChild(monthDays);
+        monthElements.push(monthDiv);
       }
 
-      calendarHTML += '</div>'; // .heatmap-months
-      return calendarHTML;
+      // Batch append all months at once for better performance
+      for (let i = 0; i < monthElements.length; i++) {
+        monthsContainer.appendChild(monthElements[i]);
+      }
+
+      return fragment;
     }
     
     // Update heatmap statistics
@@ -8169,16 +8237,32 @@ async function saveProfile({ fullName, file }) {
         yearSelect.appendChild(option);
       });
       
-      // Generate and display heatmap (defer heavy DOM write to next frame)
-      // Protect against missing income data structure
+      // Generate heatmap data first (this is fast)
       try {
         heatmapData = generateHeatmapData(currentHeatmapYear);
       } catch (err) {
         console.warn('Heatmap data generation failed, falling back to empty data.', err);
         heatmapData = {};
       }
+      
+      // Show loading indicator with opacity transition
+      heatmapContainer.style.opacity = '0.5';
+      heatmapContainer.innerHTML = '<div class="flex items-center justify-center py-8"><div class="text-sm" style="color:var(--muted)">Loading heatmap...</div></div>';
+      
+      // Use requestAnimationFrame for smooth rendering
       requestAnimationFrame(() => {
-        heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+        // Clear container and append the DocumentFragment
+        heatmapContainer.innerHTML = '';
+        const fragment = generateHeatmapCalendar(currentHeatmapYear);
+        heatmapContainer.appendChild(fragment);
+        
+        // Fade in the new content
+        heatmapContainer.style.opacity = '0';
+        requestAnimationFrame(() => {
+          heatmapContainer.style.transition = 'opacity 0.3s ease';
+          heatmapContainer.style.opacity = '1';
+        });
+        
         updateHeatmapStats(currentHeatmapYear);
         // Add tooltip functionality
         addHeatmapTooltips();
@@ -8186,13 +8270,31 @@ async function saveProfile({ fullName, file }) {
       // Add event listeners
       yearSelect.addEventListener('change', (e) => {
         currentHeatmapYear = parseInt(e.target.value);
+        
+        // Generate data first (fast operation)
         try {
           heatmapData = generateHeatmapData(currentHeatmapYear);
         } catch {
           heatmapData = {};
         }
+        
+        // Smooth transition with opacity
+        heatmapContainer.style.opacity = '0.5';
+        heatmapContainer.innerHTML = '<div class="flex items-center justify-center py-8"><div class="text-sm" style="color:var(--muted)">Loading heatmap...</div></div>';
+        
         requestAnimationFrame(() => {
-          heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+          // Clear container and append the DocumentFragment
+          heatmapContainer.innerHTML = '';
+          const fragment = generateHeatmapCalendar(currentHeatmapYear);
+          heatmapContainer.appendChild(fragment);
+          
+          // Fade in the new content
+          heatmapContainer.style.opacity = '0';
+          requestAnimationFrame(() => {
+            heatmapContainer.style.transition = 'opacity 0.3s ease';
+            heatmapContainer.style.opacity = '1';
+          });
+          
           updateHeatmapStats(currentHeatmapYear);
           addHeatmapTooltips();
         });
@@ -8201,10 +8303,27 @@ async function saveProfile({ fullName, file }) {
       // Refresh handler
       if (refreshBtn && !refreshBtn._bound) {
         refreshBtn.addEventListener('click', () => {
+          // Clear cache and generate fresh data
           try { heatmapCache.clear && heatmapCache.clear(); } catch {}
           try { heatmapData = generateHeatmapData(currentHeatmapYear); } catch { heatmapData = {}; }
+          
+          // Smooth transition with opacity
+          heatmapContainer.style.opacity = '0.5';
+          heatmapContainer.innerHTML = '<div class="flex items-center justify-center py-8"><div class="text-sm" style="color:var(--muted)">Refreshing heatmap...</div></div>';
+          
           requestAnimationFrame(() => {
-            heatmapContainer.innerHTML = generateHeatmapCalendar(currentHeatmapYear);
+            // Clear container and append the DocumentFragment
+            heatmapContainer.innerHTML = '';
+            const fragment = generateHeatmapCalendar(currentHeatmapYear);
+            heatmapContainer.appendChild(fragment);
+            
+            // Fade in the new content
+            heatmapContainer.style.opacity = '0';
+            requestAnimationFrame(() => {
+              heatmapContainer.style.transition = 'opacity 0.3s ease';
+              heatmapContainer.style.opacity = '1';
+            });
+            
             updateHeatmapStats(currentHeatmapYear);
             addHeatmapTooltips();
           });
