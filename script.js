@@ -2465,7 +2465,10 @@ async function saveProfile({ fullName, file }) {
           // Update currency button
           updateCurrencyButton(currency, currencySymbol);
           
-          showSignupStatus('Account created successfully! Please check your email to verify your account.', 'success');
+          showSignupStatus('✅ Account created! Check your email NOW to verify your account and complete setup.', 'success');
+          
+          // Show prominent email verification notice
+          showNotification('📧 IMPORTANT: Check your email NOW to verify your account!', 'warning', 10000);
           
           // Close signup modal and show auth modal for sign in
           setTimeout(() => {
@@ -2583,18 +2586,18 @@ async function saveProfile({ fullName, file }) {
       
       const icon = matchContainer.querySelector('.match-icon');
       const text = matchContainer.querySelector('.match-text');
-      
+
       if (password === confirmPassword && password.length > 0) {
         matchContainer.className = 'auth-password-match password-match';
-        icon.textContent = '✓';
+        // Don't set textContent since CSS ::before handles the icon
         text.textContent = 'Passwords match';
       } else if (confirmPassword.length > 0) {
         matchContainer.className = 'auth-password-match password-mismatch';
-        icon.textContent = '✗';
+        // Don't set textContent since CSS ::before handles the icon
         text.textContent = 'Passwords do not match';
       } else {
         matchContainer.className = 'auth-password-match';
-        icon.textContent = '';
+        // Don't set textContent since CSS ::before handles the icon
         text.textContent = 'Passwords must match';
       }
     }
@@ -3265,7 +3268,7 @@ async function saveProfile({ fullName, file }) {
         // If sign in fails, check the error type
         if (error) {
           if (error.message.includes('email not confirmed') || error.message.includes('Email not confirmed')) {
-            showAuthStatus('Please check your email and click the confirmation link before signing in.', 'error');
+            showAuthStatus('⚠️ Please check your email and click the verification link to complete your account setup.', 'error');
             showAuthLoading(false);
             return;
           } else if (error.message.includes('Invalid login credentials')) {
@@ -3313,7 +3316,7 @@ async function saveProfile({ fullName, file }) {
         
         if (error) throw error;
         
-        showAuthStatus('Account created! Please check your email to confirm.', 'success');
+        showAuthStatus('✅ Account created! Check your email NOW to verify your account.', 'success');
         showAuthLoading(false);
       } catch (error) {
 

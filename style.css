@@ -5934,7 +5934,8 @@ header img:hover {
 .auth-form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .auth-form-header {
@@ -6948,6 +6949,68 @@ header img:hover {
 
 .match-text {
   font-size: 0.7rem;
+}
+
+/* Auth Password Match Styles */
+.auth-password-match {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.auth-password-match .match-icon {
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  text-align: center;
+  line-height: 16px;
+}
+
+.auth-password-match .match-icon::before {
+  content: "○";
+  color: var(--muted);
+}
+
+.auth-password-match.password-match .match-icon::before {
+  content: "✓";
+  color: #10b981;
+  font-weight: bold;
+}
+
+.auth-password-match.password-mismatch .match-icon::before {
+  content: "✗";
+  color: #ef4444;
+}
+
+.auth-password-match .match-text {
+  font-size: 0.75rem;
+}
+
+/* Urgent Email Verification Notice */
+.verification-urgent-notice {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.verification-urgent-notice p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.verification-urgent-notice strong {
+  color: #b45309;
 }
 
 /* Loading States */
