@@ -3454,10 +3454,13 @@ async function saveProfile({ fullName, file }) {
         // Authentication step
         incrementSplashProgress('authentication');
         
-        // CRITICAL: Clear existing data to prevent duplication
-        state.personal = [];
-        state.biz = [];
-        state.income = {};
+        // CRITICAL: Only clear existing data on first load, not during refresh
+        // This prevents the jarring reset to 0 during refresh operations
+        if (isFirstLoad) {
+          state.personal = [];
+          state.biz = [];
+          state.income = {};
+        }
         
         // Load custom icons from localStorage first
         loadCustomIcons();
@@ -5672,6 +5675,164 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
+    // Smooth refresh function that doesn't cause visual disruption
+    function smoothRefreshData() {
+      const refreshIcon = document.getElementById('iconRefresh');
+      const syncStatus = document.getElementById('syncStatus');
+      const originalTransform = refreshIcon.style.transform;
+      
+      // Update sync status
+      updateSyncStatus('syncing');
+      
+      // Add spinning animation
+      refreshIcon.style.transform = 'rotate(360deg)';
+      refreshIcon.style.transition = 'transform 0.5s ease';
+      
+      // Only load fresh data from cloud - no saving, no visual disruption
+      if (currentUser && supabaseReady) {
+        // Use new sync system if available
+        if (typeof window.loadFromSupabase === 'function' && window.syncSystemReady) {
+          window.loadFromSupabase().then(() => {
+            updateSyncStatus('success');
+            showNotification('Data synced from cloud', 'success', 2000, { force: true });
+            resetRefreshIcon();
+          }).catch((error) => {
+            console.error('❌ Sync load failed, falling back to regular load:', error);
+            loadUserData().then(() => {
+              updateSyncStatus('success');
+              showNotification('Data synced from cloud', 'success', 2000, { force: true });
+              resetRefreshIcon();
+            }).catch((error) => {
+              updateSyncStatus('error');
+              showNotification('Cloud sync failed', 'error', 2000);
+              resetRefreshIcon();
+            });
+          });
+        } else {
+          // Fallback to regular load
+          loadUserData().then(() => {
+            updateSyncStatus('success');
+            showNotification('Data synced from cloud', 'success', 2000, { force: true });
+            resetRefreshIcon();
+          }).catch((error) => {
+            updateSyncStatus('error');
+            showNotification('Cloud sync failed', 'error', 2000);
+            resetRefreshIcon();
+          });
+        }
+      } else {
+        updateSyncStatus('offline');
+        showNotification('Not connected to cloud', 'info', 2000);
+        resetRefreshIcon();
+      }
+      
+      function resetRefreshIcon() {
+        setTimeout(() => {
+          refreshIcon.style.transform = originalTransform;
+          // Keep success status for 2 seconds, then hide
+          if (syncStatus.classList.contains('success')) {
+            setTimeout(() => {
+              updateSyncStatus('');
+            }, 2000);
+          }
+        }, 500);
+      }
+    }
+    
+    // Smooth data update function that preserves existing data during refresh
+    function smoothUpdateData(newData) {
+      // Update data without clearing existing values
+      if (newData.personal && Array.isArray(newData.personal)) {
+        // Merge new personal data with existing, preserving order
+        const existingPersonal = state.personal || [];
+        const newPersonal = newData.personal;
+        
+        // Update existing items and add new ones
+        newPersonal.forEach(newItem => {
+          const existingIndex = existingPersonal.findIndex(item => item.id === newItem.id);
+          if (existingIndex !== -1) {
+            // Update existing item
+            existingPersonal[existingIndex] = newItem;
+          } else {
+            // Add new item
+            existingPersonal.push(newItem);
+          }
+        });
+        
+        state.personal = existingPersonal;
+      }
+      
+      if (newData.business && Array.isArray(newData.business)) {
+        // Merge new business data with existing, preserving order
+        const existingBusiness = state.biz || [];
+        const newBusiness = newData.business;
+        
+        // Update existing items and add new ones
+        newBusiness.forEach(newItem => {
+          const existingIndex = existingBusiness.findIndex(item => item.id === newItem.id);
+          if (existingIndex !== -1) {
+            // Update existing item
+            existingBusiness[existingIndex] = newItem;
+          } else {
+            // Add new item
+            existingBusiness.push(newItem);
+          }
+        });
+        
+        state.biz = existingBusiness;
+      }
+      
+      if (newData.income && Array.isArray(newData.income)) {
+        // Update income data by year
+        const incomeByYear = {};
+        newData.income.forEach(income => {
+          const year = income.year.toString();
+          if (!incomeByYear[year]) {
+            incomeByYear[year] = [];
+          }
+          incomeByYear[year].push(income);
+        });
+        
+        // Merge with existing income data
+        Object.keys(incomeByYear).forEach(year => {
+          if (state.income[year]) {
+            // Update existing year data
+            const existingYearData = state.income[year];
+            const newYearData = incomeByYear[year];
+            
+            newYearData.forEach(newItem => {
+              const existingIndex = existingYearData.findIndex(item => item.id === newItem.id);
+              if (existingIndex !== -1) {
+                // Update existing item
+                existingYearData[existingIndex] = newItem;
+              } else {
+                // Add new item
+                existingYearData.push(newItem);
+              }
+            });
+          } else {
+            // Add new year data
+            state.income[year] = incomeByYear[year];
+          }
+        });
+      }
+      
+      // Update settings if provided
+      if (newData.settings) {
+        if (newData.settings.fx_rate !== undefined) state.fx = newData.settings.fx_rate;
+        if (newData.settings.theme !== undefined) state.theme = newData.settings.theme;
+        if (newData.settings.autosave !== undefined) state.autosave = newData.settings.autosave ? 'on' : 'off';
+        if (newData.settings.include_annual_in_monthly !== undefined) state.includeAnnualInMonthly = newData.settings.include_annual_in_monthly;
+        if (newData.settings.inputs_locked !== undefined) state.inputsLocked = newData.settings.inputs_locked;
+        if (newData.settings.preferred_currency !== undefined) {
+          state.selectedCurrency = newData.settings.preferred_currency;
+          if (typeof updateCurrency === 'function') {
+            updateCurrency(newData.settings.preferred_currency);
+          }
+        }
+      }
+    }
+    
     function updateSyncStatus(status) {
       const syncStatus = document.getElementById('syncStatus');
       if (!syncStatus) return;
@@ -5738,8 +5899,8 @@ async function saveProfile({ fullName, file }) {
     // Initial connection check
     checkConnectionStatus();
 
-    // Manual refresh button
-    $('#btnRefresh').addEventListener('click', refreshData);
+    // Manual refresh button - use smooth refresh to prevent visual disruption
+    $('#btnRefresh').addEventListener('click', smoothRefreshData);
     
     // Initialize currency dropdown functionality
     function initializeCurrencyDropdown() {
@@ -6257,12 +6418,112 @@ async function saveProfile({ fullName, file }) {
     }
 
     // Enhanced setText function with value comparison to prevent unnecessary updates
+    // Count-up animation utility
+    function animateCountUp(element, targetValue, duration = 1000) {
+      if (!element) return;
+      
+      const startValue = 0;
+      const startTime = performance.now();
+      
+      // Add a small random delay (0-200ms) to stagger animations
+      const delay = Math.random() * 200;
+      
+      // Extract numeric value from the target string
+      let numericValue = 0;
+      let prefix = '';
+      let suffix = '';
+      
+      if (typeof targetValue === 'string') {
+        // Handle currency formats like "$1,234.56" or "1,234.56 EGP"
+        const match = targetValue.match(/([^0-9.-]*)([0-9.,-]+)([^0-9.-]*)/);
+        if (match) {
+          prefix = match[1] || '';
+          suffix = match[3] || '';
+          numericValue = parseFloat(match[2].replace(/,/g, '')) || 0;
+        } else {
+          numericValue = parseFloat(targetValue) || 0;
+        }
+      } else {
+        numericValue = targetValue;
+      }
+      
+      // Don't animate if the value is 0 or very small
+      if (Math.abs(numericValue) < 0.01) {
+        element.textContent = targetValue;
+        return;
+      }
+      
+      // For very small values, use a shorter duration
+      if (Math.abs(numericValue) < 10) {
+        duration = 600;
+      }
+      
+      function updateValue(currentTime) {
+        const elapsed = currentTime - startTime - delay;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use easeOutCubic for smooth animation
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        const currentValue = startValue + (numericValue - startValue) * easeProgress;
+        
+        // Format the current value
+        let formattedValue;
+        if (prefix.includes('$') || prefix.includes('€')) {
+          // Currency formatting
+          formattedValue = prefix + currentValue.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        } else if (suffix.includes('%')) {
+          // Percentage formatting
+          formattedValue = currentValue.toFixed(1) + suffix;
+        } else if (suffix.includes('/100') || suffix.includes('Grade')) {
+          // Score/Grade formatting
+          formattedValue = Math.round(currentValue) + suffix;
+        } else {
+          // Regular number formatting
+          formattedValue = prefix + currentValue.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+          }) + suffix;
+        }
+        
+        element.textContent = formattedValue;
+        
+        if (progress < 1) {
+          requestAnimationFrame(updateValue);
+        } else {
+          // Ensure final value is exactly the target
+          element.textContent = targetValue;
+        }
+      }
+      
+      requestAnimationFrame(updateValue);
+    }
+
     function setText(id, val) { 
       const el = document.getElementById(id); 
       if (el) {
         // Only update if the value has actually changed
         if (el.textContent !== val) {
-          el.textContent = val;
+          // Check if this is a value element that should be animated
+          if (el.classList.contains('value') || 
+              el.classList.contains('sub') ||
+              id.includes('USD') || 
+              id.includes('EGP') || 
+              id.includes('Rate') || 
+              id.includes('Score') || 
+              id.includes('Grade') ||
+              id.includes('Efficiency') ||
+              id.includes('Health') ||
+              id.includes('Progress') ||
+              id.includes('Target') ||
+              id.includes('Status') ||
+              id.includes('Fx')) {
+            animateCountUp(el, val, 1200); // 1.2 second animation
+          } else {
+            el.textContent = val;
+          }
         }
       }
     }
@@ -6438,7 +6699,7 @@ async function saveProfile({ fullName, file }) {
     setTimeout(() => {
       animateProgressBar('sharePersonalBarContainer', sp);
       animateProgressBar('shareBizBarContainer', sb);
-    }, 1000);
+    }, 800);
     
     // Update Income KPIs with lifetime totals
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
@@ -7792,7 +8053,7 @@ async function saveProfile({ fullName, file }) {
     }
 
     
-    function animateProgressBar(containerId, targetWidth, duration = 800) {
+    function animateProgressBar(containerId, targetWidth, duration = 1200) {
       const container = document.getElementById(containerId);
       if (!container) return;
       
@@ -7802,13 +8063,34 @@ async function saveProfile({ fullName, file }) {
       // Remove loading state
       container.classList.remove('loading');
       
-      // Reset to 0 first, then animate to target width
+      // Reset to 0 first
       bar.style.width = '0%';
       
-      // Use requestAnimationFrame for smooth animation
-      requestAnimationFrame(() => {
-        bar.style.width = targetWidth + '%';
-      });
+      const startTime = performance.now();
+      const startWidth = 0;
+      
+      // Add a small random delay to stagger with count-up animations
+      const delay = Math.random() * 300;
+      
+      function updateProgress(currentTime) {
+        const elapsed = currentTime - startTime - delay;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use easeOutCubic for smooth animation (same as count-up)
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        const currentWidth = startWidth + (targetWidth - startWidth) * easeProgress;
+        
+        bar.style.width = currentWidth + '%';
+        
+        if (progress < 1) {
+          requestAnimationFrame(updateProgress);
+        } else {
+          // Ensure final width is exactly the target
+          bar.style.width = targetWidth + '%';
+        }
+      }
+      
+      requestAnimationFrame(updateProgress);
     }
     
     function resetProgressBar(containerId) {
@@ -7821,6 +8103,42 @@ async function saveProfile({ fullName, file }) {
       // Reset to 0 and add loading state
       bar.style.width = '0%';
       container.classList.add('loading');
+    }
+
+    // Synchronized animation for numbers and progress bars
+    // Usage example:
+    // animateCardSynchronized({
+    //   numbers: [
+    //     { id: 'kpiAllMonthlyUSD', value: '$1,234.56' },
+    //     { id: 'kpiAllMonthlyEGP', value: '59,456 EGP' }
+    //   ],
+    //   progressBars: [
+    //     { containerId: 'sharePersonalBarContainer', targetWidth: 65 },
+    //     { containerId: 'shareBizBarContainer', targetWidth: 35 }
+    //   ]
+    // }, 0);
+    function animateCardSynchronized(cardData, delay = 0) {
+      const { numbers, progressBars } = cardData;
+      
+      // Animate numbers first
+      numbers.forEach((number, index) => {
+        const elementDelay = delay + (index * 100); // 100ms stagger between numbers
+        setTimeout(() => {
+          const el = document.getElementById(number.id);
+          if (el && number.value !== undefined) {
+            animateCountUp(el, number.value, 1200);
+          }
+        }, elementDelay);
+      });
+      
+      // Animate progress bars after numbers
+      const progressDelay = delay + (numbers.length * 100) + 200; // Start after numbers + 200ms
+      progressBars.forEach((bar, index) => {
+        const barDelay = progressDelay + (index * 150); // 150ms stagger between bars
+        setTimeout(() => {
+          animateProgressBar(bar.containerId, bar.targetWidth, 1200);
+        }, barDelay);
+      });
     }
     
     function resetAllProgressBars() {
@@ -7869,7 +8187,7 @@ async function saveProfile({ fullName, file }) {
         setTimeout(() => {
           animateProgressBar('sharePersonalBarContainer', sp);
           animateProgressBar('shareBizBarContainer', sb);
-        }, 200);
+        }, 400);
       } else if (currentPage === 'analytics') {
         // Animate analytics page progress bars
         updateAnalyticsPage();
@@ -8478,7 +8796,7 @@ async function saveProfile({ fullName, file }) {
       setTimeout(() => {
         animateProgressBar('analyticsIncomeBarContainer', incomeBarWidth);
         animateProgressBar('analyticsExpensesBarContainer', expensesBarWidth);
-      }, 1200);
+      }, 600);
       
       // 2. Savings Rate Analysis
       const savingsRateMonthly = incomeTotals.monthly > 0 ? (netCashFlow.mUSD / incomeTotals.monthly) * 100 : 0;
@@ -8514,7 +8832,7 @@ async function saveProfile({ fullName, file }) {
       // Animate savings progress bar
       setTimeout(() => {
         animateProgressBar('analyticsSavingsProgressBarContainer', savingsProgress);
-      }, 1400);
+      }, 800);
       
       // 3. Expense Efficiency Analysis
       const personalEfficiency = incomeTotals.monthly > 0 ? (p.mUSD / incomeTotals.monthly) * 100 : 0;
@@ -8538,7 +8856,7 @@ async function saveProfile({ fullName, file }) {
       if (currentUser) {
         setTimeout(() => {
           animateProgressBar('analyticsEfficiencyBarContainer', efficiencyScore);
-        }, 1600);
+        }, 1000);
       } else {
         // If not logged in, set progress bar to 0 without animation
         const efficiencyBar = document.querySelector('#analyticsEfficiencyBarContainer .progress-bar');
@@ -8588,7 +8906,7 @@ async function saveProfile({ fullName, file }) {
       // Animate health progress bar
       setTimeout(() => {
         animateProgressBar('analyticsHealthBarContainer', healthScore);
-      }, 1800);
+      }, 1200);
       setText('analyticsHealthProgress', Math.round(healthScore) + '%');
       
       // Apply color coding to health score
@@ -12607,26 +12925,29 @@ function loadNonCriticalResources() {
       }
     });
     
-    // Show loading skeletons for optimized duration
+    // Show loading skeletons for optimized duration (only on first load, not during refresh)
     const loadingSkeleton = document.getElementById('loading-skeleton');
     const loadingSkeletonBiz = document.getElementById('loading-skeleton-biz');
     
-    if (loadingSkeleton) {
-      loadingSkeleton.classList.remove('hidden');
-    }
-    if (loadingSkeletonBiz) {
-      loadingSkeletonBiz.classList.remove('hidden');
-    }
-    
-    // Hide skeletons after optimized loading time (reduced from 2000ms to 800ms)
-    setTimeout(() => {
+    // Only show skeletons on first load, not during refresh operations
+    if (isFirstLoad) {
       if (loadingSkeleton) {
-        loadingSkeleton.classList.add('hidden');
+        loadingSkeleton.classList.remove('hidden');
       }
       if (loadingSkeletonBiz) {
-        loadingSkeletonBiz.classList.add('hidden');
+        loadingSkeletonBiz.classList.remove('hidden');
       }
-    }, 800);
+      
+      // Hide skeletons after optimized loading time (reduced from 2000ms to 800ms)
+      setTimeout(() => {
+        if (loadingSkeleton) {
+          loadingSkeleton.classList.add('hidden');
+        }
+        if (loadingSkeletonBiz) {
+          loadingSkeletonBiz.classList.add('hidden');
+        }
+      }, 800);
+    }
     
     // Initialize column order on page load (after renderAll)
     applyColumnOrder();
@@ -14737,6 +15058,9 @@ function loadNonCriticalResources() {
   });
   }
 
-  // Make duplicate check function globally available
-  window.checkAndFixDuplicates = checkAndFixDuplicates;
+    // Make duplicate check function globally available
+    window.checkAndFixDuplicates = checkAndFixDuplicates;
+    
+    // Make smooth update function globally available
+    window.smoothUpdateData = smoothUpdateData;
 

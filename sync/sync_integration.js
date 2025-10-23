@@ -97,9 +97,12 @@ function handlePersonalExpenseUpdate(eventType, data, oldData) {
     }
   }
   
-  // Re-render if renderAll function is available
-  if (typeof renderAll === 'function') {
-    renderAll();
+  // Update KPIs and tables smoothly without full re-render
+  if (typeof renderKPIs === 'function') {
+    renderKPIs();
+  }
+  if (typeof renderTables === 'function') {
+    renderTables();
   }
 }
 
@@ -126,8 +129,11 @@ function handleBusinessExpenseUpdate(eventType, data, oldData) {
     }
   }
   
-  if (typeof renderAll === 'function') {
-    renderAll();
+  if (typeof renderKPIs === 'function') {
+    renderKPIs();
+  }
+  if (typeof renderTables === 'function') {
+    renderTables();
   }
 }
 
@@ -164,8 +170,11 @@ function handleIncomeUpdate(eventType, data, oldData) {
     }
   }
   
-  if (typeof renderAll === 'function') {
-    renderAll();
+  if (typeof renderKPIs === 'function') {
+    renderKPIs();
+  }
+  if (typeof renderTables === 'function') {
+    renderTables();
   }
 }
 
@@ -302,49 +311,61 @@ async function loadFromSupabase() {
     
     const data = await syncManager.loadUserData();
     
-    // Update local state with loaded data
+    // Update local state with loaded data using smooth update
     if (typeof state !== 'undefined') {
-      // Update settings
-      if (data.settings) {
-        state.fx = data.settings.fx_rate || 48.1843;
-        state.theme = data.settings.theme || 'dark';
-        state.autosave = data.settings.autosave ? 'on' : 'off';
-        state.includeAnnualInMonthly = data.settings.include_annual_in_monthly || false;
-        state.inputsLocked = data.settings.inputs_locked || false;
-        state.selectedCurrency = data.settings.preferred_currency || 'EGP';
-        
-        if (typeof columnOrder !== 'undefined') {
-          columnOrder = data.settings.column_order || ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
-        }
-      }
-      
-      // Update personal expenses
-      if (data.personal) {
-        state.personal = data.personal.map(mapSupabaseToLocalExpense);
-      }
-      
-      // Update business expenses
-      if (data.business) {
-        state.biz = data.business.map(mapSupabaseToLocalExpense);
-      }
-      
-      // Update income data
-      if (data.income) {
-        const incomeByYear = {};
-        data.income.forEach(income => {
-          const year = income.year.toString();
-          if (!incomeByYear[year]) {
-            incomeByYear[year] = [];
+      // Use smooth update function if available, otherwise fallback to direct update
+      if (typeof smoothUpdateData === 'function') {
+        smoothUpdateData(data);
+      } else {
+        // Fallback to direct update
+        // Update settings
+        if (data.settings) {
+          state.fx = data.settings.fx_rate || 48.1843;
+          state.theme = data.settings.theme || 'dark';
+          state.autosave = data.settings.autosave ? 'on' : 'off';
+          state.includeAnnualInMonthly = data.settings.include_annual_in_monthly || false;
+          state.inputsLocked = data.settings.inputs_locked || false;
+          state.selectedCurrency = data.settings.preferred_currency || 'EGP';
+          
+          if (typeof columnOrder !== 'undefined') {
+            columnOrder = data.settings.column_order || ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
           }
-          incomeByYear[year].push(mapSupabaseToLocalIncome(income));
-        });
-        state.income = incomeByYear;
+        }
+        
+        // Update personal expenses
+        if (data.personal) {
+          state.personal = data.personal.map(mapSupabaseToLocalExpense);
+        }
+        
+        // Update business expenses
+        if (data.business) {
+          state.biz = data.business.map(mapSupabaseToLocalExpense);
+        }
+        
+        // Update income data
+        if (data.income) {
+          const incomeByYear = {};
+          data.income.forEach(income => {
+            const year = income.year.toString();
+            if (!incomeByYear[year]) {
+              incomeByYear[year] = [];
+            }
+            incomeByYear[year].push(mapSupabaseToLocalIncome(income));
+          });
+          state.income = incomeByYear;
+        }
       }
     }
     
-    // Re-render the UI
-    if (typeof renderAll === 'function') {
-      renderAll();
+    // Update the UI smoothly without full re-render
+    if (typeof renderKPIs === 'function') {
+      renderKPIs();
+    }
+    if (typeof renderTables === 'function') {
+      renderTables();
+    }
+    if (typeof updateAnalyticsPage === 'function') {
+      updateAnalyticsPage();
     }
     
     console.log('✅ Data loaded from Supabase successfully');
