@@ -6373,19 +6373,20 @@ async function saveProfile({ fullName, file }) {
     // Income calculation functions
     // For income, each entry is a single payment, not a recurring amount
     const rowIncomeMonthlyUSD = (r) => {
-      // Income entries are individual payments, so monthly = 0 unless it's this month
+      // Income entries are individual payments, so monthly = 0 unless it's the selected month
       const paymentDate = new Date(r.date);
-      const now = new Date();
-      const isThisMonth = paymentDate.getFullYear() === now.getFullYear() && 
-                         paymentDate.getMonth() === now.getMonth();
-      return isThisMonth ? Number(r.paidUsd || 0) : 0;
+      const selectedYear = parseInt(currentYear);
+      const selectedMonth = new Date().getMonth(); // Current month for the selected year
+      const isSelectedMonth = paymentDate.getFullYear() === selectedYear && 
+                             paymentDate.getMonth() === selectedMonth;
+      return isSelectedMonth ? Number(r.paidUsd || 0) : 0;
     };
     const rowIncomeYearlyUSD = (r) => {
-      // Income entries are individual payments, so yearly = 0 unless it's this year
+      // Income entries are individual payments, so yearly = 0 unless it's the selected year
       const paymentDate = new Date(r.date);
-      const now = new Date();
-      const isThisYear = paymentDate.getFullYear() === now.getFullYear();
-      return isThisYear ? Number(r.paidUsd || 0) : 0;
+      const selectedYear = parseInt(currentYear);
+      const isSelectedYear = paymentDate.getFullYear() === selectedYear;
+      return isSelectedYear ? Number(r.paidUsd || 0) : 0;
     };
     
     // Calculate lifetime income totals across all years
@@ -8947,8 +8948,8 @@ async function saveProfile({ fullName, file }) {
     }
 
     function generateIncomeInsights() {
-      const currentYear = new Date().getFullYear().toString();
-      const currentYearIncome = state.income[currentYear] || [];
+      const selectedYear = currentYear;
+      const currentYearIncome = state.income[selectedYear] || [];
       const allIncome = getAllIncomeData();
       
       const insights = [];
@@ -9147,8 +9148,8 @@ async function saveProfile({ fullName, file }) {
 
     // Helper function to get current income totals
     function getCurrentIncomeTotals() {
-      const currentYear = new Date().getFullYear().toString();
-      const currentYearIncome = state.income[currentYear] || [];
+      const selectedYear = currentYear;
+      const currentYearIncome = state.income[selectedYear] || [];
       const currentMonth = new Date().getMonth();
       
       const monthlyIncome = currentYearIncome
