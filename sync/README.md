@@ -1,105 +1,142 @@
-# 🚀 Sync System Folder
+# Supabase Sync System
 
-This folder contains the optimized sync system for the Financial Tool application.
+A clean, reliable sync system using official Supabase JavaScript APIs.
 
-## 📁 File Structure
+## Features
 
-```
-sync/
-├── README.md                    # This documentation
-├── sync-loader.js              # Main loader - loads all sync components
-├── sync_optimization.js        # Core sync classes and algorithms
-├── optimized_sync_integration.js # Integration functions for the main app
-└── test_sync_functionality.js  # Comprehensive sync testing suite
-```
+- ✅ **Official Supabase APIs**: Uses the official [Supabase JavaScript client](https://supabase.com/docs/reference/javascript/introduction)
+- ✅ **Real-time Updates**: Live synchronization using [Supabase Realtime](https://supabase.com/docs/guides/realtime)
+- ✅ **Optimistic UI**: Instant local updates with cloud sync
+- ✅ **Error Handling**: Robust error handling and fallback mechanisms
+- ✅ **Clean Architecture**: Modular, maintainable code structure
 
-## 🔄 Loading Order
+## Files
 
-1. **sync-loader.js** - Loads first, manages the loading sequence
-2. **sync_optimization.js** - Core classes (ChangeTracker, BatchProcessor, etc.)
-3. **optimized_sync_integration.js** - Integration functions for the main app
+- `supabase_sync.js` - Core sync manager using official Supabase APIs
+- `sync_integration.js` - Integration layer connecting sync to main app
+- `sync_loader.js` - Loader script for the sync system
+- `README.md` - This documentation
 
-## 🎯 How It Works
+## API Reference
 
-### 1. **Automatic Loading**
-The HTML loads `sync/sync-loader.js` which automatically loads the other files in the correct order.
+### Core Functions
 
-### 2. **Global Availability**
-All sync classes are made available globally:
-- `window.SmartSyncManager`
-- `window.ChangeTracker`
-- `window.BatchProcessor`
-- `window.RealtimeSync`
-- `window.ConflictResolver`
-- `window.SyncPerformanceMonitor`
-
-### 3. **Integration**
-The main app can use these functions:
-- `initializeOptimizedSync()` - Initialize the sync system
-- `cleanupOptimizedSync()` - Cleanup when done
-- `saveToSupabaseOptimized()` - Optimized save function
-- `instantSaveAllOptimized()` - Optimized instant save
-
-## 🛡️ Fallback System
-
-If any sync files fail to load, the app will automatically fall back to the original sync system, ensuring the app continues to work.
-
-## 📊 Status Tracking
-
-Check sync system status:
-```javascript
-// In browser console:
-window.syncSystemStatus
-// Returns: { coreLoaded: true, integrationLoaded: true, ready: true }
-```
-
-## 🔧 Benefits of This Structure
-
-1. **Organized**: All sync-related code in one place
-2. **Modular**: Each file has a specific purpose
-3. **Reliable**: Proper loading sequence and error handling
-4. **Maintainable**: Easy to update individual components
-5. **Fallback**: App works even if sync optimization fails
-
-## 🧪 Testing
-
-The sync system includes comprehensive testing:
+#### `initializeSync()`
+Initialize the sync system. Call this when user signs in.
 
 ```javascript
-// Run all sync tests
-runComprehensiveSyncTest();
-
-// Run individual tests
-testSyncSystemStatus();
-testFXRateExclusion();
-testChangeTracker();
-testBatchProcessor();
-testRealtimeSync();
-testPerformanceMonitor();
+await initializeSync();
 ```
 
-Tests automatically run in development mode (localhost).
-
-## 🚨 Important Notes
-
-- **Don't change the loading order** - it's critical for proper initialization
-- **All files must be in the sync folder** - the loader expects this structure
-- **Test after changes** - make sure the sync system still works
-- **Check console** - look for sync system loading messages
-- **FX Rate Exclusion** - FX rates are no longer synced to cloud (fetched from API)
-
-## 🎮 Usage in Main App
-
-The main app (script.js) can use the sync system like this:
+#### `saveToSupabase()`
+Save all local data to Supabase.
 
 ```javascript
-// Initialize when user signs in
-if (session?.user) {
-  currentUser = session.user;
-  await initializeOptimizedSync(); // This will be available globally
+await saveToSupabase();
+```
+
+#### `loadFromSupabase()`
+Load all data from Supabase to local state.
+
+```javascript
+await loadFromSupabase();
+```
+
+#### `deleteExpense(tableName, expenseId)`
+Delete an expense from Supabase.
+
+```javascript
+await deleteExpense('personal_expenses', 'expense-id');
+```
+
+#### `deleteIncomeEntry(incomeId)`
+Delete an income entry from Supabase.
+
+```javascript
+await deleteIncomeEntry('income-id');
+```
+
+#### `cleanupSync()`
+Cleanup the sync system. Call this when user signs out.
+
+```javascript
+await cleanupSync();
+```
+
+## Supabase Tables
+
+The sync system works with these tables:
+
+- `user_settings` - User preferences and settings
+- `personal_expenses` - Personal expense data
+- `business_expenses` - Business expense data  
+- `income` - Income data
+
+## Real-time Updates
+
+The system automatically handles real-time updates from Supabase:
+
+- **INSERT**: New records are added to local state
+- **UPDATE**: Existing records are updated in local state
+- **DELETE**: Records are removed from local state
+
+## Integration
+
+To integrate with your main app:
+
+1. **Load the sync system** in your HTML:
+```html
+<script src="sync/sync_loader.js"></script>
+```
+
+2. **Initialize when user signs in**:
+```javascript
+if (window.syncSystemReady) {
+  await initializeSync();
 }
-
-// Use optimized save functions
-saveToSupabaseOptimized(); // Instead of saveToSupabase()
-instantSaveAllOptimized(); // Instead of instantSaveAll()
 ```
+
+3. **Save data** when changes are made:
+```javascript
+await saveToSupabase();
+```
+
+4. **Load data** on app startup:
+```javascript
+await loadFromSupabase();
+```
+
+5. **Cleanup when user signs out**:
+```javascript
+await cleanupSync();
+```
+
+## Error Handling
+
+The system includes comprehensive error handling:
+
+- Connection failures fall back to local-only mode
+- Network errors are logged and retried
+- Data validation ensures consistency
+- Graceful degradation when sync is unavailable
+
+## Performance
+
+- **Parallel Operations**: Multiple database operations run in parallel
+- **Efficient Queries**: Uses Supabase's optimized query system
+- **Minimal Data Transfer**: Only changed data is synchronized
+- **Real-time Efficiency**: WebSocket connections for instant updates
+
+## Browser Support
+
+Works with all modern browsers that support:
+- ES6+ JavaScript
+- WebSocket connections
+- Fetch API
+- Promises
+
+## Dependencies
+
+- Supabase JavaScript client
+- Modern browser with WebSocket support
+- Your main application state management
