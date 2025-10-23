@@ -321,8 +321,17 @@ async function waitForTablesRendered() {
   return new Promise((resolve) => {
     let attempts = 0;
     const maxAttempts = 50; // 5 seconds max wait
+    let lastCheckTime = 0;
+    const checkInterval = 500; // Only check every 500ms
     
     const checkTables = () => {
+      const now = Date.now();
+      if (now - lastCheckTime < checkInterval) {
+        setTimeout(checkTables, checkInterval - (now - lastCheckTime));
+        return;
+      }
+      lastCheckTime = now;
+      
       attempts++;
       
       const personalTable = document.getElementById('list-personal');
@@ -339,12 +348,15 @@ async function waitForTablesRendered() {
       const businessVisible = businessTable && businessTable.offsetHeight > 0;
       const incomeVisible = incomeTable && incomeTable.offsetHeight > 0;
       
-      console.log(`🔍 Table check attempt ${attempts}:`, {
-        personal: { rendered: personalRendered, visible: personalVisible },
-        business: { rendered: businessRendered, visible: businessVisible },
-        income: { rendered: incomeRendered, visible: incomeVisible }
-      });
-      
+      // Only log every 5th attempt to reduce spam
+      if (attempts % 5 === 0) {
+        console.log(`🔍 Table check attempt ${attempts}:`, {
+          personal: { rendered: personalRendered, visible: personalVisible },
+          business: { rendered: businessRendered, visible: businessVisible },
+          income: { rendered: incomeRendered, visible: incomeVisible }
+        });
+      }
+
       if ((personalRendered && personalVisible) && 
           (businessRendered && businessVisible) && 
           (incomeRendered && incomeVisible)) {
@@ -367,8 +379,17 @@ async function waitForKPIsRendered() {
   return new Promise((resolve) => {
     let attempts = 0;
     const maxAttempts = 50; // 5 seconds max wait
+    let lastCheckTime = 0;
+    const checkInterval = 500; // Only check every 500ms
     
     const checkKPIs = () => {
+      const now = Date.now();
+      if (now - lastCheckTime < checkInterval) {
+        setTimeout(checkKPIs, checkInterval - (now - lastCheckTime));
+        return;
+      }
+      lastCheckTime = now;
+      
       attempts++;
       
       const kpiElements = document.querySelectorAll('.kpi .value');
@@ -379,11 +400,14 @@ async function waitForKPIsRendered() {
         el.offsetHeight > 0 // Ensure element is visible
       );
       
-      console.log(`🔍 KPI check attempt ${attempts}:`, {
-        totalKPIs: kpiElements.length,
-        allPopulated: allKPIsPopulated,
-        kpiValues: Array.from(kpiElements).map(el => el.textContent)
-      });
+      // Only log every 5th attempt to reduce spam
+      if (attempts % 5 === 0) {
+        console.log(`🔍 KPI check attempt ${attempts}:`, {
+          totalKPIs: kpiElements.length,
+          allPopulated: allKPIsPopulated,
+          kpiValues: Array.from(kpiElements).map(el => el.textContent)
+        });
+      }
       
       if (allKPIsPopulated && kpiElements.length > 0) {
         console.log('✅ All KPIs rendered and populated');
@@ -1634,27 +1658,46 @@ async function saveProfile({ fullName, file }) {
       
       // Set up Supabase authentication state listener
       window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        console.log('🔐 Auth state change:', event, 'session:', session);
         if (session?.user) {
+          console.log('🔐 User signed in:', session.user.email);
           currentUser = session.user;
           updateAuthUI();
           updateUserDisplay();
           loadUserData();
           
           // Hide onboarding modal if user signs in
+          console.log('Hide onboarding modal if user signs in');
           hideOnboardingModal();
           
-          // Initialize optimized sync system when user signs in (stable version)
-          if (typeof window.initializeOptimizedSync === 'function') {
-            // Initialize sync system in background without blocking
-            setTimeout(() => {
-              window.initializeOptimizedSync().then(() => {
-                console.log('✅ Optimized sync system initialized');
-              }).catch((error) => {
-                console.error('❌ Failed to initialize optimized sync:', error);
+        // Initialize sync system when user signs in
+        if (typeof window.initializeSync === 'function') {
+          // Wait for sync system to be ready, then initialize
+          const initSync = async () => {
+            // Wait for sync system to be ready
+            if (window.syncSystemReady) {
+              try {
+                await window.initializeSync();
+                console.log('✅ Sync system initialized');
+                
+                // Load fresh data from cloud after sync is ready
+                if (typeof window.loadFromSupabase === 'function') {
+                  await window.loadFromSupabase();
+                  console.log('✅ Fresh data loaded from cloud');
+                }
+              } catch (error) {
+                console.error('❌ Failed to initialize sync:', error);
                 console.log('🔄 Continuing with basic sync...');
-              });
-            }, 2000); // Wait 2 seconds for everything to load
-          }
+              }
+            } else {
+              // If sync system not ready, wait and try again
+              setTimeout(initSync, 500);
+            }
+          };
+          
+          // Start initialization process
+          setTimeout(initSync, 1000);
+        }
           
           // Re-initialize currency dropdown for cloud sync
           setTimeout(() => {
@@ -1670,15 +1713,15 @@ async function saveProfile({ fullName, file }) {
           currentUser = null;
           updateAuthUI();
           
-          // Cleanup optimized sync system when user signs out
-          if (typeof window.cleanupOptimizedSync === 'function') {
-            try {
-              window.cleanupOptimizedSync();
-              console.log('🧹 Optimized sync system cleaned up');
-            } catch (error) {
-              console.error('❌ Failed to cleanup optimized sync:', error);
-            }
+        // Cleanup sync system when user signs out
+        if (typeof window.cleanupSync === 'function') {
+          try {
+            window.cleanupSync();
+            console.log('🧹 Sync system cleaned up');
+          } catch (error) {
+            console.error('❌ Failed to cleanup sync:', error);
           }
+        }
           
           // User signed out
           console.log('👋 User signed out, cloud sync disabled');
@@ -3365,6 +3408,20 @@ async function saveProfile({ fullName, file }) {
       
       isLoadingData = true;
       
+      // Try to use new sync system if available
+      if (typeof window.loadFromSupabase === 'function' && window.syncSystemReady) {
+        try {
+          console.log('🔄 Using new sync system to load data...');
+          await window.loadFromSupabase();
+          console.log('✅ Data loaded using new sync system');
+          isLoadingData = false;
+          return;
+        } catch (error) {
+          console.error('❌ New sync system failed, falling back to manual loading:', error);
+          // Continue with manual loading below
+        }
+      }
+      
       // Check for CORS issues and fallback to local data
       try {
         // Test connection first with a simple query
@@ -3585,6 +3642,7 @@ async function saveProfile({ fullName, file }) {
               date: income.date,
               allPayment: income.all_payment,
               paidUsd: income.paid_usd,
+              paidEgp: income.paid_egp,
               method: income.method,
               icon: income.icon || 'fa:dollar-sign', // Default icon if not in schema
               order: income.order || 0,
@@ -5051,13 +5109,13 @@ async function saveProfile({ fullName, file }) {
         console.log('🔄 Starting cloud save...');
         updateSyncStatus('syncing');
         
-        // Use optimized sync if available, otherwise fallback to regular save
-        if (typeof window.instantSaveAllOptimized === 'function') {
-          console.log('⚡ Using optimized instant save');
+        // Use new sync system if available, otherwise fallback to regular save
+        if (typeof window.saveToSupabase === 'function' && window.syncSystemReady && window.isInitialized) {
+          console.log('⚡ Using Supabase sync system');
           try {
-            await window.instantSaveAllOptimized(source);
+            await window.saveToSupabase();
           } catch (error) {
-            console.error('❌ Optimized instant save failed, falling back to regular save:', error);
+            console.error('❌ Sync save failed, falling back to regular save:', error);
             await saveToSupabase();
           }
         } else {
@@ -5565,15 +5623,36 @@ async function saveProfile({ fullName, file }) {
       
       // Only load fresh data from cloud - no saving
       if (currentUser && supabaseReady) {
-        loadUserData().then(() => {
-          updateSyncStatus('success');
-          showNotification('Data synced from cloud', 'success', 2000, { force: true });
-          resetRefreshIcon();
-        }).catch((error) => {
-          updateSyncStatus('error');
-          showNotification('Cloud sync failed', 'error', 2000);
-          resetRefreshIcon();
-        });
+        // Use new sync system if available
+        if (typeof window.loadFromSupabase === 'function' && window.syncSystemReady) {
+          window.loadFromSupabase().then(() => {
+            updateSyncStatus('success');
+            showNotification('Data synced from cloud', 'success', 2000, { force: true });
+            resetRefreshIcon();
+          }).catch((error) => {
+            console.error('❌ Sync load failed, falling back to regular load:', error);
+            loadUserData().then(() => {
+              updateSyncStatus('success');
+              showNotification('Data synced from cloud', 'success', 2000, { force: true });
+              resetRefreshIcon();
+            }).catch((error) => {
+              updateSyncStatus('error');
+              showNotification('Cloud sync failed', 'error', 2000);
+              resetRefreshIcon();
+            });
+          });
+        } else {
+          // Fallback to regular load
+          loadUserData().then(() => {
+            updateSyncStatus('success');
+            showNotification('Data synced from cloud', 'success', 2000, { force: true });
+            resetRefreshIcon();
+          }).catch((error) => {
+            updateSyncStatus('error');
+            showNotification('Cloud sync failed', 'error', 2000);
+            resetRefreshIcon();
+          });
+        }
       } else {
         updateSyncStatus('offline');
         showNotification('Not connected to cloud', 'info', 2000);
@@ -13652,8 +13731,10 @@ function loadNonCriticalResources() {
 
   // Initialize onboarding system
   function initializeOnboarding() {
+    console.log('🔍 initializeOnboarding() called');
     // Check if user is currently authenticated
     const isUserSignedIn = typeof currentUser !== 'undefined' && currentUser !== null;
+    console.log('🔍 User signed in status:', isUserSignedIn, 'currentUser:', currentUser);
     
     // If user is signed in, don't show onboarding
     if (isUserSignedIn) {
@@ -13712,12 +13793,18 @@ function loadNonCriticalResources() {
 
   // Hide onboarding modal
   function hideOnboardingModal() {
+    console.log('🎯 hideOnboardingModal() called');
     const modal = document.getElementById('onboardingModal');
+    console.log('🎯 Modal element found:', modal);
     if (modal) {
+      console.log('🎯 Modal current display:', modal.style.display);
       modal.style.display = 'none';
       document.body.classList.remove('no-scroll');
       // Show main UI when onboarding is hidden
       document.body.classList.remove('onboarding-active');
+      console.log('✅ Onboarding modal hidden successfully');
+    } else {
+      console.error('❌ Onboarding modal element not found');
     }
   }
 
