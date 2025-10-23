@@ -1597,11 +1597,8 @@
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
             </div>
-            <h2 class="onboarding-title">📧 Check your email NOW!</h2>
+            <h2 class="onboarding-title">Check your email</h2>
             <p class="onboarding-subtitle">We've sent a verification link to <strong id="verificationEmail"></strong></p>
-            <div class="verification-urgent-notice">
-              <p><strong>⚠️ Important:</strong> You must verify your email to complete your account setup!</p>
-            </div>
             
             <div class="onboarding-verification-info">
               <div class="verification-steps">
@@ -1682,6 +1679,68 @@
     </div>
   </div>
   
+  <!-- Email Verification Popup -->
+  <div id="emailVerificationPopup" class="email-verification-popup" style="display: none;">
+    <div class="email-verification-overlay"></div>
+    <div class="email-verification-content">
+      <div class="email-verification-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-16 h-16">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+      </div>
+      
+      <div class="email-verification-header">
+        <h2 class="email-verification-title">Check Your Email</h2>
+        <p class="email-verification-subtitle">We've sent a verification link to</p>
+        <div class="email-verification-email">
+          <span id="verificationPopupEmail" class="email-address"></span>
+        </div>
+      </div>
+      
+      <div class="email-verification-steps">
+        <div class="verification-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Check inbox</h4>
+            <p>Look for email from Financial Tool</p>
+          </div>
+        </div>
+        
+        <div class="verification-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Click link</h4>
+            <p>Confirm your email address</p>
+          </div>
+        </div>
+        
+        <div class="verification-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Sign in</h4>
+            <p>Complete your setup</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="email-verification-actions">
+        <button id="verificationPopupClose" class="verification-btn verification-btn-primary">
+          Got it!
+        </button>
+        <button id="verificationPopupResend" class="verification-btn verification-btn-secondary">
+          Resend
+        </button>
+      </div>
+      
+      <div class="email-verification-footer">
+        <p class="verification-footer-text">
+          Didn't receive the email? Check your spam folder or try resending.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <!-- Custom Date Picker Modal -->
   <div id="customDatePicker" class="custom-date-picker-modal" style="display: none;">
     <div class="custom-date-picker">

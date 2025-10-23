@@ -2465,16 +2465,15 @@ async function saveProfile({ fullName, file }) {
           // Update currency button
           updateCurrencyButton(currency, currencySymbol);
           
-          showSignupStatus('✅ Account created! Check your email NOW to verify your account and complete setup.', 'success');
+          showSignupStatus('Account created successfully! Please check your email to verify your account.', 'success');
           
-          // Show prominent email verification notice
-          showNotification('📧 IMPORTANT: Check your email NOW to verify your account!', 'warning', 10000);
+          // Show the email verification popup immediately
+          showEmailVerificationPopup(email);
           
-          // Close signup modal and show auth modal for sign in
+          // Close signup modal after a short delay
           setTimeout(() => {
             closeSignupModal();
-            openAuthModal();
-          }, 2000);
+          }, 1000);
         }
       } catch (error) {
         console.error('Signup error:', error);
@@ -2602,10 +2601,88 @@ async function saveProfile({ fullName, file }) {
       }
     }
 
+    // Email Verification Popup Functions
+    function showEmailVerificationPopup(email) {
+      const popup = $('#emailVerificationPopup');
+      const emailSpan = $('#verificationPopupEmail');
+      
+      if (popup && emailSpan) {
+        emailSpan.textContent = email;
+        popup.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Add event listeners
+        const closeBtn = $('#verificationPopupClose');
+        const resendBtn = $('#verificationPopupResend');
+        
+        if (closeBtn) {
+          closeBtn.addEventListener('click', closeEmailVerificationPopup);
+        }
+        
+        if (resendBtn) {
+          resendBtn.addEventListener('click', () => {
+            resendVerificationEmail(email);
+          });
+        }
+        
+        // Close on overlay click
+        const overlay = popup.querySelector('.email-verification-overlay');
+        if (overlay) {
+          overlay.addEventListener('click', closeEmailVerificationPopup);
+        }
+      }
+    }
+    
+    function closeEmailVerificationPopup() {
+      const popup = $('#emailVerificationPopup');
+      if (popup) {
+        popup.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    }
+    
+    async function resendVerificationEmail(email) {
+      try {
+        const resendBtn = $('#verificationPopupResend');
+        if (resendBtn) {
+          resendBtn.textContent = 'Sending...';
+          resendBtn.disabled = true;
+        }
+        
+        // Call Supabase resend verification
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: email
+        });
+        
+        if (error) throw error;
+        
+        // Show success message
+        showNotification('📧 Verification email sent! Check your inbox.', 'success', 5000);
+        
+        if (resendBtn) {
+          resendBtn.textContent = 'Resend Email';
+          resendBtn.disabled = false;
+        }
+        
+      } catch (error) {
+        console.error('Error resending verification email:', error);
+        showNotification('Failed to resend email. Please try again.', 'error', 5000);
+        
+        const resendBtn = $('#verificationPopupResend');
+        if (resendBtn) {
+          resendBtn.textContent = 'Resend Email';
+          resendBtn.disabled = false;
+        }
+      }
+    }
+
     // Make functions globally available
     window.openAuthModal = openAuthModal;
     window.closeAuthModal = closeAuthModal;
     window.openSignupModal = openSignupModal;
+    window.showEmailVerificationPopup = showEmailVerificationPopup;
+    window.closeEmailVerificationPopup = closeEmailVerificationPopup;
     window.closeSignupModal = closeSignupModal;
     window.handleSignup = handleSignup;
     
@@ -3268,7 +3345,7 @@ async function saveProfile({ fullName, file }) {
         // If sign in fails, check the error type
         if (error) {
           if (error.message.includes('email not confirmed') || error.message.includes('Email not confirmed')) {
-            showAuthStatus('⚠️ Please check your email and click the verification link to complete your account setup.', 'error');
+            showAuthStatus('Please check your email and click the confirmation link before signing in.', 'error');
             showAuthLoading(false);
             return;
           } else if (error.message.includes('Invalid login credentials')) {
@@ -3316,7 +3393,11 @@ async function saveProfile({ fullName, file }) {
         
         if (error) throw error;
         
-        showAuthStatus('✅ Account created! Check your email NOW to verify your account.', 'success');
+        showAuthStatus('Account created! Please check your email to confirm.', 'success');
+        
+        // Show the email verification popup
+        showEmailVerificationPopup(email);
+        
         showAuthLoading(false);
       } catch (error) {
 
