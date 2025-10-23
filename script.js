@@ -5889,7 +5889,7 @@ async function saveProfile({ fullName, file }) {
     
     // Currency conversion system - rates from USD to each currency
     const currencyRates = {
-      'EGP': 48.1843,  // 1 USD = 48.18 EGP
+      'EGP': 49.2,     // 1 USD = 49.2 EGP (updated to more current rate)
       'KWD': 0.31,     // 1 USD = 0.31 KWD
       'SAR': 3.75,     // 1 USD = 3.75 SAR
       'AED': 3.67,     // 1 USD = 3.67 AED
@@ -5911,7 +5911,7 @@ async function saveProfile({ fullName, file }) {
     // Convert USD to selected currency
     const usdToSelectedCurrency = (usd) => {
       if (!usd || isNaN(usd)) return 0;
-      const rate = currencyRates[state.selectedCurrency] || currencyRates['EGP'] || 48.1843;
+      const rate = currencyRates[state.selectedCurrency] || currencyRates['EGP'] || 49.2;
       const result = usd * rate;
       if (isNaN(result)) {
         console.warn('Currency conversion failed:', { usd, selectedCurrency: state.selectedCurrency, rate, result });
@@ -11662,6 +11662,8 @@ function loadNonCriticalResources() {
         // Create dynamic API endpoints based on selected currency
         // All APIs fetch USD rates and we extract the selected currency from USD
         const apiEndpoints = [
+          // Primary API with EGP support
+          `https://api.fxapi.com/v1/latest?apikey=free&base=USD&currencies=${selectedCurrency}`,
           `https://api.exchangerate.host/latest?base=USD&symbols=${selectedCurrency}`,
           `https://api.exchangerate-api.com/v4/latest/USD`,
           `https://api.fxratesapi.com/latest?base=USD`,
@@ -11696,7 +11698,12 @@ function loadNonCriticalResources() {
             console.log(`📊 API Response from ${endpoint}:`, data);
             
             // Check if data has the expected structure and extract rate
-            if (data && data.rates && data.rates[selectedCurrency]) {
+            if (data && data.data && data.data[selectedCurrency]) {
+              // fxAPI.com format: { data: { EGP: 48.1843 } }
+              newRate = data.data[selectedCurrency];
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from fxAPI:`, newRate);
+              break; // Success, exit the loop
+            } else if (data && data.rates && data.rates[selectedCurrency]) {
               newRate = data.rates[selectedCurrency];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
               break; // Success, exit the loop
@@ -11789,7 +11796,7 @@ function loadNonCriticalResources() {
         // Fallback to the current currency's default rate if API fails
         const selectedCurrency = state.selectedCurrency || 'EGP';
         const fallbackRates = {
-          'EGP': 48.1843,
+          'EGP': 49.2,  // Updated to more current EGP rate
           'KWD': 0.31,
           'SAR': 3.75,
           'AED': 3.67,
@@ -11797,7 +11804,7 @@ function loadNonCriticalResources() {
           'BHD': 0.38,
           'EUR': 0.92
         };
-        const fallbackRate = fallbackRates[selectedCurrency] || 48.1843;
+        const fallbackRate = fallbackRates[selectedCurrency] || 49.2;
         $('#inputFx').value = fallbackRate.toFixed(4);
         state.currencyRate = fallbackRate;
         state.fx = fallbackRate; // Keep both in sync
