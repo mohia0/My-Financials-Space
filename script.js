@@ -1766,26 +1766,32 @@ async function saveProfile({ fullName, file }) {
       save('add-row'); 
       clearCalculationCache(); // Clear cache when data changes
       
-      // Only re-render the specific table that was updated (no animations)
+      // Only re-render the specific table that was updated (force full render for new rows)
       if (group === 'personal') {
-        renderList('list-personal', state.personal, false, false); // false = no animations
+        renderList('list-personal', state.personal, false, false, true); // true = force full render
         updateInputsLockState();
         addRowButtonListeners();
         // Add smooth animation only to the new row
         animateNewRow('list-personal', state.personal.length - 1);
+        // Re-initialize drag and drop after rendering
+        reinitializeDragAndDrop();
       } else if (group === 'biz') {
-        renderList('list-biz', state.biz, true, false); // false = no animations
+        renderList('list-biz', state.biz, true, false, true); // true = force full render
         updateInputsLockState();
         addRowButtonListeners();
         // Add smooth animation only to the new row
         animateNewRow('list-biz', state.biz.length - 1);
+        // Re-initialize drag and drop after rendering
+        reinitializeDragAndDrop();
       } else if (group === 'income') {
         const currentYearData = state.income[currentYear] || [];
-        renderIncomeList('list-income', currentYearData, false); // false = no animations
+        renderIncomeList('list-income', currentYearData, false, true); // true = force full render
         updateInputsLockState();
         addRowButtonListeners();
         // Add smooth animation only to the new row
         animateNewRow('list-income', currentYearData.length - 1);
+        // Re-initialize drag and drop after rendering
+        reinitializeDragAndDrop();
       }
       
       // Update KPIs without full re-render
@@ -6342,10 +6348,11 @@ async function saveProfile({ fullName, file }) {
     
     // Function to render all tables
     function renderTables() {
-      renderList('list-personal', state.personal, false);
-      renderList('list-biz', state.biz, true);
+      // Use smooth rendering that preserves existing rows during refresh
+      renderList('list-personal', state.personal, false, false, false);
+      renderList('list-biz', state.biz, true, false, false);
       const currentYearData = state.income[currentYear] || [];
-      renderIncomeList('list-income', currentYearData);
+      renderIncomeList('list-income', currentYearData, false, false);
     };
     
     const rowMonthlyUSD = (r)=> {
@@ -10604,8 +10611,93 @@ async function saveProfile({ fullName, file }) {
       ensureFontAwesomeLoaded().then(()=>{ renderIconPicker('', 'all'); iconPickerEl.showModal(); });
     }
 
-    function renderList(containerId, arr, isBiz, enableAnimations = true){
-      const wrap=document.getElementById(containerId); wrap.innerHTML='';
+    // Helper function to update existing rows without clearing them
+    function updateExistingRows(wrap, arr, isBiz) {
+      const existingRows = wrap.querySelectorAll('.row');
+      
+      // Update existing rows with new data
+      existingRows.forEach((row, index) => {
+        if (index < arr.length) {
+          const rowData = arr[index];
+          const mUSD = rowMonthlyUSD(rowData);
+          const yUSD = rowYearlyUSD(rowData);
+          const mEGP = usdToEgp(mUSD);
+          const yEGP = usdToEgp(yUSD);
+          const mSelected = usdToSelectedCurrency(mUSD);
+          const ySelected = usdToSelectedCurrency(yUSD);
+          
+          // Update the row data
+          row.__rowData = rowData;
+          
+          // Update values in the row without recreating the entire row
+          const monthlyUSD = row.querySelector('.monthly-usd');
+          const yearlyUSD = row.querySelector('.yearly-usd');
+          const monthlyEGP = row.querySelector('.monthly-egp');
+          const yearlyEGP = row.querySelector('.yearly-egp');
+          const monthlySelected = row.querySelector('.monthly-selected');
+          const yearlySelected = row.querySelector('.yearly-selected');
+          
+          if (monthlyUSD) monthlyUSD.textContent = nfUSD.format(mUSD);
+          if (yearlyUSD) yearlyUSD.textContent = nfUSD.format(yUSD);
+          if (monthlyEGP) monthlyEGP.textContent = nfEGP.format(mEGP);
+          if (yearlyEGP) yearlyEGP.textContent = nfEGP.format(yEGP);
+          if (monthlySelected) monthlySelected.textContent = formatCurrency(mSelected);
+          if (yearlySelected) yearlySelected.textContent = formatCurrency(ySelected);
+        }
+      });
+    }
+    
+    // Helper function to update existing income rows without clearing them
+    function updateExistingIncomeRows(wrap, arr) {
+      const existingRows = wrap.querySelectorAll('.row');
+      
+      // Update existing rows with new data
+      existingRows.forEach((row, index) => {
+        if (index < arr.length) {
+          const rowData = arr[index];
+          const mUSD = rowIncomeMonthlyUSD(rowData);
+          const yUSD = rowIncomeYearlyUSD(rowData);
+          const mEGP = usdToEgp(mUSD);
+          const yEGP = usdToEgp(yUSD);
+          const mSelected = usdToSelectedCurrency(mUSD);
+          const ySelected = usdToSelectedCurrency(yUSD);
+          
+          // Update the row data
+          row.__rowData = rowData;
+          
+          // Update values in the row without recreating the entire row
+          const monthlyUSD = row.querySelector('.monthly-usd');
+          const yearlyUSD = row.querySelector('.yearly-usd');
+          const monthlyEGP = row.querySelector('.monthly-egp');
+          const yearlyEGP = row.querySelector('.yearly-egp');
+          const monthlySelected = row.querySelector('.monthly-selected');
+          const yearlySelected = row.querySelector('.yearly-selected');
+          
+          if (monthlyUSD) monthlyUSD.textContent = nfUSD.format(mUSD);
+          if (yearlyUSD) yearlyUSD.textContent = nfUSD.format(yUSD);
+          if (monthlyEGP) monthlyEGP.textContent = nfEGP.format(mEGP);
+          if (yearlyEGP) yearlyEGP.textContent = nfEGP.format(yEGP);
+          if (monthlySelected) monthlySelected.textContent = formatCurrency(mSelected);
+          if (yearlySelected) yearlySelected.textContent = formatCurrency(ySelected);
+        }
+      });
+    }
+
+    function renderList(containerId, arr, isBiz, enableAnimations = true, forceFullRender = false){
+      const wrap=document.getElementById(containerId);
+      
+      // Check if this is a refresh operation (existing rows present)
+      const existingRows = wrap.querySelectorAll('.row');
+      const isRefresh = existingRows.length > 0 && !forceFullRender;
+      
+      // For refresh operations, preserve existing rows and just update their content
+      if (isRefresh) {
+        updateExistingRows(wrap, arr, isBiz);
+        return;
+      }
+      
+      // For initial render or forced full render, clear and rebuild
+      wrap.innerHTML='';
       
       // Sort array by order property before rendering
       const sortedArr = [...arr].sort((a, b) => {
@@ -10997,9 +11089,21 @@ async function saveProfile({ fullName, file }) {
     hideSplashScreen();
   }
 
-  function renderIncomeList(containerId, arr, enableAnimations = true) {
+  function renderIncomeList(containerId, arr, enableAnimations = true, forceFullRender = false) {
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
+    
+    // Check if this is a refresh operation (existing rows present)
+    const existingRows = wrap.querySelectorAll('.row');
+    const isRefresh = existingRows.length > 0 && !forceFullRender;
+    
+    // For refresh operations, preserve existing rows and just update their content
+    if (isRefresh) {
+      updateExistingIncomeRows(wrap, arr);
+      return;
+    }
+    
+    // For initial render or forced full render, clear and rebuild
     wrap.innerHTML = '';
     
     // Sort array by date (oldest to newest) before rendering
@@ -11028,15 +11132,16 @@ async function saveProfile({ fullName, file }) {
       const ySelected = usdToSelectedCurrency(yUSD);
       
       const div = document.createElement('div');
-      div.className = 'row row-income';
+      div.className = 'row row-income row-draggable row-drop-zone';
       div.setAttribute('data-row-index', idx);
+      div.setAttribute('draggable', 'true');
       div.__rowData = row; // Store row data for tag system
       
-      // Empty space where drag handle used to be (for consistent layout)
-      const emptyDiv = document.createElement('div');
-      emptyDiv.className = 'empty-space';
-      emptyDiv.style.width = '20px';
-      emptyDiv.style.height = '100%';
+      // Drag handle cell
+      const dragHandleDiv = document.createElement('div');
+      dragHandleDiv.className = 'drag-handle';
+      dragHandleDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 6h8M8 12h8M8 18h8"/></svg>';
+      dragHandleDiv.title = 'Drag to reorder';
       
       // Icon cell
       const iconName = row.icon || 'fa:dollar-sign';
@@ -11445,7 +11550,7 @@ async function saveProfile({ fullName, file }) {
       iconBtn.addEventListener('click', async () => await openIconPicker(arr, idx));
       
       // Append all cells
-      div.appendChild(emptyDiv);
+      div.appendChild(dragHandleDiv);
       div.appendChild(iconDiv);
       div.appendChild(nameDiv);
       div.appendChild(tagsDiv);
@@ -11536,7 +11641,7 @@ async function saveProfile({ fullName, file }) {
       const totalPaidSelected = usdToSelectedCurrency(totalPaidUsd);
       
       let sumHTML = '';
-      sumHTML += '<div></div>'; // empty space (was drag handle)
+      sumHTML += '<div></div>'; // drag handle space
       sumHTML += '<div></div>'; // icon
       sumHTML += '<div style="font-weight: 600;">Total</div>'; // project name
       sumHTML += '<div></div>'; // tags
@@ -11697,10 +11802,11 @@ function loadNonCriticalResources() {
       
       // Debounce rendering to prevent multiple rapid calls
       renderTimeout = setTimeout(() => {
-        renderList('list-personal', state.personal, false);
-        renderList('list-biz', state.biz, true);
+        // Use smooth rendering that preserves existing rows during refresh
+        renderList('list-personal', state.personal, false, shouldAnimate, false);
+        renderList('list-biz', state.biz, true, shouldAnimate, false);
         const currentYearData = state.income[currentYear] || [];
-        renderIncomeList('list-income', currentYearData);
+        renderIncomeList('list-income', currentYearData, shouldAnimate, false);
         renderKPIs();
         updateGridTemplate();
         
@@ -13415,8 +13521,28 @@ function loadNonCriticalResources() {
     let draggedRowIndex = null;
     let draggedRowArray = null;
 
-    // Add row drag event listeners
-    document.addEventListener('dragstart', (e) => {
+    // Initialize drag and drop functionality
+    reinitializeDragAndDrop();
+
+    // Function to re-initialize drag and drop functionality
+    function reinitializeDragAndDrop() {
+      // Remove existing event listeners to prevent duplicates
+      document.removeEventListener('dragstart', handleDragStart);
+      document.removeEventListener('dragend', handleDragEnd);
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('drop', handleDrop);
+      
+      // Re-add event listeners
+      document.addEventListener('dragstart', handleDragStart);
+      document.addEventListener('dragend', handleDragEnd);
+      document.addEventListener('dragover', handleDragOver);
+      document.addEventListener('dragleave', handleDragLeave);
+      document.addEventListener('drop', handleDrop);
+    }
+    
+    // Drag and drop event handlers
+    function handleDragStart(e) {
       if (e.target.classList.contains('row-draggable') || e.target.closest('.row-draggable')) {
         const rowElement = e.target.classList.contains('row-draggable') ? e.target : e.target.closest('.row-draggable');
         draggedRow = rowElement;
@@ -13430,7 +13556,7 @@ function loadNonCriticalResources() {
         }
         rowElement.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', ''); // Prevent default drag behavior
+        e.dataTransfer.setData('text/plain', '');
         
         // Create a custom drag image (invisible)
         const dragImage = document.createElement('div');
@@ -13450,9 +13576,9 @@ function loadNonCriticalResources() {
           }
         }, 0);
       }
-    });
-
-    document.addEventListener('dragend', (e) => {
+    }
+    
+    function handleDragEnd(e) {
       if (e.target.classList.contains('row-draggable') || e.target.closest('.row-draggable')) {
         const rowElement = e.target.classList.contains('row-draggable') ? e.target : e.target.closest('.row-draggable');
         rowElement.classList.remove('dragging');
@@ -13462,24 +13588,24 @@ function loadNonCriticalResources() {
         // Remove all drag-over classes
         document.querySelectorAll('.row-drop-zone').forEach(el => el.classList.remove('drag-over'));
       }
-    });
-
-    document.addEventListener('dragover', (e) => {
+    }
+    
+    function handleDragOver(e) {
       e.preventDefault();
       const dropZone = e.target.classList.contains('row-drop-zone') ? e.target : e.target.closest('.row-drop-zone');
       if (dropZone && dropZone !== draggedRow) {
         dropZone.classList.add('drag-over');
       }
-    });
-
-    document.addEventListener('dragleave', (e) => {
+    }
+    
+    function handleDragLeave(e) {
       const dropZone = e.target.classList.contains('row-drop-zone') ? e.target : e.target.closest('.row-drop-zone');
       if (dropZone) {
         dropZone.classList.remove('drag-over');
       }
-    });
-
-    document.addEventListener('drop', (e) => {
+    }
+    
+    function handleDrop(e) {
       e.preventDefault();
       const dropZone = e.target.classList.contains('row-drop-zone') ? e.target : e.target.closest('.row-drop-zone');
       if (dropZone && dropZone !== draggedRow) {
@@ -13514,18 +13640,25 @@ function loadNonCriticalResources() {
           // Save and re-render
           if (dropZone.closest('#list-income')) {
             // Use specific save for income table
-            saveToLocal();
-            renderAll(true); // User action - enable animations
+            save('drag-drop');
+            // Re-render only the income table to preserve drag functionality
+            const currentYearData = state.income[currentYear] || [];
+            renderIncomeList('list-income', currentYearData, true, true); // Force full render for drag
             showNotification('Income row reordered', 'success', 1500);
           } else {
             // Use regular save for other tables
-          save();
-          renderAll(true); // User action - enable animations
-          showNotification('Row reordered', 'success', 1500);
+            save('drag-drop');
+            // Re-render only the specific table to preserve drag functionality
+            if (dropZone.closest('#list-personal')) {
+              renderList('list-personal', state.personal, false, true, true); // Force full render for drag
+            } else if (dropZone.closest('#list-biz')) {
+              renderList('list-biz', state.biz, true, true, true); // Force full render for drag
+            }
+            showNotification('Row reordered', 'success', 1500);
           }
         }
       }
-    });
+    }
 
     // Tag system helper functions
     function createTagChip(tagText) {
