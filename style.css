@@ -3299,9 +3299,10 @@ input[type="range"]::-moz-range-thumb:hover {
 .table-container {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-radius: 8px;
+  border-radius: 8px !important;
   border: none;
   background: var(--card);
+  overflow: hidden; /* Ensure rounded corners are visible */
 }
 
 .table-container::-webkit-scrollbar {
@@ -3340,6 +3341,19 @@ input[type="range"]::-moz-range-thumb:hover {
 .table-container .row-biz,
 .table-container .row-income {
   min-width: 800px;
+}
+
+/* Ensure table rows respect container rounded corners */
+.table-container .row-head:first-child {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.table-container .row:last-child,
+.table-container .row-biz:last-child,
+.table-container .row-income:last-child {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 /* Mobile optimizations */

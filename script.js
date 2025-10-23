@@ -1,6 +1,26 @@
 // Global variables
-let state;
+let state = {
+  fx: null,
+  autosave: 'on',
+  autosaveInterval: 15,
+  theme: 'dark',
+  includeAnnualInMonthly: false,
+  inputsLocked: false,
+  selectedCurrency: 'EGP',
+  currencySymbol: 'EGP',
+  currencyRate: null,
+  currencyLoadedFromCloud: false,
+  personal: [],
+  biz: [],
+  income: {
+    2022: [],
+    2023: [],
+    2024: [],
+    2025: []
+  }
+};
 let currencyRates;
+let columnOrder = ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
 
 // Sticky Header Scroll Interactions
 let lastScrollY = 0;
@@ -886,6 +906,7 @@ async function saveProfile({ fullName, file }) {
           triggerFirstTimePageAnimations('expenses');
         }, 100);
       } else if (page === 'income') {
+        console.log('🔄 Switching to income page, updating KPIs for year:', currentYear);
         tabExpenses?.classList.remove('active');
         tabIncome?.classList.add('active');
         tabAnalytics?.classList.remove('active');
@@ -900,6 +921,21 @@ async function saveProfile({ fullName, file }) {
         
         // Update income KPIs live when switching to income page
         updateIncomeKPIsLive();
+        
+        // Force update all KPIs to ensure income KPIs are updated
+        if (typeof renderKPIs === 'function') {
+          console.log('🔄 Force calling renderKPIs for income page');
+          renderKPIs(true); // Force update
+        }
+        
+        // Additional update to ensure all calculations are refreshed
+        setTimeout(() => {
+          console.log('🔄 Additional update for income page');
+          updateIncomeKPIsLive();
+          if (typeof renderKPIs === 'function') {
+            renderKPIs(true);
+          }
+        }, 100);
         
         // Re-initialize tooltips for the new page
         setTimeout(() => {
@@ -980,10 +1016,13 @@ async function saveProfile({ fullName, file }) {
       showPage(page);
     }
     
-    // Ensure current year is selected
+    // Ensure current year is selected (always prioritize current year)
     function ensureCurrentYearSelected() {
       const currentYearString = new Date().getFullYear().toString();
       const currentYearTab = document.querySelector(`[data-year="${currentYearString}"]`);
+      
+      console.log('🔄 ensureCurrentYearSelected called, looking for year:', currentYearString);
+      console.log('📊 Found tab:', currentYearTab);
       
       if (currentYearTab) {
         // Remove active class from all tabs first
@@ -991,10 +1030,12 @@ async function saveProfile({ fullName, file }) {
         // Set current year as active
         currentYearTab.classList.add('active');
         currentYear = currentYearString;
+        console.log('✅ currentYear set to:', currentYear);
         
         // Update income data for the current year
         updateIncomeForYear(currentYear);
       } else {
+        console.log('🆕 Current year tab not found, creating it');
         // If current year tab doesn't exist, create it and set as active
         createYearTab(currentYearString);
         switchYear(currentYearString);
@@ -1017,28 +1058,49 @@ async function saveProfile({ fullName, file }) {
         manageYearsBtn.addEventListener('click', showYearManagementPanel);
       }
       
-      // Set current year as active by default
+      // Set current year as active by default (always prioritize current year)
       const currentYearString = new Date().getFullYear().toString();
       const currentYearTab = document.querySelector(`[data-year="${currentYearString}"]`);
+      
+      console.log('🔄 initYearTabs: Looking for current year:', currentYearString);
+      console.log('📊 Found current year tab:', currentYearTab);
+      
       if (currentYearTab) {
         // Remove active class from all tabs first
         yearTabs.forEach(tab => tab.classList.remove('active'));
         // Set current year as active
         currentYearTab.classList.add('active');
         currentYear = currentYearString;
-
+        console.log('✅ Set current year as active:', currentYear);
+        
+        // Update income data for the current year
+        if (currentPage === 'income') {
+          updateIncomeForYear(currentYear);
+          // Also update KPIs immediately after setting currentYear
+          console.log('🔄 Updating income KPIs after setting current year:', currentYear);
+          updateIncomeKPIsLive();
+        }
       } else {
+        console.log('⚠️ Current year tab not found, using first available');
         // If current year tab doesn't exist, use the first available tab
         if (yearTabs.length > 0) {
           yearTabs[0].classList.add('active');
           currentYear = yearTabs[0].getAttribute('data-year');
-
+          console.log('✅ Set first available year as active:', currentYear);
+          
+          // Update income data for the selected year
+          if (currentPage === 'income') {
+            updateIncomeForYear(currentYear);
+            // Also update KPIs immediately after setting currentYear
+            console.log('🔄 Updating income KPIs after setting first available year:', currentYear);
+            updateIncomeKPIsLive();
+          }
         }
       }
     }
     
     function switchYear(year) {
-
+      console.log('🔄 Switching to year:', year);
       
       // Remove active class from all year tabs
       document.querySelectorAll('.year-tab').forEach(tab => {
@@ -1050,15 +1112,36 @@ async function saveProfile({ fullName, file }) {
       if (selectedTab) {
         selectedTab.classList.add('active');
         currentYear = year;
-
+        console.log('✅ currentYear updated to:', currentYear);
+        console.log('📊 Available years in state.income:', Object.keys(state.income || {}));
+        console.log('📊 Data for year', year, ':', state.income[year] || []);
         
         // Update income data for selected year
         if (currentPage === 'income') {
+          console.log('🔄 Updating income for year:', year);
           updateIncomeForYear(year);
         }
         
         // Trigger live KPI updates when year changes
+        console.log('🔄 Triggering KPI update for year:', year);
         updateIncomeKPIsLive();
+        
+        // Force update all KPIs to ensure income KPIs are updated
+        if (typeof renderKPIs === 'function') {
+          console.log('🔄 Force calling renderKPIs for year:', year);
+          renderKPIs(true); // Force update
+        }
+        
+        // Additional update to ensure all calculations are refreshed
+        setTimeout(() => {
+          console.log('🔄 Additional update for year:', year);
+          updateIncomeKPIsLive();
+          if (typeof renderKPIs === 'function') {
+            renderKPIs(true);
+          }
+        }, 100);
+      } else {
+        console.error('❌ Selected tab not found for year:', year);
       }
     }
     
@@ -1425,21 +1508,31 @@ async function saveProfile({ fullName, file }) {
         console.log(`✅ Tab created for year ${year}`);
       });
       
-      // Set current year as active if no current year is set
-      if (!currentYear && years.length > 0) {
+      // Always set current year as active (prioritize current year)
+      if (years.length > 0) {
         const currentYearNum = new Date().getFullYear();
         if (years.includes(currentYearNum)) {
+          // Current year exists, set it as active
           switchYear(currentYearNum.toString());
+          console.log('✅ Set current year as active:', currentYearNum);
         } else {
-        switchYear(years[0].toString());
+          // Current year doesn't exist, set the most recent year as active
+          const mostRecentYear = years[years.length - 1];
+          switchYear(mostRecentYear.toString());
+          console.log('✅ Set most recent year as active:', mostRecentYear);
         }
       }
       
 
       
       // Save years to Supabase to ensure they're persisted
-
-        save(); // This will update available_years in user_settings
+      console.log('🔄 New year added, triggering sync...');
+      save(); // This will update available_years in user_settings
+      
+      // Force sync to ensure new year is saved to cloud
+      setTimeout(async () => {
+        await syncNewYearToCloud(newYear);
+      }, 100); // Small delay to ensure state is updated
     }
     
     function addYearToTabs(newYear) {
@@ -1449,6 +1542,7 @@ async function saveProfile({ fullName, file }) {
       // Initialize the year in the income data structure
       if (!state.income[newYear]) {
         state.income[newYear] = [];
+        console.log(`🆕 New year ${newYear} created in income data structure`);
       }
       
       // Create new year tab
@@ -1481,21 +1575,57 @@ async function saveProfile({ fullName, file }) {
     }
     
     function updateIncomeForYear(year) {
+      console.log('🔄 updateIncomeForYear called for year:', year);
+      console.log('📊 Income data for year:', state.income[year]);
+      
       // Ensure the year exists in the income data structure
       if (!state.income[year]) {
         state.income[year] = [];
+        console.log('🆕 Created empty array for year:', year);
       }
       
       // Re-render the income list with year-specific data
       renderIncomeList('list-income', state.income[year]);
       
       // Update KPIs for the selected year
+      console.log('🔄 Calling renderKPIs for year:', year);
       renderKPIs();
+      
+      // Also force update income KPIs specifically
+      console.log('🔄 Force updating income KPIs in updateIncomeForYear');
+      updateIncomeKPIsLive();
     }
     
     // Initialize navigation
     initPageNavigation();
     initYearTabs();
+    
+    // Ensure current year is always the default
+    setTimeout(() => {
+      ensureCurrentYearSelected();
+      
+      // Force update all income KPIs to ensure they're calculated correctly
+      // Only call this after currentYear is properly set
+      if (currentPage === 'income' && currentYear) {
+        console.log('🔄 Force updating income KPIs on page load for year:', currentYear);
+        updateIncomeKPIsLive();
+        if (typeof renderKPIs === 'function') {
+          renderKPIs(true);
+        }
+      } else if (currentPage === 'income') {
+        console.log('⚠️ currentYear not set yet, waiting for year tabs to initialize...');
+        // Wait a bit more for year tabs to initialize
+        setTimeout(() => {
+          if (currentYear) {
+            console.log('🔄 Delayed update of income KPIs for year:', currentYear);
+            updateIncomeKPIsLive();
+            if (typeof renderKPIs === 'function') {
+              renderKPIs(true);
+            }
+          }
+        }, 200);
+      }
+    }, 100);
     
     // Ensure analytics page is updated after initialization
     setTimeout(() => {
@@ -4753,6 +4883,7 @@ async function saveProfile({ fullName, file }) {
     $('#btnLock').addEventListener('click', toggleInputsLock);
     
     function updateLockIcon() {
+      console.log('🔒 updateLockIcon called, lock state:', state.inputsLocked);
       const lockIcon = $('#iconLock');
       const lockBtn = $('#btnLock');
       
@@ -4820,6 +4951,7 @@ async function saveProfile({ fullName, file }) {
     }
     
     function updateInputsLockState() {
+      console.log('🔒 updateInputsLockState called, lock state:', state.inputsLocked);
       // Get all interactive elements
       const allInputs = document.querySelectorAll('input, select, textarea');
       const allButtons = document.querySelectorAll('.delete-btn, .icon-cell button');
@@ -5485,6 +5617,11 @@ async function saveProfile({ fullName, file }) {
           
           // Also save to local storage as backup
           saveToLocal();
+          
+          // Update available_years in user settings to include the new year
+          setTimeout(async () => {
+            await syncNewYearToCloud(year);
+          }, 100);
           
         } catch (error) {
 
@@ -6459,6 +6596,8 @@ async function saveProfile({ fullName, file }) {
             el.textContent = val;
           }
         }
+      } else {
+        console.warn('⚠️ Element not found for ID:', id);
       }
     }
 
@@ -6536,6 +6675,129 @@ async function saveProfile({ fullName, file }) {
     }
     
     return true;
+  }
+  
+  // Smooth data update function for sync system
+  function smoothUpdateData(data) {
+    try {
+      // Update settings
+      if (data.settings) {
+        state.fx = data.settings.fx_rate || 48.1843;
+        state.theme = data.settings.theme || 'dark';
+        state.autosave = data.settings.autosave ? 'on' : 'off';
+        state.includeAnnualInMonthly = data.settings.include_annual_in_monthly || false;
+        state.inputsLocked = data.settings.inputs_locked || false;
+        console.log('🔒 Lock state loaded from cloud:', state.inputsLocked);
+        state.selectedCurrency = data.settings.preferred_currency || 'EGP';
+        
+        if (typeof columnOrder !== 'undefined') {
+          columnOrder = data.settings.column_order || ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
+        }
+      }
+      
+      // Update personal expenses
+      if (data.personal) {
+        state.personal = data.personal.map(mapSupabaseToLocalExpense);
+      }
+      
+      // Update business expenses
+      if (data.business) {
+        state.biz = data.business.map(mapSupabaseToLocalExpense);
+      }
+      
+      // Update income data
+      if (data.income) {
+        const incomeByYear = {};
+        data.income.forEach(income => {
+          const year = income.year.toString();
+          if (!incomeByYear[year]) {
+            incomeByYear[year] = [];
+          }
+          incomeByYear[year].push(mapSupabaseToLocalIncome(income));
+        });
+        state.income = incomeByYear;
+      }
+      
+      console.log('✅ Data updated smoothly from Supabase');
+      
+      // Update UI elements after data is loaded
+      if (typeof updateInputsLockState === 'function') {
+        console.log('🔄 Updating inputs lock state from cloud data');
+        updateInputsLockState();
+      }
+      
+      if (typeof updateLockIcon === 'function') {
+        console.log('🔄 Updating lock icon from cloud data');
+        updateLockIcon();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in smooth data update:', error);
+    }
+  }
+  
+  // Helper function to map Supabase expense data to local format
+  function mapSupabaseToLocalExpense(supabaseData) {
+    return {
+      id: supabaseData.id,
+      name: supabaseData.name,
+      cost: supabaseData.cost,
+      status: supabaseData.status,
+      billing: supabaseData.billing,
+      next: supabaseData.next_payment || '',
+      monthlyUSD: supabaseData.monthly_usd || 0,
+      yearlyUSD: supabaseData.yearly_usd || 0,
+      monthlyEGP: supabaseData.monthly_egp || 0,
+      yearlyEGP: supabaseData.yearly_egp || 0,
+      icon: supabaseData.icon,
+      order: supabaseData.order || 0
+    };
+  }
+  
+  // Helper function to map Supabase income data to local format
+  function mapSupabaseToLocalIncome(supabaseData) {
+    return {
+      id: supabaseData.id,
+      name: supabaseData.name,
+      tags: supabaseData.tags,
+      date: supabaseData.date,
+      allPayment: supabaseData.all_payment,
+      paidUsd: supabaseData.paid_usd,
+      paidEgp: supabaseData.paid_egp,
+      method: supabaseData.method,
+      icon: supabaseData.icon,
+      order: supabaseData.order || 0
+    };
+  }
+  
+  // Function to ensure new years are synced to cloud
+  async function syncNewYearToCloud(year) {
+    if (!currentUser || !supabaseReady) {
+      console.log('⚠️ User not signed in or Supabase not ready, skipping year sync');
+      return;
+    }
+    
+    try {
+      console.log(`🔄 Syncing new year ${year} to cloud...`);
+      
+      // Ensure the year exists in the income data structure
+      if (!state.income[year]) {
+        state.income[year] = [];
+      }
+      
+      // Trigger a full sync to update available_years
+      if (typeof window.saveToSupabase === 'function' && window.syncSystemReady && window.isInitialized) {
+        await window.saveToSupabase();
+        console.log(`✅ Year ${year} synced to cloud successfully`);
+      } else {
+        console.log('⚠️ Sync system not ready, saving locally only');
+        saveToLocal();
+      }
+    } catch (error) {
+      console.error(`❌ Failed to sync year ${year} to cloud:`, error);
+      // Fallback to local save
+      saveToLocal();
+    }
   }
   
   function renderKPIs(forceUpdate = false){
@@ -11303,37 +11565,62 @@ async function saveProfile({ fullName, file }) {
 
   // Live income KPI updates function
   function updateIncomeKPIsLive() {
+    console.log('🔄 updateIncomeKPIsLive called for year:', currentYear);
+    
+    // Check if currentYear is set
+    if (!currentYear) {
+      console.warn('⚠️ currentYear is not set, cannot update income KPIs');
+      return;
+    }
+    
+    console.log('📊 Available years in state.income:', Object.keys(state.income || {}));
     const currentYearData = state.income[currentYear] || [];
+    console.log('📊 Current year data for', currentYear, ':', currentYearData);
+    console.log('📊 Number of income entries for', currentYear, ':', currentYearData.length);
     const i = incomeTotals(currentYearData);
+    console.log('💰 Income totals for current year:', i);
     const lifetimeIncome = lifetimeIncomeTotals();
+    console.log('💰 Lifetime income totals:', lifetimeIncome);
     
     // Update current year income KPIs
+    console.log('🔄 Updating current year KPIs...');
+    console.log('💰 Setting monthly current USD to:', nfUSD.format(i.mUSD));
+    console.log('💰 Setting monthly current EGP to:', formatCurrency(i.mSelected));
+    console.log('💰 Setting yearly current USD to:', nfUSD.format(i.yUSD));
+    console.log('💰 Setting yearly current EGP to:', formatCurrency(i.ySelected));
+    
     setText('kpiIncomeMonthlyCurrent', nfUSD.format(i.mUSD));
     setText('kpiIncomeMonthlyCurrentEGP', formatCurrency(i.mSelected));
     setText('kpiIncomeYearlyCurrent', nfUSD.format(i.yUSD));
     setText('kpiIncomeYearlyCurrentEGP', formatCurrency(i.ySelected));
     
     // Update lifetime income KPIs
+    console.log('🔄 Updating lifetime KPIs...');
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
     setText('kpiIncomeAllMonthlyEGP', formatCurrency(lifetimeIncome.monthlySelected));
     setText('kpiIncomeAllYearlyUSD', nfUSD.format(lifetimeIncome.yearlyUSD));
     setText('kpiIncomeAllYearlyEGP', formatCurrency(lifetimeIncome.yearlySelected));
     
     // Update average calculations
+    console.log('🔄 Updating average KPIs...');
     setText('kpiIncomeMonthlyAvg', nfUSD.format(lifetimeIncome.monthlyUSD));
     setText('kpiIncomeMonthlyAvgEGP', formatCurrency(lifetimeIncome.monthlySelected));
     
     // Update yearly target (20% above lifetime)
+    console.log('🔄 Updating target KPIs...');
     setText('kpiIncomeYearlyTarget', nfUSD.format(lifetimeIncome.yearlyUSD * 1.2));
     setText('kpiIncomeYearlyTargetEGP', formatCurrency(lifetimeIncome.yearlySelected * 1.2));
     
     // Update lifetime income breakdown
+    console.log('🔄 Updating lifetime breakdown...');
     setText('shareIncomeCompletedVal', nfUSD.format(lifetimeIncome.totalUSD));
     setText('shareIncomeCompletedValCurrency', formatCurrency(lifetimeIncome.totalSelected));
     
-  // Update FX rate display
-  setText('kpiIncomeFxSmall', Number(state.currencyRate||0).toFixed(4));
-}
+    // Update FX rate display
+    setText('kpiIncomeFxSmall', Number(state.currencyRate||0).toFixed(4));
+    
+    console.log('✅ Income KPIs updated successfully');
+  }
 
 // Ultra-smooth animation functions optimized for performance
 function animateKPICards() {

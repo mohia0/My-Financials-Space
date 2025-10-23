@@ -325,6 +325,7 @@ async function loadFromSupabase() {
           state.autosave = data.settings.autosave ? 'on' : 'off';
           state.includeAnnualInMonthly = data.settings.include_annual_in_monthly || false;
           state.inputsLocked = data.settings.inputs_locked || false;
+          console.log('🔒 Lock state loaded from Supabase:', state.inputsLocked);
           state.selectedCurrency = data.settings.preferred_currency || 'EGP';
           
           if (typeof columnOrder !== 'undefined') {
@@ -368,7 +369,24 @@ async function loadFromSupabase() {
       updateAnalyticsPage();
     }
     
-    console.log('✅ Data loaded from Supabase successfully');
+        // Update year tabs if income data was loaded
+        if (data.income && typeof createYearTabsFromData === 'function') {
+          console.log('🔄 Updating year tabs from loaded income data...');
+          createYearTabsFromData(state.income);
+        }
+        
+        // Update UI elements after loading data from Supabase
+        if (typeof updateInputsLockState === 'function') {
+          console.log('🔄 Updating inputs lock state from loaded data');
+          updateInputsLockState();
+        }
+        
+        if (typeof updateLockIcon === 'function') {
+          console.log('🔄 Updating lock icon from loaded data');
+          updateLockIcon();
+        }
+        
+        console.log('✅ Data loaded from Supabase successfully');
     
   } catch (error) {
     console.error('❌ Failed to load data from Supabase:', error);
