@@ -102,15 +102,15 @@ body.onboarding-active .mobile-bottom-nav {
 /* Light mode header styling */
 [data-theme="light"] header {
   background: var(--bg) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* Light mode header shadows */
 [data-theme="light"] header.scrolled {
-  background: rgba(248, 250, 252, 0.95) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  background: var(--bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
 }
 
@@ -462,15 +462,16 @@ header {
   position: sticky !important;
   top: 0 !important;
   z-index: 1000;
-  background: var(--bg);
-  backdrop-filter: blur(20px);
+  background: var(--bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border-bottom: 1px solid transparent;
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   padding: 1rem 0;
   margin: -1rem 0 1rem 0;
   width: 100%;
   /* Enhanced mobile performance */
-  will-change: transform, background-color, backdrop-filter;
+  will-change: transform, background-color;
   transform: translateZ(0);
   /* Smooth shadow transitions */
   box-shadow: 0 0 0 rgba(0, 0, 0, 0);
@@ -488,10 +489,10 @@ header.scrolled {
   margin: -0.75rem 0 0.75rem 0;
   border-bottom-color: var(--stroke);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  /* Enhanced mobile backdrop */
-  background: rgba(var(--bg-rgb, 10, 10, 11), 0.95);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  /* Match background exactly */
+  background: var(--bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   /* Smooth transform for mobile */
   transform: translateZ(0) scale(1);
 }
@@ -526,12 +527,6 @@ header.scrolled .icon-btn {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Enhanced scroll effects */
-header.scrolled {
-  background: rgba(10, 10, 11, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
 
 /* Mobile responsiveness for sticky header */
 @media (max-width: 768px) {
