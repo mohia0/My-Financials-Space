@@ -528,18 +528,23 @@ img, svg, .icon, .avatar, .profile-pic {
   -webkit-filter: none !important;
 }
 
-/* Sticky Header Styles */
+/* SUPER-PERFECT Sticky Header Styles */
 header {
   position: sticky !important;
   top: 0 !important;
-  z-index: 100;
+  z-index: 1000;
   background: var(--bg);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid transparent;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   padding: 1rem 0;
   margin: -1rem 0 1rem 0;
   width: 100%;
+  /* Enhanced mobile performance */
+  will-change: transform, background-color, backdrop-filter;
+  transform: translateZ(0);
+  /* Smooth shadow transitions */
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
 /* Ensure proper scrolling context */
@@ -548,12 +553,18 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Header scroll state - compact and with border */
+/* SUPER-PERFECT Header scroll state - compact and with border */
 header.scrolled {
   padding: 0.75rem 0;
   margin: -0.75rem 0 0.75rem 0;
   border-bottom-color: var(--stroke);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  /* Enhanced mobile backdrop */
+  background: rgba(var(--bg-rgb, 10, 10, 11), 0.95);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  /* Smooth transform for mobile */
+  transform: translateZ(0) scale(1);
 }
 
 /* Smooth transitions for header elements */
@@ -3302,7 +3313,7 @@ input[type="range"]::-moz-range-thumb:hover {
   border-radius: 8px !important;
   border: none;
   background: var(--card);
-  overflow: hidden; /* Ensure rounded corners are visible */
+  /* Remove overflow: hidden to allow horizontal scrolling */
 }
 
 .table-container::-webkit-scrollbar {
@@ -3358,6 +3369,19 @@ input[type="range"]::-moz-range-thumb:hover {
 
 /* Mobile optimizations */
 @media (max-width: 768px) {
+  
+  /* Enhanced table container for mobile scrolling */
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth;
+    /* Ensure proper touch scrolling */
+    touch-action: pan-x;
+    /* Add visual scroll indicators */
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted) var(--glass);
+  }
+  
   .table-container .row-head,
   .table-container .row,
   .table-container .row-biz,
@@ -4706,7 +4730,7 @@ header img:hover {
   background: var(--bg);
   border-top: 1px solid var(--stroke);
   padding: 8px 16px 12px;
-  z-index: 1000;
+  z-index: 9999; /* Higher z-index to ensure it stays on top */
   backdrop-filter: blur(10px);
   /* Ensure it stays within viewport */
   max-width: 100vw;
@@ -4720,6 +4744,9 @@ header img:hover {
   width: 100%;
   height: auto;
   min-height: 60px;
+  /* Force hardware acceleration for smooth performance */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .mobile-nav-btn {
@@ -4780,12 +4807,17 @@ header img:hover {
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    z-index: 1000 !important;
+    z-index: 9999 !important; /* Higher z-index to ensure it stays on top */
+    /* Ensure it's always visible and sticky */
+    transform: translateZ(0) !important;
+    will-change: transform !important;
   }
   
   /* Add bottom padding to main content to account for mobile nav */
   #mainContent {
     padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0)); /* Account for safe area */
+    /* Ensure content doesn't get hidden behind the sticky toolbar */
+    margin-bottom: 0;
   }
   
   /* Ensure body doesn't allow horizontal scroll */
@@ -4820,6 +4852,25 @@ header img:hover {
     margin-bottom: 3rem !important; /* Extra space after last table */
   }
   
+  /* Enhanced mobile table scrolling */
+  .table-container {
+    /* Ensure smooth horizontal scrolling on mobile */
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0;
+    /* Add momentum scrolling for iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Ensure proper touch targets */
+    touch-action: pan-x pan-y;
+  }
+  
+  /* Add scroll snap points for better mobile experience */
+  .table-container .row-head,
+  .table-container .row,
+  .table-container .row-biz,
+  .table-container .row-income {
+    scroll-snap-align: start;
+  }
+  
   /* Ensure page content has proper bottom spacing */
   .page-content {
     padding-bottom: 1rem;
@@ -4828,6 +4879,32 @@ header img:hover {
   /* Specific spacing for analytics page sections */
   .analytics-section:last-child {
     margin-bottom: 3rem !important; /* Extra space after last analytics section */
+  }
+  
+  /* Improve mobile table accessibility */
+  .table-container {
+    /* Add visual scroll indicators */
+    border: 1px solid var(--stroke);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Ensure table rows are properly spaced on mobile */
+  .table-container .row,
+  .table-container .row-biz,
+  .table-container .row-income {
+    /* Add better spacing between rows */
+    margin-bottom: 1px;
+    /* Ensure proper touch targets */
+    min-height: 44px;
+  }
+  
+  /* Improve mobile table header visibility */
+  .table-container .row-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--card);
+    border-bottom: 2px solid var(--stroke);
   }
 }
 
@@ -8388,6 +8465,9 @@ body.splash-complete .mobile-bottom-nav {
     overflow-x: hidden;
     max-width: 100vw;
     width: 100%;
+    /* Ensure proper mobile viewport handling */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
   }
   
   /* Ensure mobile bottom nav is always visible and properly positioned */
