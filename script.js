@@ -829,8 +829,9 @@ async function saveProfile({ fullName, file }) {
       const pageAnalytics = $('#pageAnalytics');
       const yearTabsContainer = $('#yearTabsContainer');
       
-      // Set transitioning flag
+      // Set transitioning flag and mark as page navigation
       isTransitioning = true;
+      animationState.isPageNavigation = true;
       
       // Get all page elements
       const pages = {
@@ -877,6 +878,8 @@ async function saveProfile({ fullName, file }) {
             // Clean up transition styles
             targetPageElement.style.transition = '';
             if (currentPageElement) currentPageElement.style.transition = '';
+            // Reset smart animation states after page transition
+            resetSmartAnimationStates();
           }, 150);
         }, 50);
       } else {
@@ -5487,6 +5490,9 @@ async function saveProfile({ fullName, file }) {
         supabaseReady
       });
       
+      // Mark as data change for smart animations
+      animationState.isDataChange = true;
+      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
         console.log('🔒 Inputs locked, saving locally only');
@@ -5571,6 +5577,9 @@ async function saveProfile({ fullName, file }) {
     }
     
     async function instantSaveIncomeRow(incomeRow, year) {
+      // Mark as data change for smart animations
+      animationState.isDataChange = true;
+      
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
 
@@ -6690,7 +6699,15 @@ async function saveProfile({ fullName, file }) {
               id.includes('Target') ||
               id.includes('Status') ||
               id.includes('Fx')) {
-            animateCountUp(el, val, 1200); // 1.2 second animation
+            
+            // Use smart animation - ONLY animate on first load
+            if (shouldAnimateCards()) {
+              console.log('🎬 First load: Animating', id, 'to', val);
+              animateCountUp(el, val, 1200); // 1.2 second animation
+            } else {
+              console.log('🎬 Live update: Setting', id, 'to', val, 'instantly');
+              el.textContent = val; // Instant update for navigation/edits
+            }
           } else {
             el.textContent = val;
           }
@@ -6990,11 +7007,34 @@ async function saveProfile({ fullName, file }) {
     setText('shareBizVal', sb + '%');
     
     // Update bar widths only if they've changed
-    // Animate progress bars with loading effect
-    setTimeout(() => {
-      animateProgressBar('sharePersonalBarContainer', sp);
-      animateProgressBar('shareBizBarContainer', sb);
-    }, 800);
+    // Use smart animation system - ONLY animate on first load
+    if (shouldAnimateCards()) {
+      // First load - use animations
+      console.log('🎬 First load: Animating progress bars');
+      setTimeout(() => {
+        animateProgressBar('sharePersonalBarContainer', sp);
+        animateProgressBar('shareBizBarContainer', sb);
+      }, 800);
+    } else {
+      // Navigation, data change, or live edit - update instantly without animation
+      console.log('🎬 Live update: Setting progress bars instantly');
+      const personalBar = document.getElementById('sharePersonalBarContainer');
+      const bizBar = document.getElementById('shareBizBarContainer');
+      if (personalBar) {
+        const barElement = personalBar.querySelector('span');
+        if (barElement) {
+          personalBar.classList.remove('loading');
+          barElement.style.width = sp + '%';
+        }
+      }
+      if (bizBar) {
+        const barElement = bizBar.querySelector('span');
+        if (barElement) {
+          bizBar.classList.remove('loading');
+          barElement.style.width = sb + '%';
+        }
+      }
+    }
     
     // Update Income KPIs with lifetime totals
     setText('kpiIncomeAllMonthlyUSD', nfUSD.format(lifetimeIncome.monthlyUSD));
@@ -8512,13 +8552,16 @@ async function saveProfile({ fullName, file }) {
       container.classList.add('loading');
     }
 
-    // Animation state tracking for first-time page visits
+    // Smart animation state tracking system
     let animationState = {
       hasAnimated: {
         expenses: false,
         income: false,
         analytics: false
-      }
+      },
+      isFirstLoad: true, // Track if this is the very first page load
+      isPageNavigation: false, // Track if user is navigating between pages
+      isDataChange: false // Track if data is being updated live
     };
 
     // Reset animation state for a specific page
@@ -8535,6 +8578,12 @@ async function saveProfile({ fullName, file }) {
       animationState.hasAnimated.analytics = false;
     }
 
+    // Reset smart animation states for page navigation
+    function resetSmartAnimationStates() {
+      animationState.isPageNavigation = false;
+      animationState.isDataChange = false;
+    }
+
     // Reset animation state when data changes significantly
     function resetAnimationsOnDataChange() {
       // Reset all animation states so users can see animations again
@@ -8545,6 +8594,99 @@ async function saveProfile({ fullName, file }) {
         setTimeout(() => {
           triggerFirstTimePageAnimations(currentPage);
         }, 100);
+      }
+    }
+
+    // Smart animation system - determines animation behavior based on context
+    function shouldAnimateCards() {
+      // ONLY animate on the very first page load - never on navigation, edits, or data changes
+      const shouldAnimate = animationState.isFirstLoad && 
+                           !animationState.isPageNavigation && 
+                           !animationState.isDataChange;
+      
+      // Debug logging
+      console.log('🎬 Animation Check:', {
+        isFirstLoad: animationState.isFirstLoad,
+        isPageNavigation: animationState.isPageNavigation,
+        isDataChange: animationState.isDataChange,
+        shouldAnimate: shouldAnimate
+      });
+      
+      return shouldAnimate;
+    }
+
+    // Update card values without animation (for live updates)
+    function updateCardValuesLive(cardData) {
+      const { numbers, progressBars } = cardData;
+      
+      // Update numbers instantly without animation
+      numbers.forEach(number => {
+        const el = document.getElementById(number.id);
+        if (el && number.value !== undefined) {
+          el.textContent = number.value;
+        }
+      });
+      
+      // Update progress bars instantly without animation
+      progressBars.forEach(bar => {
+        const container = document.getElementById(bar.containerId);
+        if (container) {
+          const barElement = container.querySelector('span');
+          if (barElement) {
+            container.classList.remove('loading');
+            barElement.style.width = bar.targetWidth + '%';
+          }
+        }
+      });
+    }
+
+    // Reset card values to 0 before animation
+    function resetCardValuesToZero(cardData) {
+      const { numbers, progressBars } = cardData;
+      
+      // Reset numbers to 0
+      numbers.forEach(number => {
+        const el = document.getElementById(number.id);
+        if (el) {
+          // Reset to 0 or appropriate default
+          if (number.id.includes('Grade') || number.id.includes('Status')) {
+            el.textContent = 'F'; // Default grade
+          } else if (number.id.includes('%')) {
+            el.textContent = '0%';
+          } else if (number.id.includes('USD') || number.id.includes('EGP')) {
+            el.textContent = '$0.00';
+          } else {
+            el.textContent = '0';
+          }
+        }
+      });
+      
+      // Reset progress bars to 0
+      progressBars.forEach(bar => {
+        const container = document.getElementById(bar.containerId);
+        if (container) {
+          const barElement = container.querySelector('span');
+          if (barElement) {
+            container.classList.remove('loading');
+            barElement.style.width = '0%';
+          }
+        }
+      });
+    }
+
+    // Smart card update function - chooses between animated and live updates
+    function updateCardSmart(cardData, delay = 0) {
+      if (shouldAnimateCards()) {
+        // First load - reset to 0 then animate
+        // console.log('🎬 Using animated updates for first load');
+        resetCardValuesToZero(cardData);
+        setTimeout(() => {
+          animateCardSynchronized(cardData, delay);
+        }, 100); // Small delay to show the reset
+      } else {
+        // Navigation or data change - update live without animation
+        // console.log('🎬 Using live updates (no animation)');
+        updateCardValuesLive(cardData);
       }
     }
 
@@ -8584,25 +8726,33 @@ async function saveProfile({ fullName, file }) {
       });
     }
 
-    // First-time page loading animations
+    // Smart page loading animations - handles first load vs navigation
     function triggerFirstTimePageAnimations(page) {
-      if (animationState.hasAnimated[page]) return;
+      if (animationState.hasAnimated[page] && !animationState.isFirstLoad) return;
+      
+      // Debug logging (can be removed in production)
+      // console.log('🎬 Triggering smart animations for page:', page, {
+      //   isFirstLoad: animationState.isFirstLoad,
+      //   isPageNavigation: animationState.isPageNavigation,
+      //   isDataChange: animationState.isDataChange
+      // });
       
       setTimeout(() => {
         if (page === 'expenses') {
-          animateExpensesPageFirstTime();
+          animateExpensesPageSmart();
         } else if (page === 'income') {
-          animateIncomePageFirstTime();
+          animateIncomePageSmart();
         } else if (page === 'analytics') {
-          animateAnalyticsPageFirstTime();
+          animateAnalyticsPageSmart();
         }
         
         animationState.hasAnimated[page] = true;
+        animationState.isFirstLoad = false; // Mark that we've loaded at least once
       }, 300); // Small delay to ensure page is fully loaded
     }
 
-    // Expenses page first-time animation
-    function animateExpensesPageFirstTime() {
+    // Smart expenses page animation
+    function animateExpensesPageSmart() {
       const p = totals(state.personal);
       const b = totals(state.biz);
       const all = totals([...state.personal, ...state.biz]);
@@ -8621,7 +8771,7 @@ async function saveProfile({ fullName, file }) {
         ]
       };
       
-      animateCardSynchronized(allCardData, 0);
+      updateCardSmart(allCardData, 0);
       
       // Personal KPI Card
       const personalCardData = {
@@ -8634,7 +8784,7 @@ async function saveProfile({ fullName, file }) {
         progressBars: []
       };
       
-      animateCardSynchronized(personalCardData, 200);
+      updateCardSmart(personalCardData, 200);
       
       // Business KPI Card
       const bizCardData = {
@@ -8647,11 +8797,16 @@ async function saveProfile({ fullName, file }) {
         progressBars: []
       };
       
-      animateCardSynchronized(bizCardData, 400);
+      updateCardSmart(bizCardData, 400);
     }
 
-    // Income page first-time animation
-    function animateIncomePageFirstTime() {
+    // Expenses page first-time animation (legacy - kept for compatibility)
+    function animateExpensesPageFirstTime() {
+      animateExpensesPageSmart();
+    }
+
+    // Smart income page animation
+    function animateIncomePageSmart() {
       const i = totals(state.income);
       const lifetimeIncome = calculateLifetimeIncome();
       
@@ -8666,7 +8821,7 @@ async function saveProfile({ fullName, file }) {
         progressBars: []
       };
       
-      animateCardSynchronized(lifetimeCardData, 0);
+      updateCardSmart(lifetimeCardData, 0);
       
       // Monthly Income Card
       const monthlyCardData = {
@@ -8679,7 +8834,7 @@ async function saveProfile({ fullName, file }) {
         progressBars: []
       };
       
-      animateCardSynchronized(monthlyCardData, 200);
+      updateCardSmart(monthlyCardData, 200);
       
       // Yearly Income Card
       const yearlyCardData = {
@@ -8692,11 +8847,16 @@ async function saveProfile({ fullName, file }) {
         progressBars: []
       };
       
-      animateCardSynchronized(yearlyCardData, 400);
+      updateCardSmart(yearlyCardData, 400);
     }
 
-    // Analytics page first-time animation
-    function animateAnalyticsPageFirstTime() {
+    // Income page first-time animation (legacy - kept for compatibility)
+    function animateIncomePageFirstTime() {
+      animateIncomePageSmart();
+    }
+
+    // Smart analytics page animation
+    function animateAnalyticsPageSmart() {
       const p = totals(state.personal);
       const b = totals(state.biz);
       const all = totals([...state.personal, ...state.biz]);
@@ -8738,7 +8898,7 @@ async function saveProfile({ fullName, file }) {
         ]
       };
       
-      animateCardSynchronized(cashFlowData, 0);
+      updateCardSmart(cashFlowData, 0);
       
       // Savings Rate Card
       const savingsData = {
@@ -8752,7 +8912,7 @@ async function saveProfile({ fullName, file }) {
         ]
       };
       
-      animateCardSynchronized(savingsData, 200);
+      updateCardSmart(savingsData, 200);
       
       // Efficiency Card
       const efficiencyData = {
@@ -8766,7 +8926,7 @@ async function saveProfile({ fullName, file }) {
         ]
       };
       
-      animateCardSynchronized(efficiencyData, 400);
+      updateCardSmart(efficiencyData, 400);
       
       // Health Card
       const healthGrade = healthScore >= 90 ? 'A+' : healthScore >= 80 ? 'A' : healthScore >= 70 ? 'B+' : 
@@ -8784,7 +8944,12 @@ async function saveProfile({ fullName, file }) {
         ]
       };
       
-      animateCardSynchronized(healthData, 600);
+      updateCardSmart(healthData, 600);
+    }
+
+    // Analytics page first-time animation (legacy - kept for compatibility)
+    function animateAnalyticsPageFirstTime() {
+      animateAnalyticsPageSmart();
     }
     
     function resetAllProgressBars() {
@@ -8799,25 +8964,28 @@ async function saveProfile({ fullName, file }) {
       ];
       
       progressBarIds.forEach(containerId => {
-        // Special handling for efficiency bar when user is not logged in
-        if (containerId === 'analyticsEfficiencyBarContainer' && !currentUser) {
-          const container = document.getElementById(containerId);
-          if (container) {
-            const bar = container.querySelector('span');
-            if (bar) {
+        const container = document.getElementById(containerId);
+        if (container) {
+          const bar = container.querySelector('span');
+          if (bar) {
+            // Remove loading state immediately
+            container.classList.remove('loading');
+            
+            // Only reset to 0 if it's first load, otherwise keep current values
+            if (shouldAnimateCards()) {
               bar.style.width = '0%';
-              container.classList.remove('loading');
             }
+            // For navigation, keep the current width (no reset)
           }
-        } else {
-          resetProgressBar(containerId);
         }
       });
       
-      // Re-animate progress bars after reset
-      setTimeout(() => {
-        animateAllProgressBars();
-      }, 100);
+      // Only animate if it's first load
+      if (shouldAnimateCards()) {
+        setTimeout(() => {
+          animateAllProgressBars();
+        }, 100);
+      }
     }
     
     function animateAllProgressBars() {
@@ -9549,10 +9717,23 @@ async function saveProfile({ fullName, file }) {
       setText('analyticsHealthScoreStatus', '/100');
       setText('analyticsHealthGradeStatus', 'Grade');
       
-      // Animate health progress bar
-      setTimeout(() => {
-        animateProgressBar('analyticsHealthBarContainer', healthScore);
-      }, 1200);
+      // Use smart animation for health progress bar
+      if (shouldAnimateCards()) {
+        console.log('🎬 First load: Animating health bar');
+        setTimeout(() => {
+          animateProgressBar('analyticsHealthBarContainer', healthScore);
+        }, 1200);
+      } else {
+        console.log('🎬 Live update: Setting health bar instantly');
+        const healthBarContainer = document.getElementById('analyticsHealthBarContainer');
+        if (healthBarContainer) {
+          const barElement = healthBarContainer.querySelector('span');
+          if (barElement) {
+            healthBarContainer.classList.remove('loading');
+            barElement.style.width = healthScore + '%';
+          }
+        }
+      }
       setText('analyticsHealthProgress', Math.round(healthScore) + '%');
       
       // Apply color coding to health score
@@ -12236,7 +12417,9 @@ function loadNonCriticalResources() {
         }
       }
       
-      // Update KPIs and analytics
+      // Update KPIs and analytics with live calculation
+      // console.log('🔄 Live calculation triggered for row:', row.name);
+      animationState.isDataChange = true; // Mark as data change for smart animations
       renderKPIs();
     }
 
@@ -12587,7 +12770,7 @@ function loadNonCriticalResources() {
                 }
                 instantSaveExpenseRow(row, isBiz);
                 updateRowCalculations(rowElement, row, isBiz);
-                renderKPIs();
+                // renderKPIs() is already called in updateRowCalculations
               }
             }
           } else {
