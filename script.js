@@ -761,8 +761,8 @@ async function saveProfile({ fullName, file }) {
         mobileNav.classList.add('android-webview');
         
         // Force positioning above Android navbar
-        mobileNav.style.bottom = '20px';
-        mobileNav.style.paddingBottom = '20px';
+        mobileNav.style.bottom = '40px';
+        mobileNav.style.paddingBottom = '30px';
         mobileNav.style.zIndex = '99999';
         
         // Add Android-specific styles
@@ -777,7 +777,7 @@ async function saveProfile({ fullName, file }) {
       // Also fix main content padding
       const mainContent = document.getElementById('mainContent');
       if (mainContent) {
-        mainContent.style.paddingBottom = 'calc(6rem + 20px)';
+        mainContent.style.paddingBottom = 'calc(6rem + 40px)';
         console.log('✅ Main content padding adjusted for Android');
       }
     }

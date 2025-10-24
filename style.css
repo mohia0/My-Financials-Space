@@ -4805,9 +4805,9 @@ header img:hover {
   /* Force hardware acceleration for smooth performance */
   transform: translateZ(0);
   will-change: transform;
-  /* Android WebView safe area handling */
-  bottom: max(env(safe-area-inset-bottom, 0), 20px);
-  padding-bottom: max(12px, env(safe-area-inset-bottom, 20px));
+    /* Android WebView safe area handling */
+    bottom: max(env(safe-area-inset-bottom, 0), 40px);
+    padding-bottom: max(30px, env(safe-area-inset-bottom, 30px));
 }
 
 .mobile-nav-btn {
@@ -4860,9 +4860,9 @@ header img:hover {
   .mobile-bottom-nav {
     display: flex !important;
     /* Enhanced Android WebView safe area handling */
-    bottom: max(env(safe-area-inset-bottom, 0), 20px) !important;
+    bottom: max(env(safe-area-inset-bottom, 0), 40px) !important;
     /* Add extra safety for devices with home indicators and Android navbar */
-    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px)) !important;
+    padding-bottom: max(30px, env(safe-area-inset-bottom, 30px)) !important;
     /* Force visibility and proper positioning */
     position: fixed !important;
     left: 0 !important;
@@ -4880,11 +4880,11 @@ header img:hover {
   
   /* Add bottom padding to main content to account for mobile nav */
   #mainContent {
-    padding-bottom: calc(6rem + max(env(safe-area-inset-bottom, 0), 20px)) !important; /* Account for safe area and Android navbar */
+    padding-bottom: calc(6rem + max(env(safe-area-inset-bottom, 0), 40px)) !important; /* Account for safe area and Android navbar */
     /* Ensure content doesn't get hidden behind the sticky toolbar */
     margin-bottom: 0;
     /* Additional Android WebView compatibility */
-    min-height: calc(100vh - max(env(safe-area-inset-bottom, 0), 20px));
+    min-height: calc(100vh - max(env(safe-area-inset-bottom, 0), 40px));
   }
   
   /* Allow horizontal scroll for tables on mobile */
@@ -4994,7 +4994,7 @@ header img:hover {
     transform: translateY(0) !important;
     /* Android WebView specific fixes */
     position: fixed !important;
-    bottom: max(env(safe-area-inset-bottom, 0), 20px) !important;
+    bottom: max(env(safe-area-inset-bottom, 0), 40px) !important;
     /* Ensure it's above Android system UI */
     z-index: 99999 !important;
     /* Prevent Android navbar overlap */
@@ -5006,8 +5006,8 @@ header img:hover {
   
   /* Android WebView specific styles */
   .mobile-bottom-nav.android-webview {
-    bottom: 20px !important;
-    padding-bottom: 20px !important;
+    bottom: 40px !important;
+    padding-bottom: 30px !important;
     z-index: 99999 !important;
     position: fixed !important;
     left: 0 !important;
@@ -5022,7 +5022,7 @@ header img:hover {
     /* Prevent Android navbar overlap */
     margin-bottom: 0 !important;
     /* Ensure proper touch targets */
-    min-height: 60px !important;
+    min-height: 70px !important;
   }
   
   /* Improve mobile nav button spacing */
