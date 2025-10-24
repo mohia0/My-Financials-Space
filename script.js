@@ -745,6 +745,51 @@ async function saveProfile({ fullName, file }) {
   }
 }
 
+  // Android WebView detection and handling
+  function isAndroidWebView() {
+    return /Android/i.test(navigator.userAgent) && /wv|WebView/i.test(navigator.userAgent);
+  }
+
+  // Fix mobile navigation for Android WebView
+  function fixAndroidWebViewNavigation() {
+    if (isAndroidWebView()) {
+      console.log('🤖 Android WebView detected - applying navigation fixes');
+      
+      const mobileNav = document.getElementById('mobileBottomNav');
+      if (mobileNav) {
+        // Add Android-specific class
+        mobileNav.classList.add('android-webview');
+        
+        // Force positioning above Android navbar
+        mobileNav.style.bottom = '20px';
+        mobileNav.style.paddingBottom = '20px';
+        mobileNav.style.zIndex = '99999';
+        
+        // Add Android-specific styles
+        mobileNav.style.position = 'fixed';
+        mobileNav.style.left = '0';
+        mobileNav.style.right = '0';
+        mobileNav.style.width = '100%';
+        
+        console.log('✅ Android WebView navigation fixes applied');
+      }
+      
+      // Also fix main content padding
+      const mainContent = document.getElementById('mainContent');
+      if (mainContent) {
+        mainContent.style.paddingBottom = 'calc(6rem + 20px)';
+        console.log('✅ Main content padding adjusted for Android');
+      }
+    }
+  }
+
+  // Re-apply Android WebView fixes on window resize
+  function handleAndroidWebViewResize() {
+    if (isAndroidWebView()) {
+      fixAndroidWebViewNavigation();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function(){
     const $ = (s, el)=> (el||document).querySelector(s);
     
@@ -753,6 +798,9 @@ async function saveProfile({ fullName, file }) {
     
     // Optimize initial loading performance
     optimizeInitialLoad();
+    
+    // Fix Android WebView navigation
+    fixAndroidWebViewNavigation();
     
     // Note: Onboarding is now handled by initializeOnboarding() called after splash screen
     
@@ -770,6 +818,8 @@ async function saveProfile({ fullName, file }) {
     // Add resize listener for responsive grid updates
     window.addEventListener('resize', function() {
       updateGridTemplate();
+      // Re-apply Android WebView fixes on resize
+      handleAndroidWebViewResize();
     });
     
 
