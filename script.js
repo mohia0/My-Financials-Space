@@ -998,6 +998,9 @@ async function saveProfile({ fullName, file }) {
       mobileNav.style.width = '100%';
       mobileNav.style.maxWidth = '100vw';
       mobileNav.style.zIndex = '1000';
+      mobileNav.style.display = 'flex';
+      mobileNav.style.visibility = 'visible';
+      mobileNav.style.opacity = '1';
       
       // Ensure it doesn't go outside viewport
       const viewportWidth = window.innerWidth;
@@ -1007,12 +1010,43 @@ async function saveProfile({ fullName, file }) {
         mobileNav.style.width = `${viewportWidth}px`;
         mobileNav.style.maxWidth = '100vw';
       }
+      
+      // Ensure buttons are properly distributed
+      const buttons = mobileNav.querySelectorAll('.mobile-nav-btn');
+      buttons.forEach(btn => {
+        btn.style.flex = '1';
+        btn.style.minWidth = '0';
+        btn.style.maxWidth = 'calc(33.333% - 8px)';
+      });
     }
 
     // Call on window resize and load
     window.addEventListener('resize', ensureMobileNavPositioning);
     window.addEventListener('load', ensureMobileNavPositioning);
     document.addEventListener('DOMContentLoaded', ensureMobileNavPositioning);
+    
+    // Additional mobile navigation initialization
+    function initializeMobileNavigation() {
+      const mobileNav = document.querySelector('.mobile-bottom-nav');
+      if (!mobileNav) return;
+      
+      // Force display on mobile devices
+      if (window.innerWidth <= 768) {
+        mobileNav.style.display = 'flex';
+        mobileNav.style.visibility = 'visible';
+        mobileNav.style.opacity = '1';
+        mobileNav.style.position = 'fixed';
+        mobileNav.style.bottom = '0';
+        mobileNav.style.left = '0';
+        mobileNav.style.right = '0';
+        mobileNav.style.width = '100%';
+        mobileNav.style.zIndex = '1000';
+      }
+    }
+    
+    // Initialize mobile navigation
+    initializeMobileNavigation();
+    window.addEventListener('resize', initializeMobileNavigation);
     
     // Mobile navigation function (called from HTML onclick)
     function switchPage(page) {

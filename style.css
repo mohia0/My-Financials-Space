@@ -4716,6 +4716,10 @@ header img:hover {
   justify-content: space-around;
   align-items: center;
   gap: 8px;
+  /* Ensure it's always visible and properly positioned */
+  width: 100%;
+  height: auto;
+  min-height: 60px;
 }
 
 .mobile-nav-btn {
@@ -4735,6 +4739,10 @@ header img:hover {
   flex: 1;
   min-height: 56px;
   cursor: pointer;
+  /* Ensure buttons are touch-friendly and properly sized */
+  min-width: 60px;
+  max-width: 120px;
+  touch-action: manipulation;
 }
 
 .mobile-nav-btn:hover {
@@ -4762,11 +4770,17 @@ header img:hover {
 /* Show mobile nav only on mobile */
 @media (max-width: 768px) {
   .mobile-bottom-nav {
-    display: flex;
+    display: flex !important;
     /* Ensure it stays within safe area on mobile devices */
     bottom: env(safe-area-inset-bottom, 0);
     /* Add extra safety for devices with home indicators */
     padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    /* Force visibility and proper positioning */
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 1000 !important;
   }
   
   /* Add bottom padding to main content to account for mobile nav */
@@ -4788,6 +4802,12 @@ header img:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    /* Ensure proper touch targets */
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
   
   /* Add extra spacing after total rows on mobile */
@@ -4814,11 +4834,44 @@ header img:hover {
 /* Hide mobile nav on larger screens */
 @media (min-width: 769px) {
   .mobile-bottom-nav {
-    display: none;
+    display: none !important;
   }
   
   #mainContent {
     padding-bottom: 1.5rem;
+  }
+}
+
+/* Additional mobile navigation fixes for better visibility */
+@media (max-width: 768px) {
+  /* Ensure mobile nav is always visible */
+  .mobile-bottom-nav {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+  }
+  
+  /* Improve mobile nav button spacing */
+  .mobile-bottom-nav {
+    gap: 4px;
+    padding: 8px 12px 12px;
+  }
+  
+  /* Ensure proper button sizing on very small screens */
+  @media (max-width: 480px) {
+    .mobile-nav-btn {
+      padding: 0.4rem 0.2rem;
+      font-size: 0.6rem;
+    }
+    
+    .mobile-nav-btn .nav-icon {
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+    
+    .mobile-nav-btn .nav-label {
+      font-size: 0.55rem;
+    }
   }
 }
 
