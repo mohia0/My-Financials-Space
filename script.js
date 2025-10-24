@@ -6682,10 +6682,10 @@ async function saveProfile({ fullName, file }) {
         // Format the current value
         let formattedValue;
         if (prefix.includes('$') || prefix.includes('€')) {
-          // Currency formatting
-          formattedValue = prefix + currentValue.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+          // Currency formatting - hide decimals during animation
+          formattedValue = prefix + Math.round(currentValue).toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
           });
         } else if (suffix.includes('%')) {
           // Percentage formatting
