@@ -1888,7 +1888,7 @@ async function saveProfile({ fullName, file }) {
       }
       
       // Update KPIs without full re-render
-      updateKPIs();
+      renderKPIs();
       
       // Check if user has reached 3+ rows and hide onboarding if needed
       checkAndHideOnboardingIfNeeded();
@@ -5150,7 +5150,7 @@ async function saveProfile({ fullName, file }) {
       const allButtons = document.querySelectorAll('.delete-btn, .icon-cell button');
       const allToggles = document.querySelectorAll('.status-toggle, .billing-toggle');
       const allFinancialInputs = document.querySelectorAll('.financial-input-wrapper, .calculated-div, .cost-input, [data-row-index]');
-      const allDateInputs = document.querySelectorAll('.date-input-minimal, input[type="date"]');
+      const allDateInputs = document.querySelectorAll('.date-input-minimal, input[type="date"]:not(.smart-date-picker input)');
       const allClickableElements = document.querySelectorAll('[onclick], [data-clickable]');
       const addRowButtons = document.querySelectorAll('button[data-add-row]');
       
@@ -5197,6 +5197,18 @@ async function saveProfile({ fullName, file }) {
       filteredElements.forEach(element => {
         // Allow heatmap year select to remain interactive even when locked
         if (element.id === 'heatmapYearSelect' || (element.classList && element.classList.contains('heatmap-year-select'))) {
+          element.disabled = false;
+          element.style.pointerEvents = 'auto';
+          element.style.userSelect = 'auto';
+          const existingOverlay = element.querySelector && element.querySelector('.lock-indicator');
+          if (existingOverlay && existingOverlay.parentNode === element) {
+            existingOverlay.remove();
+          }
+          return; // Skip locking for this control
+        }
+        
+        // Allow Untitled UI date picker to remain interactive even when locked
+        if (element.closest('.untitled-date-picker') || element.classList.contains('untitled-date-input') || element.classList.contains('calendar-icon')) {
           element.disabled = false;
           element.style.pointerEvents = 'auto';
           element.style.userSelect = 'auto';
@@ -11460,7 +11472,7 @@ async function saveProfile({ fullName, file }) {
               }
               
               // Update KPIs without full re-render
-              updateKPIs();
+              renderKPIs();
             }, 300); // Match CSS animation duration
             
             // Check if onboarding should be shown again after deletion
@@ -11580,14 +11592,14 @@ async function saveProfile({ fullName, file }) {
       const ySelected = usdToSelectedCurrency(yUSD);
       
       const div = document.createElement('div');
-      div.className = 'row row-income row-draggable row-drop-zone';
+      div.className = 'row row-income';
       div.setAttribute('data-row-index', idx);
-      div.setAttribute('draggable', 'true');
+      div.setAttribute('draggable', 'false');
       div.__rowData = row; // Store row data for tag system
       
-      // Drag handle cell
+      // Drag handle cell - hidden but preserves space
       const dragHandleDiv = document.createElement('div');
-      dragHandleDiv.className = 'drag-handle';
+      dragHandleDiv.className = 'drag-handle drag-handle-hidden';
       dragHandleDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 6h8M8 12h8M8 18h8"/></svg>';
       dragHandleDiv.title = 'Drag to reorder';
       
@@ -11672,34 +11684,88 @@ async function saveProfile({ fullName, file }) {
       dateDiv.style.alignItems = 'center';
       dateDiv.style.justifyContent = 'center';
       
-      const dateInput = document.createElement('input');
-      dateInput.className = 'input date-input-minimal';
-      dateInput.type = 'date';
-      dateInput.placeholder = 'MM-DD';
-      dateInput.style.fontSize = '0.7rem';
-      dateInput.style.padding = '0.4rem 0.6rem';
-      dateInput.style.borderRadius = '8px';
-      dateInput.style.width = '100%';
-      dateInput.style.border = '1px solid var(--stroke)';
-      dateInput.style.background = 'var(--card)';
-      dateInput.style.color = 'var(--fg)';
+      // Create improved date picker with proper functionality
+      const datePickerContainer = document.createElement('div');
+      datePickerContainer.className = 'untitled-date-picker';
+      datePickerContainer.style.cssText = `
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        contain: layout;
+      `;
       
-      // Set value with current year if no date exists
+      // Create the main date input (visible and functional)
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.className = 'untitled-date-input';
+      dateInput.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: transparent;
+        color: var(--fg);
+        font-size: 0.7rem;
+        padding: 0.4rem 1.8rem 0.4rem 0.6rem;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        position: relative;
+        z-index: 1;
+        font-family: inherit;
+        font-weight: 400;
+      `;
+      
+      // Create calendar icon positioned near the text
+      const calendarIcon = document.createElement('div');
+      calendarIcon.className = 'calendar-icon';
+      calendarIcon.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      `;
+      calendarIcon.style.cssText = `
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        transition: color 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 2;
+      `;
+      
+      // Set initial value
       if (row.date) {
-        dateInput.value = row.date;
+        const date = new Date(row.date);
+        const year = parseInt(currentYear) || new Date().getFullYear();
+        date.setFullYear(year);
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const fullDate = `${year}-${month}-${day}`;
+        dateInput.value = fullDate;
       } else {
-        // Set to current year with today's month and day
         const today = new Date();
         const year = parseInt(currentYear) || today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const day = String(today.getDate()).padStart(2, '0');
-        dateInput.value = `${year}-${month}-${day}`;
-        row.date = dateInput.value;
+        const fullDate = `${year}-${month}-${day}`;
+        dateInput.value = fullDate;
+        row.date = fullDate;
       }
       
-      dateInput.addEventListener('change', function() {
-        // Ensure the year is set to current year
-        const selectedDate = new Date(this.value);
+      // Handle date change
+      const handleDateChange = () => {
+        const selectedDate = new Date(dateInput.value);
         const year = parseInt(currentYear) || new Date().getFullYear();
         selectedDate.setFullYear(year);
         const finalYear = selectedDate.getFullYear();
@@ -11708,12 +11774,41 @@ async function saveProfile({ fullName, file }) {
         const fullDate = `${finalYear}-${month}-${day}`;
         
         row.date = fullDate;
-        this.value = fullDate;
+        dateInput.value = fullDate;
         instantSaveIncomeRow(row, currentYear);
-        // Trigger live KPI updates when date changes (affects monthly/yearly calculations)
         updateIncomeKPIsLive();
+      };
+      
+      // Add event listeners
+      dateInput.addEventListener('change', handleDateChange);
+      
+      // Hover effects
+      dateInput.addEventListener('mouseenter', () => {
+        dateInput.style.background = 'var(--glass)';
+        calendarIcon.style.color = 'var(--primary)';
       });
-      dateDiv.appendChild(dateInput);
+      
+      dateInput.addEventListener('mouseleave', () => {
+        dateInput.style.background = 'transparent';
+        calendarIcon.style.color = 'var(--muted)';
+      });
+      
+      // Focus effects
+      dateInput.addEventListener('focus', (e) => {
+        e.stopPropagation();
+        dateInput.style.background = 'var(--glass)';
+        calendarIcon.style.color = 'var(--primary)';
+      });
+      
+      dateInput.addEventListener('blur', () => {
+        dateInput.style.background = 'transparent';
+        calendarIcon.style.color = 'var(--muted)';
+      });
+      
+      // Assemble the date picker
+      datePickerContainer.appendChild(dateInput);
+      datePickerContainer.appendChild(calendarIcon);
+      dateDiv.appendChild(datePickerContainer);
       
       
       // All Payment input
@@ -11983,7 +12078,7 @@ async function saveProfile({ fullName, file }) {
             addRowButtonListeners();
             
             // Update KPIs without full re-render
-            updateKPIs();
+            renderKPIs();
             // Trigger live KPI updates when income row is deleted
             updateIncomeKPIsLive();
           }, 300); // Match CSS animation duration

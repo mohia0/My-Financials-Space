@@ -4435,6 +4435,114 @@ input[type="range"]::-moz-range-thumb:hover {
   transform:scale(0.95);
 }
 
+/* Hide drag handle for income table but preserve space */
+.drag-handle-hidden {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Improved Untitled UI Date Picker Styles */
+.untitled-date-picker {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  contain: layout;
+}
+
+.untitled-date-input {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--fg) !important;
+  font-size: 0.7rem !important;
+  padding: 0.4rem 1.8rem 0.4rem 0.6rem !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  z-index: 1 !important;
+  font-family: inherit !important;
+  font-weight: 400 !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+}
+
+.untitled-date-input:hover {
+  background: var(--glass) !important;
+}
+
+.untitled-date-input:focus {
+  outline: none !important;
+  background: var(--glass) !important;
+  box-shadow: 0 0 0 2px var(--primary) !important;
+}
+
+.calendar-icon {
+  position: absolute !important;
+  right: 0.5rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: var(--muted) !important;
+  transition: color 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+.untitled-date-input:hover + .calendar-icon,
+.untitled-date-input:focus + .calendar-icon {
+  color: var(--primary) !important;
+}
+
+/* Hide the default date picker icon */
+.untitled-date-input::-webkit-calendar-picker-indicator {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  right: -9999px !important;
+}
+
+/* Ensure date picker doesn't interfere with rows below */
+.untitled-date-picker {
+  overflow: hidden;
+  contain: layout;
+  isolation: isolate;
+}
+
+/* Prevent date picker from affecting layout */
+.untitled-date-picker input[type="date"] {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .untitled-date-input {
+    font-size: 0.65rem !important;
+    padding: 0.3rem 1.5rem 0.3rem 0.4rem !important;
+  }
+  
+  .calendar-icon {
+    right: 0.3rem !important;
+  }
+  
+  .calendar-icon svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+}
+
 /* Prevent text selection during drag */
 .row-draggable.dragging * {
   user-select: none;
