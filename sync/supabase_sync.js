@@ -317,6 +317,8 @@ class SupabaseSync {
                   icon: income.icon || 'fa:dollar-sign',
                   year: parseInt(year),
                   order: income.order || 0,
+                  progress: income.progress || 10,
+                  note: income.note || '',
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', income.id)
@@ -337,7 +339,9 @@ class SupabaseSync {
                   method: income.method || 'Bank Transfer',
                   icon: income.icon || 'fa:dollar-sign',
                   year: parseInt(year),
-                  order: income.order || 0
+                  order: income.order || 0,
+                  progress: income.progress || 10,
+                  note: income.note || ''
                 })
                 .select()
                 .single()

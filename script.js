@@ -4044,6 +4044,14 @@ async function saveProfile({ fullName, file }) {
             if (!newIncomeData[year]) {
               newIncomeData[year] = [];
             }
+            
+            console.log('📥 Loading income from Supabase (loadUserData):', {
+              id: income.id,
+              name: income.name,
+              progress: income.progress,
+              note: income.note
+            });
+            
             newIncomeData[year].push({
               name: income.name,
               tags: income.tags,
@@ -4054,6 +4062,8 @@ async function saveProfile({ fullName, file }) {
               method: income.method,
               icon: income.icon || 'fa:dollar-sign', // Default icon if not in schema
               order: income.order || 0,
+              progress: income.progress || 10,
+              note: income.note || '',
               id: income.id
             });
           });
@@ -5562,6 +5572,7 @@ async function saveProfile({ fullName, file }) {
     
     // Instant save function for expense financial inputs - 0ms delay
     let expenseSaveInProgress = new Set();
+    let incomeSaveInProgress = new Set();
     
     async function instantSaveExpenseRow(expenseRow, isBiz) {
       console.log('💾 instantSaveExpenseRow called:', { 
@@ -5661,168 +5672,126 @@ async function saveProfile({ fullName, file }) {
     }
     
     async function instantSaveIncomeRow(incomeRow, year) {
+      console.log('💾 instantSaveIncomeRow called:', { 
+        name: incomeRow.name, 
+        progress: incomeRow.progress,
+        note: incomeRow.note,
+        hasId: !!incomeRow.id,
+        year: year,
+        inputsLocked: state.inputsLocked,
+        hasUser: !!currentUser,
+        supabaseReady
+      });
+      
       // Mark as data change for smart animations
       animationState.isDataChange = true;
       
       // Check if lock is active - if so, only save locally, not to cloud
       if (state.inputsLocked) {
-
+        console.log('🔒 Inputs locked, saving locally only');
         saveToLocal();
         return;
       }
       
       if (!currentUser || !supabaseReady) {
-
+        console.log('❌ No user or Supabase not ready, saving locally only');
         saveToLocal();
         return;
       }
       
-      // Create a unique key for this income row to prevent duplicate saves
-      const rowKey = incomeRow.id || `temp_${incomeRow.name}_${incomeRow.date}`;
+      const rowKey = `income-${incomeRow.id || 'new'}`;
       
       // Prevent duplicate saves for the same row
-      if (incomeSaveInProgress && incomeSaveInProgress.has(rowKey)) {
+      if (incomeSaveInProgress.has(rowKey)) {
         return;
-      }
-      
-      // Initialize the set if it doesn't exist
-      if (!incomeSaveInProgress) {
-        incomeSaveInProgress = new Set();
       }
       
       incomeSaveInProgress.add(rowKey);
       
-      // Save immediately - 0ms delay
-        try {
+      try {
+        if (incomeRow.id) {
+          // Update existing row - 0ms delay
+          const updateData = {
+            name: incomeRow.name || '',
+            tags: incomeRow.tags || '',
+            date: incomeRow.date || new Date().toISOString().split('T')[0],
+            all_payment: incomeRow.allPayment || 0,
+            paid_usd: incomeRow.paidUsd || 0,
+            paid_egp: incomeRow.paidEgp || null,
+            method: incomeRow.method || 'Bank Transfer',
+            icon: incomeRow.icon || 'fa:dollar-sign',
+            year: parseInt(year),
+            order: incomeRow.order || 0,
+            progress: incomeRow.progress || 10,
+            note: incomeRow.note || '',
+            updated_at: new Date().toISOString()
+          };
           
-          if (incomeRow.id) {
-            // Update existing income record
-            // Try to update with paid_egp first, fallback if field doesn't exist
-            let updateError;
-            try {
-              const { error } = await window.supabaseClient
-              .from('income')
-              .update({
-                name: incomeRow.name || '',
-                tags: incomeRow.tags || '',
-                date: incomeRow.date || new Date().toISOString().split('T')[0],
-                all_payment: incomeRow.allPayment || 0,
-                paid_usd: incomeRow.paidUsd || 0,
-                  paid_egp: incomeRow.paidEgp || null,
-                method: incomeRow.method || 'Bank Transfer',
-                icon: incomeRow.icon || 'fa:dollar-sign',
-                year: parseInt(year),
-                order: incomeRow.order || 0,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', incomeRow.id);
-              updateError = error;
-            } catch (schemaError) {
-              // If paid_egp field doesn't exist, fallback to without it
-
-              const { error } = await window.supabaseClient
-                .from('income')
-                .update({
-                  name: incomeRow.name || '',
-                  tags: incomeRow.tags || '',
-                  date: incomeRow.date || new Date().toISOString().split('T')[0],
-                  all_payment: incomeRow.allPayment || 0,
-                  paid_usd: incomeRow.paidUsd || 0,
-                  method: incomeRow.method || 'Bank Transfer',
-                  icon: incomeRow.icon || 'fa:dollar-sign',
-                  year: parseInt(year),
-                  order: incomeRow.order || 0,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', incomeRow.id);
-              updateError = error;
-            }
+          console.log('🔄 Updating income in Supabase:', {
+            id: incomeRow.id,
+            updateData: updateData
+          });
+          
+          const { error } = await window.supabaseClient
+            .from('income')
+            .update(updateData)
+            .eq('id', incomeRow.id);
             
-            if (updateError) {
+          if (error) {
+            console.error('❌ Supabase update error:', error);
+            throw error;
+          }
+          console.log('✅ Income updated in Supabase for row:', incomeRow.id);
 
-              showNotification('Failed to save changes, retrying...', 'error', 2000);
-              
-              // Retry once after a short delay
-              setTimeout(async () => {
-                try {
-                  const { error: retryError } = await window.supabaseClient
-                    .from('income')
-                    .update({
-                      tags: incomeRow.tags || '',
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', incomeRow.id);
-                  
-                  if (retryError) {
-                    showNotification('Failed to sync tags', 'error', 3000);
-                  } else {
-                    // Don't show individual tag sync notifications
-              // showNotification('Tags synced', 'success', 1000);
-                  }
-                } catch (retryErr) {
-                  // Silent retry error
-                }
-              }, 1000);
-              
-              throw updateError;
-            } else {
-              // Don't show individual tag update notifications
-              // showNotification('Tags updated', 'success', 800);
-            }
-          } else {
-            // Create new income record
-            const { data: newIncome, error: insertError } = await window.supabaseClient
-              .from('income')
-              .insert({
-                user_id: currentUser.id,
-                name: incomeRow.name || '',
-                tags: incomeRow.tags || '',
-                date: incomeRow.date || new Date().toISOString().split('T')[0],
-                all_payment: incomeRow.allPayment || 0,
-                paid_usd: incomeRow.paidUsd || 0,
-                paid_egp: incomeRow.paidEgp || null,
-                method: incomeRow.method || 'Bank Transfer',
-                icon: incomeRow.icon || 'fa:dollar-sign',
-                year: parseInt(year),
-                order: incomeRow.order || 0
-              })
-              .select()
-              .single();
+        } else {
+          // Create new row - 0ms delay
+          const insertData = {
+            user_id: currentUser.id,
+            name: incomeRow.name || '',
+            tags: incomeRow.tags || '',
+            date: incomeRow.date || new Date().toISOString().split('T')[0],
+            all_payment: incomeRow.allPayment || 0,
+            paid_usd: incomeRow.paidUsd || 0,
+            paid_egp: incomeRow.paidEgp || null,
+            method: incomeRow.method || 'Bank Transfer',
+            icon: incomeRow.icon || 'fa:dollar-sign',
+            year: parseInt(year),
+            order: incomeRow.order || 0,
+            progress: incomeRow.progress || 10,
+            note: incomeRow.note || ''
+          };
+          
+          console.log('🔄 Creating income in Supabase:', {
+            insertData: insertData
+          });
+          
+          const { data, error } = await window.supabaseClient
+            .from('income')
+            .insert(insertData)
+            .select()
+            .single();
             
-            if (insertError) {
-
-              showNotification('Failed to save income', 'error', 2000);
-              throw insertError;
-            } else {
-
-              // Update the local row with the new ID
-              if (newIncome) {
-                incomeRow.id = newIncome.id;
-              }
-              // Don't show individual income save notifications
-              // showNotification('Income saved', 'success', 800);
-            }
+          if (error) {
+            console.error('❌ Supabase insert error:', error);
+            throw error;
           }
           
-          // Also save to local storage as backup
-          saveToLocal();
-          
-          // Update available_years in user settings to include the new year
-          setTimeout(async () => {
-            await syncNewYearToCloud(year);
-          }, 100);
-          
-        } catch (error) {
-
-          showNotification('Failed to save income', 'error', 2000);
-          // Fallback to local save
-          saveToLocal();
-        } finally {
-          // Remove from in-progress set
-          incomeSaveInProgress.delete(rowKey);
-          // Trigger live KPI updates after saving income data
-          updateIncomeKPIsLive();
+          // Update the local row with the new ID
+          incomeRow.id = data.id;
+          console.log('✅ Income created in Supabase with ID:', data.id);
         }
+        
+        // Also save locally as backup
+        saveToLocal();
+        
+      } catch (error) {
+        console.error('❌ Error saving income to Supabase:', error);
+        // Fallback to local save
+        saveToLocal();
+      } finally {
+        // Remove from in-progress set
+        incomeSaveInProgress.delete(rowKey);
+      }
     }
 
     // Direct save function for tag removal (no debouncing)
@@ -5940,7 +5909,9 @@ async function saveProfile({ fullName, file }) {
                   paid_egp: incomeRow.paidEgp || null,
                   method: incomeRow.method || 'Bank Transfer',
                   icon: incomeRow.icon || 'fa:dollar-sign',
-                  year: parseInt(year)
+                  year: parseInt(year),
+                  progress: incomeRow.progress || 10,
+                  note: incomeRow.note || ''
                 })
                 .select()
                 .single();
@@ -6956,6 +6927,13 @@ async function saveProfile({ fullName, file }) {
   
   // Helper function to map Supabase income data to local format
   function mapSupabaseToLocalIncome(supabaseData) {
+    console.log('📥 Loading income from Supabase (script.js):', {
+      id: supabaseData.id,
+      name: supabaseData.name,
+      progress: supabaseData.progress,
+      note: supabaseData.note
+    });
+    
     return {
       id: supabaseData.id,
       name: supabaseData.name,
@@ -6966,7 +6944,9 @@ async function saveProfile({ fullName, file }) {
       paidEgp: supabaseData.paid_egp,
       method: supabaseData.method,
       icon: supabaseData.icon,
-      order: supabaseData.order || 0
+      order: supabaseData.order || 0,
+      progress: supabaseData.progress || 10,
+      note: supabaseData.note || ''
     };
   }
   
@@ -11688,14 +11668,21 @@ async function saveProfile({ fullName, file }) {
       // Date input (month and day only, with current year)
       const dateDiv = document.createElement('div');
       dateDiv.style.position = 'relative';
+      dateDiv.style.display = 'flex';
+      dateDiv.style.alignItems = 'center';
+      dateDiv.style.justifyContent = 'center';
       
       const dateInput = document.createElement('input');
       dateInput.className = 'input date-input-minimal';
       dateInput.type = 'date';
       dateInput.placeholder = 'MM-DD';
-      dateInput.style.fontSize = '0.75rem';
-      dateInput.style.padding = '0.5rem 0.75rem';
+      dateInput.style.fontSize = '0.7rem';
+      dateInput.style.padding = '0.4rem 0.6rem';
       dateInput.style.borderRadius = '8px';
+      dateInput.style.width = '100%';
+      dateInput.style.border = '1px solid var(--stroke)';
+      dateInput.style.background = 'var(--card)';
+      dateInput.style.color = 'var(--fg)';
       
       // Set value with current year if no date exists
       if (row.date) {
@@ -12095,6 +12082,85 @@ async function saveProfile({ fullName, file }) {
         });
       });
       div.appendChild(methodDiv);
+      
+      // Progress toggle
+      const progressDiv = document.createElement('div');
+      progressDiv.className = 'progress-toggle';
+      
+      const progressButton = document.createElement('button');
+      const currentProgress = row.progress || 10;
+      progressButton.className = `progress-${currentProgress}`;
+      progressButton.textContent = `${currentProgress}%`;
+      progressButton.title = 'Click to cycle through progress (10% to 100%)';
+      
+      console.log('🎯 Creating progress button for row:', {
+        id: row.id,
+        name: row.name,
+        progress: row.progress,
+        currentProgress: currentProgress
+      });
+      
+      progressButton.addEventListener('click', function() {
+        const currentProgress = parseInt(row.progress) || 10;
+        let newProgress = currentProgress + 10;
+        if (newProgress > 100) {
+          newProgress = 10;
+        }
+        
+        row.progress = newProgress;
+        this.textContent = `${newProgress}%`;
+        this.className = `progress-${newProgress}`;
+        
+        console.log('🔄 Progress changed to:', newProgress, 'for row:', row.id || row.name);
+        console.log('🔄 Row data before save:', {
+          id: row.id,
+          name: row.name,
+          progress: row.progress,
+          note: row.note
+        });
+        instantSaveIncomeRow(row, currentYear);
+      });
+      
+      progressDiv.appendChild(progressButton);
+      
+      // Note input
+      const noteDiv = document.createElement('div');
+      const noteInput = document.createElement('textarea');
+      noteInput.className = 'input';
+      noteInput.placeholder = 'Add note...';
+      noteInput.value = row.note || '';
+      noteInput.rows = 1;
+      
+      console.log('📝 Creating note input for row:', {
+        id: row.id,
+        name: row.name,
+        note: row.note,
+        noteValue: noteInput.value
+      });
+      noteInput.style.fontSize = '0.7rem';
+      noteInput.style.padding = '0.4rem 0.6rem';
+      noteInput.style.borderRadius = '8px';
+      
+      // Auto-resize textarea
+      noteInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+        
+        row.note = this.value;
+        console.log('📝 Note changed to:', this.value, 'for row:', row.id || row.name);
+        console.log('📝 Row data before save:', {
+          id: row.id,
+          name: row.name,
+          progress: row.progress,
+          note: row.note
+        });
+        instantSaveIncomeRow(row, currentYear);
+      });
+      
+      noteDiv.appendChild(noteInput);
+      
+      div.appendChild(progressDiv);
+      div.appendChild(noteDiv);
       div.appendChild(deleteDiv);
       
       wrap.appendChild(div);
@@ -12374,11 +12440,11 @@ function loadNonCriticalResources() {
     // For Income table (responsive structure)
     let incomeTemplate;
     if (window.innerWidth <= 480) {
-      incomeTemplate = `16px 20px 1fr 1.2fr 80px 70px 70px 80px 1fr 20px`;
+      incomeTemplate = `16px 20px 1fr 1.2fr 80px 70px 70px 80px 1fr 60px 80px 20px`;
     } else if (window.innerWidth <= 768) {
-      incomeTemplate = `18px 24px 1fr 1.2fr 100px 85px 85px 100px 1fr 24px`;
+      incomeTemplate = `18px 24px 1fr 1.2fr 100px 85px 85px 100px 1fr 70px 90px 24px`;
     } else {
-      incomeTemplate = `20px 28px 1fr 1.2fr 120px 100px 100px 120px 1fr 28px`;
+      incomeTemplate = `20px 28px 1fr 1.2fr 100px 100px 100px 120px 1fr 100px 1fr 28px`;
     }
     
     document.querySelectorAll('.row-income').forEach(row => {

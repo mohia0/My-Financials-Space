@@ -222,6 +222,13 @@ function mapSupabaseToLocalExpense(supabaseData) {
  * Map Supabase income data to local format
  */
 function mapSupabaseToLocalIncome(supabaseData) {
+  console.log('📥 Loading income from Supabase:', {
+    id: supabaseData.id,
+    name: supabaseData.name,
+    progress: supabaseData.progress,
+    note: supabaseData.note
+  });
+  
   return {
     id: supabaseData.id,
     name: supabaseData.name,
@@ -232,7 +239,9 @@ function mapSupabaseToLocalIncome(supabaseData) {
     paidEgp: supabaseData.paid_egp,
     method: supabaseData.method,
     icon: supabaseData.icon,
-    order: supabaseData.order || 0
+    order: supabaseData.order || 0,
+    progress: supabaseData.progress || 10,
+    note: supabaseData.note || ''
   };
 }
 
