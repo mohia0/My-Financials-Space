@@ -5207,8 +5207,8 @@ async function saveProfile({ fullName, file }) {
           return; // Skip locking for this control
         }
         
-        // Allow Untitled UI date picker to remain interactive even when locked
-        if (element.closest('.untitled-date-picker') || element.classList.contains('untitled-date-input') || element.classList.contains('calendar-icon')) {
+        // Allow Untitled UI date picker to remain interactive even when locked (but not income table date inputs)
+        if (element.closest('.untitled-date-picker') || element.classList.contains('calendar-icon')) {
           element.disabled = false;
           element.style.pointerEvents = 'auto';
           element.style.userSelect = 'auto';
@@ -11743,26 +11743,60 @@ async function saveProfile({ fullName, file }) {
           
           // Click to edit
           dateDisplay.addEventListener('click', () => {
+            // Check if inputs are locked - don't show picker if locked
+            if (state.inputsLocked) {
+              return;
+            }
+            
             dateInput.style.display = 'block';
             dateDisplay.style.display = 'none';
             dateInput.focus();
+            
+            // Don't automatically show custom date picker - let user choose
+            // They can use native input or click calendar icon
           });
           
-          // Save and hide input
+          // Save date but don't hide input if date picker is open
           dateInput.addEventListener('change', function() {
             row.next = this.value;
-            this.style.display = 'none';
-            dateDisplay.style.display = 'block';
             updateDateDisplay();
             save('date-input');
             renderKPIs(); // Update KPIs for renewal analytics
-          });
-          
-          // Hide input on blur if no change
-          dateInput.addEventListener('blur', function() {
-            setTimeout(() => {
+            
+            // Only hide if date picker is not open
+            if (!isDatePickerOpen) {
               this.style.display = 'none';
               dateDisplay.style.display = 'block';
+            }
+          });
+          
+          // Add input event with delay to allow typing full date
+          let inputTimeout;
+          dateInput.addEventListener('input', function() {
+            // Clear previous timeout
+            if (inputTimeout) {
+              clearTimeout(inputTimeout);
+            }
+            
+            // Set a delay before updating display to allow full typing
+            inputTimeout = setTimeout(() => {
+              if (this.value) {
+                row.next = this.value;
+                updateDateDisplay();
+                save('date-input');
+                renderKPIs(); // Update KPIs for renewal analytics
+              }
+            }, 500); // 500ms delay to allow typing
+          });
+          
+          // Hide input on blur if no change (but don't auto-close date picker)
+          dateInput.addEventListener('blur', function() {
+            // Only hide if date picker is not open
+            setTimeout(() => {
+              if (!isDatePickerOpen) {
+                this.style.display = 'none';
+                dateDisplay.style.display = 'block';
+              }
             }, 100);
           });
           
@@ -12072,52 +12106,28 @@ async function saveProfile({ fullName, file }) {
       tagsWrapper.appendChild(tagsInput);
       tagsDiv.appendChild(tagsWrapper);
       
-      // Date input (month and day only, with current year)
-      const dateDiv = document.createElement('div');
+      // Date input (same structure as business table)
+      const dateDiv = document.createElement('div'); 
       dateDiv.style.position = 'relative';
-      dateDiv.style.display = 'flex';
-      dateDiv.style.alignItems = 'center';
-      dateDiv.style.justifyContent = 'center';
+      // Create a container for the date display
+      const dateContainer = document.createElement('div');
+      dateContainer.className = 'next-date-container';
+      dateContainer.style.cssText = 'display: flex; align-items: center; gap: 0.25rem; font-size: 0.65rem; color: var(--muted);';
       
-      // Create working date picker with proper click handling
-      const datePickerContainer = document.createElement('div');
-      datePickerContainer.className = 'untitled-date-picker';
-      datePickerContainer.style.cssText = `
-        position: relative;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        overflow: hidden;
-        contain: layout;
-      `;
-      
-      // Create the main date input (visible and functional)
+      // Create the date input (hidden by default)
       const dateInput = document.createElement('input');
+      dateInput.className = 'input date-input-minimal';
       dateInput.type = 'date';
-      dateInput.className = 'untitled-date-input';
-      dateInput.style.cssText = `
-        width: 100%;
-        height: 100%;
-        border: none;
-        background: transparent;
-        color: var(--fg);
-        font-size: 0.7rem;
-        padding: 0.4rem 1.8rem 0.4rem 0.6rem;
-        text-align: left;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: all 0.2s ease;
-        position: relative;
-        z-index: 1;
-        font-family: inherit;
-        font-weight: 400;
-        pointer-events: auto;
-      `;
+      dateInput.value = row.date || '';
+      dateInput.style.display = 'none';
       
-      // Create calendar icon positioned near the text
-      const calendarIcon = document.createElement('div');
-      calendarIcon.className = 'calendar-icon';
+      // Create display element
+      const dateDisplay = document.createElement('span');
+      dateDisplay.className = 'next-date-display';
+      dateDisplay.style.cssText = 'cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 4px; transition: all 0.2s ease;';
+      
+      // Create calendar icon for income table (hidden by default)
+      const calendarIcon = document.createElement('span');
       calendarIcon.innerHTML = `
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -12126,101 +12136,95 @@ async function saveProfile({ fullName, file }) {
           <line x1="3" y1="10" x2="21" y2="10"></line>
         </svg>
       `;
-      calendarIcon.style.cssText = `
-        position: absolute;
-        right: 0.5rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--muted);
-        transition: color 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: none;
-        z-index: 2;
-      `;
+      calendarIcon.style.cssText = 'color: var(--muted); transition: color 0.2s ease; display: none; align-items: center;';
       
-      // Set initial value
-      if (row.date) {
-        const date = new Date(row.date);
-        const year = parseInt(currentYear) || new Date().getFullYear();
-        date.setFullYear(year);
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const fullDate = `${year}-${month}-${day}`;
-        dateInput.value = fullDate;
-      } else {
-        const today = new Date();
-        const year = parseInt(currentYear) || today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const fullDate = `${year}-${month}-${day}`;
-        dateInput.value = fullDate;
-        row.date = fullDate;
-      }
-      
-      // Handle date change
-      const handleDateChange = () => {
-        const selectedDate = new Date(dateInput.value);
-        const year = parseInt(currentYear) || new Date().getFullYear();
-        selectedDate.setFullYear(year);
-        const finalYear = selectedDate.getFullYear();
-        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-        const day = String(selectedDate.getDate()).padStart(2, '0');
-        const fullDate = `${finalYear}-${month}-${day}`;
-        
-        row.date = fullDate;
-        dateInput.value = fullDate;
-        instantSaveIncomeRow(row, currentYear);
-        updateIncomeKPIsLive();
+      // Function to update display
+      const updateDateDisplay = () => {
+        if (row.date) {
+          dateDisplay.textContent = formatDateForDisplay(row.date);
+          dateDisplay.style.color = 'var(--fg)';
+          dateDisplay.style.backgroundColor = 'var(--hover)';
+        } else {
+          dateDisplay.textContent = 'Set date';
+          dateDisplay.style.color = 'var(--muted)';
+          dateDisplay.style.backgroundColor = 'transparent';
+        }
       };
       
-      // Add event listeners
-      dateInput.addEventListener('change', handleDateChange);
+      // Initial display update
+      updateDateDisplay();
       
-      // Force date picker to open on click
-      dateInput.addEventListener('click', (e) => {
-        e.stopPropagation();
-        console.log('Date input clicked, attempting to open picker');
-        // Force focus and try to open picker
+      // Click to edit
+      dateDisplay.addEventListener('click', () => {
+        // Check if inputs are locked - don't show picker if locked
+        if (state.inputsLocked) {
+          return;
+        }
+        
+        dateInput.style.display = 'block';
+        dateDisplay.style.display = 'none';
+        calendarIcon.style.display = 'flex';
         dateInput.focus();
-        if (dateInput.showPicker) {
-          try {
-            dateInput.showPicker();
-          } catch (err) {
-            console.log('showPicker not supported, using fallback');
-          }
+        
+        // Don't automatically show custom date picker - let user choose
+        // They can click the calendar icon or use native input
+      });
+      
+      // Save date but don't hide input if date picker is open
+      dateInput.addEventListener('change', function() {
+        row.date = this.value;
+        updateDateDisplay();
+        instantSaveIncomeRow(row, currentYear);
+        updateIncomeKPIsLive();
+        
+        // Only hide if date picker is not open
+        if (!isDatePickerOpen) {
+          this.style.display = 'none';
+          dateDisplay.style.display = 'block';
+          calendarIcon.style.display = 'none';
         }
       });
       
-      // Also try on focus
-      dateInput.addEventListener('focus', (e) => {
-        e.stopPropagation();
-        console.log('Date input focused');
-        dateInput.style.background = 'var(--glass)';
-        calendarIcon.style.color = 'var(--primary)';
+      // Add input event with delay to allow typing full date
+      let inputTimeout;
+      dateInput.addEventListener('input', function() {
+        // Clear previous timeout
+        if (inputTimeout) {
+          clearTimeout(inputTimeout);
+        }
+        
+        // Set a delay before updating display to allow full typing
+        inputTimeout = setTimeout(() => {
+          if (this.value) {
+            row.date = this.value;
+            updateDateDisplay();
+            instantSaveIncomeRow(row, currentYear);
+            updateIncomeKPIsLive();
+          }
+        }, 500); // 500ms delay to allow typing
       });
       
-      // Hover effects
-      dateInput.addEventListener('mouseenter', () => {
-        dateInput.style.background = 'var(--glass)';
-        calendarIcon.style.color = 'var(--primary)';
+      // Hide input on blur if no change (but don't auto-close date picker)
+      dateInput.addEventListener('blur', function() {
+        // Only hide if date picker is not open
+        setTimeout(() => {
+          if (!isDatePickerOpen) {
+            this.style.display = 'none';
+            dateDisplay.style.display = 'block';
+            calendarIcon.style.display = 'none';
+          }
+        }, 100);
       });
       
-      dateInput.addEventListener('mouseleave', () => {
-        dateInput.style.background = 'transparent';
-        calendarIcon.style.color = 'var(--muted)';
-      });
+      // Create display wrapper to hold text and icon
+      const displayWrapper = document.createElement('div');
+      displayWrapper.style.cssText = 'display: flex; align-items: center; gap: 0.25rem;';
+      displayWrapper.appendChild(dateDisplay);
+      displayWrapper.appendChild(calendarIcon);
       
-      dateInput.addEventListener('blur', () => {
-        dateInput.style.background = 'transparent';
-        calendarIcon.style.color = 'var(--muted)';
-      });
-      
-      // Assemble the date picker
-      datePickerContainer.appendChild(dateInput);
-      datePickerContainer.appendChild(calendarIcon);
-      dateDiv.appendChild(datePickerContainer);
+      dateContainer.appendChild(displayWrapper);
+      dateContainer.appendChild(dateInput);
+      dateDiv.appendChild(dateContainer);
       
       
       // All Payment input
@@ -15209,16 +15213,12 @@ function loadNonCriticalResources() {
   }
 
   function showCustomDatePicker(inputElement) {
-
-    
     // Prevent rapid opening/closing
     if (isDatePickerOpen) {
-
       return;
     }
     
     if (!customDatePicker) {
-
       return;
     }
     
@@ -15432,6 +15432,13 @@ function loadNonCriticalResources() {
     // Handle mousedown events
     document.addEventListener('mousedown', (e) => {
       if (e.target.type === 'date' && e.target.tagName !== 'SELECT') {
+        // Check if inputs are locked - don't show picker if locked
+        if (state.inputsLocked) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         showCustomDatePicker(e.target);
@@ -15442,6 +15449,13 @@ function loadNonCriticalResources() {
     // Handle touch events for mobile
     document.addEventListener('touchstart', (e) => {
       if (e.target.type === 'date' && e.target.tagName !== 'SELECT') {
+        // Check if inputs are locked - don't show picker if locked
+        if (state.inputsLocked) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         showCustomDatePicker(e.target);
@@ -15449,11 +15463,18 @@ function loadNonCriticalResources() {
       }
     }, true);
 
-    // Disable native date picker on all date inputs
+    // Disable native date picker on all date inputs EXCEPT our special ones
     document.addEventListener('DOMContentLoaded', () => {
-      const dateInputs = document.querySelectorAll('input[type="date"]');
+      const dateInputs = document.querySelectorAll('input[type="date"]:not(.date-input-minimal)');
       dateInputs.forEach(input => {
         input.addEventListener('focus', (e) => {
+          // Check if inputs are locked - don't show picker if locked
+          if (state.inputsLocked) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          
           e.preventDefault();
           e.stopPropagation();
           showCustomDatePicker(input);
@@ -15461,6 +15482,13 @@ function loadNonCriticalResources() {
         });
         
         input.addEventListener('click', (e) => {
+          // Check if inputs are locked - don't show picker if locked
+          if (state.inputsLocked) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          
           e.preventDefault();
           e.stopPropagation();
           showCustomDatePicker(input);
@@ -15470,6 +15498,13 @@ function loadNonCriticalResources() {
         // Prevent native picker but keep icon visible
         input.style.cursor = 'pointer';
         input.addEventListener('focus', (e) => {
+          // Check if inputs are locked - don't show picker if locked
+          if (state.inputsLocked) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          
           e.preventDefault();
           e.stopPropagation();
           showCustomDatePicker(input);
@@ -15479,9 +15514,9 @@ function loadNonCriticalResources() {
     });
   }
 
-  // Function to apply date picker overrides to new inputs
+  // Function to apply date picker overrides to new inputs EXCEPT our special ones
   function applyDatePickerToNewInputs() {
-    const dateInputs = document.querySelectorAll('input[type="date"]:not([data-custom-picker-applied])');
+    const dateInputs = document.querySelectorAll('input[type="date"]:not([data-custom-picker-applied]):not(.date-input-minimal)');
     dateInputs.forEach(input => {
       input.setAttribute('data-custom-picker-applied', 'true');
       input.style.cursor = 'pointer';
@@ -15491,6 +15526,13 @@ function loadNonCriticalResources() {
       
       // Prevent all default behaviors with debouncing
       const debouncedShow = (e) => {
+        // Check if inputs are locked - don't show picker if locked
+        if (state.inputsLocked) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         if (!isDatePickerOpen) {
@@ -15508,11 +15550,18 @@ function loadNonCriticalResources() {
       const container = input.closest('.date-input-wrapper') || input.parentElement;
       if (container) {
         container.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        showCustomDatePicker(input);
-        return false;
-      });
+          // Check if inputs are locked - don't show picker if locked
+          if (state.inputsLocked) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          
+          e.preventDefault();
+          e.stopPropagation();
+          showCustomDatePicker(input);
+          return false;
+        });
       }
     });
   }

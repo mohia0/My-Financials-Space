@@ -3151,7 +3151,7 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .row-income{ 
   display:grid; 
-  grid-template-columns:20px 28px 1fr 1.2fr 100px 100px 100px 120px 1fr 100px 1fr 28px; 
+  grid-template-columns:20px 28px 108px 1.2fr 100px 100px 100px 120px 1fr 100px 120px 28px; 
   gap:0.4rem; 
   align-items:center; 
   padding:.5rem .4rem; 
@@ -3171,20 +3171,24 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   left: 48px; /* 20px drag handle + 28px icon */
   background: var(--card);
-  z-index: 5;
+  z-index: 10;
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
+  min-width: 108px; /* Minimum width to prevent shrinking */
 }
-.row-income > div:nth-child(4) { grid-column: 4; } /* Tags */
+.row-income > div:nth-child(4) { grid-column: 4; z-index: 1; } /* Tags */
 .row-income > div:nth-child(5) { grid-column: 5; } /* Date */
 .row-income > div:nth-child(6) { grid-column: 6; } /* All Payment */
 .row-income > div:nth-child(7) { grid-column: 7; } /* Paid USD */
 .row-income > div:nth-child(8) { grid-column: 8; } /* Paid EGP */
 .row-income > div:nth-child(9) { grid-column: 9; } /* Method */
 .row-income > div:nth-child(10) { grid-column: 10; } /* Progress */
-.row-income > div:nth-child(11) { grid-column: 11; } /* Note */
+.row-income > div:nth-child(11) { 
+  grid-column: 11; /* Note */
+  min-width: 120px; /* Minimum width to prevent shrinking */
+}
 .row-income > div:nth-child(12) { grid-column: 12; } /* Delete */
 
 /* CRITICAL: Preserve empty divs to maintain grid structure */
@@ -3768,11 +3772,35 @@ input[type="range"]::-moz-range-thumb:hover {
   
   /* Better mobile layout for income table */
   .table-container .row-income {
-    grid-template-columns: 20px 30px 200px 150px 120px 120px 120px 140px 180px 60px 80px 30px;
+    grid-template-columns: 20px 30px 120px 150px 120px 120px 120px 140px 180px 60px 80px 30px;
     gap: 0.3rem;
     padding: 0.4rem 0.5rem 0.4rem 0.5rem;
     min-height: 40px;
     white-space: nowrap;
+  }
+  
+  /* Fixed widths for name and note inputs on 500px screens */
+  .table-container .row-income > div:nth-child(3) input,
+  .table-container .row-income > div:nth-child(11) input,
+  .table-container .row-income > div:nth-child(11) textarea {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure minimum widths for name and note on 500px screens */
+  .table-container .row-income > div:nth-child(3) {
+    min-width: 120px !important;
+  }
+  .table-container .row-income > div:nth-child(11) {
+    min-width: 80px !important;
+  }
+  
+  /* Ensure sticky name stays above tags - z-index on small screens */
+  .table-container .row-income > div:nth-child(3) {
+    z-index: 10 !important;
+  }
+  .table-container .row-income > div:nth-child(4) {
+    z-index: 1 !important;
   }
   
   /* Ensure proper alignment on mobile for tags and date */
@@ -3905,12 +3933,36 @@ input[type="range"]::-moz-range-thumb:hover {
   
   /* Extra small screens - more compact income table */
   .table-container .row-income {
-    grid-template-columns: 18px 28px 180px 130px 110px 110px 110px 130px 160px 50px 70px 28px;
+    grid-template-columns: 18px 28px 108px 130px 110px 110px 110px 130px 160px 50px 70px 28px;
     gap: 0.25rem;
     padding: 0.35rem 0.25rem 0.35rem 0.25rem;
     min-height: 36px;
     font-size: 0.65rem;
     white-space: nowrap;
+  }
+  
+  /* Fixed widths for name and note inputs on 480px screens */
+  .table-container .row-income > div:nth-child(3) input,
+  .table-container .row-income > div:nth-child(11) input,
+  .table-container .row-income > div:nth-child(11) textarea {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure minimum widths for name and note on 480px screens */
+  .table-container .row-income > div:nth-child(3) {
+    min-width: 108px !important;
+  }
+  .table-container .row-income > div:nth-child(11) {
+    min-width: 70px !important;
+  }
+  
+  /* Ensure sticky name stays above tags - z-index on small screens */
+  .table-container .row-income > div:nth-child(3) {
+    z-index: 10 !important;
+  }
+  .table-container .row-income > div:nth-child(4) {
+    z-index: 1 !important;
   }
   
   /* Adjust delete button for extra small screens */
@@ -3929,12 +3981,20 @@ input[type="range"]::-moz-range-thumb:hover {
 /* Extra small screens - 320px and below */
 @media (max-width: 320px) {
   .table-container .row-income {
-    grid-template-columns: 16px 24px 160px 120px 100px 100px 100px 120px 140px 24px;
+    grid-template-columns: 16px 24px 96px 120px 100px 100px 100px 120px 140px 60px 80px 24px;
     gap: 0.3rem;
     padding: 0.3rem 0.2rem 0.3rem 0.2rem;
     min-height: 32px;
     font-size: 0.6rem;
     white-space: nowrap;
+  }
+  
+  /* Ensure minimum widths for name and note on 320px screens */
+  .table-container .row-income > div:nth-child(3) {
+    min-width: 96px !important;
+  }
+  .table-container .row-income > div:nth-child(11) {
+    min-width: 80px !important;
   }
   
   /* Fix all income inputs on very small screens */
@@ -3951,6 +4011,22 @@ input[type="range"]::-moz-range-thumb:hover {
     min-width: 0 !important;
     text-align: left !important;
     box-sizing: border-box !important;
+  }
+  
+  /* Fixed widths for name and note inputs on 320px screens */
+  .table-container .row-income > div:nth-child(3) input,
+  .table-container .row-income > div:nth-child(11) input,
+  .table-container .row-income > div:nth-child(11) textarea {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure sticky name stays above tags - z-index on 320px screens */
+  .table-container .row-income > div:nth-child(3) {
+    z-index: 10 !important;
+  }
+  .table-container .row-income > div:nth-child(4) {
+    z-index: 1 !important;
   }
   
   /* Fix specific columns for very small screens */
@@ -4004,7 +4080,7 @@ input[type="range"]::-moz-range-thumb:hover {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 16px 24px 160px 120px 100px 100px 100px 120px 140px 24px;
+    grid-template-columns: 16px 24px 96px 120px 100px 100px 100px 120px 140px 60px 80px 24px;
     font-size: 0.5rem;
     text-align: center;
     align-items: center;
@@ -4053,12 +4129,20 @@ input[type="range"]::-moz-range-thumb:hover {
 /* Smart responsive design for very small screens */
 @media (max-width: 360px) {
   .table-container .row-income {
-    grid-template-columns: 14px 22px 150px 110px 90px 90px 90px 110px 130px 22px;
+    grid-template-columns: 14px 22px 90px 110px 90px 90px 90px 110px 130px 60px 80px 22px;
     gap: 0.25rem;
     padding: 0.25rem 0.15rem 0.25rem 0.15rem;
     min-height: 30px;
     font-size: 0.55rem;
     white-space: nowrap;
+  }
+  
+  /* Ensure minimum widths for name and note on 360px screens */
+  .table-container .row-income > div:nth-child(3) {
+    min-width: 90px !important;
+  }
+  .table-container .row-income > div:nth-child(11) {
+    min-width: 80px !important;
   }
   
   /* Fix all income inputs on 360px screens */
@@ -4075,6 +4159,22 @@ input[type="range"]::-moz-range-thumb:hover {
     min-width: 0 !important;
     text-align: left !important;
     box-sizing: border-box !important;
+  }
+  
+  /* Fixed widths for name and note inputs on 360px screens */
+  .table-container .row-income > div:nth-child(3) input,
+  .table-container .row-income > div:nth-child(11) input,
+  .table-container .row-income > div:nth-child(11) textarea {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure sticky name stays above tags - z-index on 360px screens */
+  .table-container .row-income > div:nth-child(3) {
+    z-index: 10 !important;
+  }
+  .table-container .row-income > div:nth-child(4) {
+    z-index: 1 !important;
   }
   
   /* Fix specific columns for 360px screens */
