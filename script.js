@@ -10572,7 +10572,6 @@ async function saveProfile({ fullName, file }) {
 
     let FONTAWESOME_ICONS = [];
     let faLoaded = false;
-    const ICON_CACHE_KEY = 'finance-icon-cache-fontawesome-v3';
     const CUSTOM_ICONS_KEY = 'finance-custom-icons-v1';
     let customIcons = [];
     let currentStyle = 'solid'; // 'solid' or 'regular'
@@ -10709,15 +10708,17 @@ async function saveProfile({ fullName, file }) {
 
     async function ensureFontAwesomeLoaded(){
       if(faLoaded && FONTAWESOME_ICONS.length) return;
-      try{
-        // try cache first
-        const cached = localStorage.getItem(ICON_CACHE_KEY);
-        if(cached){
-          FONTAWESOME_ICONS = JSON.parse(cached);
+      
+      // Try to load from enhanced cache first
+      loadCachedIcons();
+      if (iconCache.fontawesome.length > 0 && isCacheValid()) {
+        FONTAWESOME_ICONS = iconCache.fontawesome;
           faLoaded = true;
+        console.log('Using cached FontAwesome icons:', FONTAWESOME_ICONS.length);
           return;
         }
         
+      try{
         // Get only VERIFIED WORKING icons (tested and confirmed for Font Awesome 7.0.0)
         const curatedIcons = [
           // Personal icons (VERIFIED SOLID)
@@ -10731,77 +10732,311 @@ async function saveProfile({ fullName, file }) {
         ];
         
         FONTAWESOME_ICONS = curatedIcons.map(name => `fa:${name}`);
-        localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(FONTAWESOME_ICONS));
+        
+        // Save to enhanced cache
+        saveIconsToCache(FONTAWESOME_ICONS);
+        
         faLoaded = true;
       }catch(err){
         // Fallback minimal set
         FONTAWESOME_ICONS = ['fa:home','fa:user','fa:heart','fa:star','fa:briefcase','fa:building','fa:chart-line','fa:calculator','fa:wallet','fa:shopping-cart','fa:car','fa:plane','fa:laptop','fa:phone','fa:envelope','fa:calendar','fa:clock','fa:search','fa:settings','fa:trash','fa:edit','fa:plus','fa:minus','fa:check','fa:times'];
+        
+        // Save fallback to cache
+        saveIconsToCache(FONTAWESOME_ICONS);
+        
         faLoaded = true;
       }
     }
 
-    function renderIconPicker(filter, category = 'all'){
-      const q = (filter||'').trim().toLowerCase();
+    // Icon picker state management
+    let iconPickerState = {
+      allIcons: [],
+      filteredIcons: [],
+      currentPage: 0,
+      pageSize: 100,
+      isLoading: false,
+      searchTimeout: null
+    };
+
+    // Enhanced caching system for icons
+    const ICON_CACHE_VERSION = 'v4';
+    const ICON_CACHE_KEY = `finance-icon-cache-fontawesome-${ICON_CACHE_VERSION}`;
+    const ICON_CATEGORY_CACHE_KEY = `finance-icon-categories-${ICON_CACHE_VERSION}`;
+    
+    let iconCache = {
+      fontawesome: [],
+      categories: {},
+      lastUpdated: null,
+      version: ICON_CACHE_VERSION
+    };
+
+    // Load cached icons
+    function loadCachedIcons() {
+      try {
+        const cached = localStorage.getItem(ICON_CACHE_KEY);
+        const categoryCache = localStorage.getItem(ICON_CATEGORY_CACHE_KEY);
+        
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.version === ICON_CACHE_VERSION && parsed.fontawesome) {
+            iconCache.fontawesome = parsed.fontawesome;
+            iconCache.lastUpdated = parsed.lastUpdated;
+            console.log('Loaded cached FontAwesome icons:', iconCache.fontawesome.length);
+          }
+        }
+        
+        if (categoryCache) {
+          const parsed = JSON.parse(categoryCache);
+          if (parsed.version === ICON_CACHE_VERSION && parsed.categories) {
+            iconCache.categories = parsed.categories;
+            console.log('Loaded cached icon categories');
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load cached icons:', error);
+      }
+    }
+
+    // Save icons to cache
+    function saveIconsToCache(icons, categories = null) {
+      try {
+        iconCache.fontawesome = icons;
+        iconCache.lastUpdated = Date.now();
+        
+        const cacheData = {
+          fontawesome: icons,
+          lastUpdated: iconCache.lastUpdated,
+          version: ICON_CACHE_VERSION
+        };
+        
+        localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(cacheData));
+        
+        if (categories) {
+          iconCache.categories = categories;
+          const categoryData = {
+            categories: categories,
+            version: ICON_CACHE_VERSION
+          };
+          localStorage.setItem(ICON_CATEGORY_CACHE_KEY, JSON.stringify(categoryData));
+        }
+        
+        console.log('Saved icons to cache:', icons.length);
+      } catch (error) {
+        console.warn('Failed to save icons to cache:', error);
+      }
+    }
+
+    // Check if cache is valid (less than 7 days old)
+    function isCacheValid() {
+      if (!iconCache.lastUpdated) return false;
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      return (Date.now() - iconCache.lastUpdated) < sevenDays;
+    }
+
+    // Pre-categorize icons with caching
+    function categorizeIcons() {
+      // Return cached categories if available, but always refresh custom icons
+      if (iconCache.categories && Object.keys(iconCache.categories).length > 0) {
+        // Update custom icons in cached categories
+        iconCache.categories.custom = customIcons.map(icon => `custom:${icon.id}`);
+        iconCache.categories.all = [...FONTAWESOME_ICONS, ...customIcons.map(icon => `custom:${icon.id}`)];
+        return iconCache.categories;
+      }
+      
+      const personalKeywords = ['home','user','heart','star','gift','coffee','book','music','camera','tv','car','plane','train','bus','shopping','wallet','calendar','phone','envelope','utensils','bed','laptop','mobile','headphones','gamepad','football','tree','leaf','sun','moon','cloud','umbrella','fire','bolt','shield','lock','key','search','filter','download','upload','share','copy','edit','trash','plus','minus','check','times','arrow','eye','bookmark','flag','thumbs','smile','comment','bell','cog','tools','paint','image','video','film','microphone','volume','play','pause','stop','forward','backward','random','repeat','refresh','sync','undo','redo','save','folder','file'];
+      
+      const businessKeywords = ['briefcase','building','chart','calculator','file','receipt','money','coins','credit','university','store','warehouse','factory','truck','shipping','box','package','clipboard','list','check','calendar','clock','network','server','database','cloud','sync','cogs','wrench','hammer','tools','project','users','handshake','bullhorn','target','flag','trophy','medal','award','certificate','diploma','graduation','folder','archive','inbox','mail','phone','print','save','undo','redo','expand','compress','window','times','exclamation','question','info','ban','unlock','eye','sort','table','border','square','circle','ellipsis','equal','divide','percentage','trending','line','bar','pie','area','scatter','bubble','radar','polar','doughnut','gauge','speedometer','thermometer','compass','ruler','protractor','triangle','pentagon','hexagon','octagon','diamond','rhombus','trapezoid','parallelogram','kite'];
+      
+      const brandKeywords = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'];
+
+      const categories = {
+        personal: FONTAWESOME_ICONS.filter(n => personalKeywords.some(keyword => n.includes(keyword))),
+        business: FONTAWESOME_ICONS.filter(n => businessKeywords.some(keyword => n.includes(keyword))),
+        brands: FONTAWESOME_ICONS.filter(n => brandKeywords.some(keyword => n.includes(keyword))),
+        custom: customIcons.map(icon => `custom:${icon.id}`),
+        all: [...FONTAWESOME_ICONS, ...customIcons.map(icon => `custom:${icon.id}`)]
+      };
+      
+      console.log('Categorized icons:', {
+        personal: categories.personal.length,
+        business: categories.business.length,
+        brands: categories.brands.length,
+        custom: categories.custom.length,
+        all: categories.all.length,
+        customIconsCount: customIcons.length
+      });
+      
+      // Cache the categories
+      saveIconsToCache(FONTAWESOME_ICONS, categories);
+      
+      return categories;
+    }
+
+    // Virtual scrolling implementation
+    function renderIconPicker(filter, category = 'all') {
+      const q = (filter || '').trim().toLowerCase();
+      
+      // Clear previous timeout
+      if (iconPickerState.searchTimeout) {
+        clearTimeout(iconPickerState.searchTimeout);
+      }
+      
+      // Debounce search
+      iconPickerState.searchTimeout = setTimeout(() => {
+        performIconSearch(q, category);
+      }, 150);
+    }
+
+    // Function to refresh custom icons and update categories
+    function refreshCustomIcons() {
+      // Force reload custom icons from localStorage
+      loadCustomIcons();
+      
+      console.log('Custom icons loaded:', customIcons.length, customIcons);
+      
+      // Clear cached categories to force refresh
+      iconCache.categories = {};
+      
+      // Re-categorize with updated custom icons
+      categorizeIcons();
+    }
+
+    // Enhanced search with better filtering and suggestions
+    function performIconSearch(query, category) {
+      const categorized = categorizeIcons();
+      let items = categorized[category] || categorized.all;
+      
+      // Apply enhanced search filter with fuzzy matching
+      if (query) {
+        const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
+        items = items.filter(n => {
+          const iconName = n.toLowerCase();
+          // Exact match gets highest priority
+          if (iconName.includes(query.toLowerCase())) {
+            return true;
+          }
+          // Fuzzy match for all search terms
+          return searchTerms.every(term => iconName.includes(term));
+        });
+        
+        // Sort by relevance (exact matches first, then fuzzy matches)
+        items.sort((a, b) => {
+          const aName = a.toLowerCase();
+          const bName = b.toLowerCase();
+          const queryLower = query.toLowerCase();
+          
+          const aExact = aName.includes(queryLower);
+          const bExact = bName.includes(queryLower);
+          
+          if (aExact && !bExact) return -1;
+          if (!aExact && bExact) return 1;
+          
+          // If both are exact or both are fuzzy, sort alphabetically
+          return aName.localeCompare(bName);
+        });
+      }
+      
+      iconPickerState.filteredIcons = items;
+      iconPickerState.currentPage = 0;
+      
+      renderIconGrid();
+    }
+
+    // Add search suggestions functionality
+    function showSearchSuggestions(query) {
+      if (query.length < 2) return;
+      
+      const categorized = categorizeIcons();
+      const allIcons = categorized.all;
+      const suggestions = allIcons
+        .filter(icon => icon.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 5)
+        .map(icon => icon.replace('fa:', '').replace('custom:', ''));
+      
+      // You could implement a dropdown with suggestions here
+      // For now, we'll just log them for debugging
+      if (suggestions.length > 0) {
+        console.log('Search suggestions:', suggestions);
+      }
+    }
+
+    function renderIconGrid() {
+      const { filteredIcons, currentPage, pageSize } = iconPickerState;
+      const startIndex = currentPage * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, filteredIcons.length);
+      const pageIcons = filteredIcons.slice(startIndex, endIndex);
+      
+      // Clear existing content
       iconGridEl.innerHTML = '';
       
-      let items = [];
-      
-      // Filter by category
-      if(category === 'custom'){
-        items = customIcons.map(icon => `custom:${icon.id}`);
-      } else if(category === 'personal'){
-        items = FONTAWESOME_ICONS.filter(n => ['home','user','heart','star','gift','coffee','book','music','camera','tv','car','plane','train','bus','shopping','wallet','calendar','phone','envelope','utensils','bed','laptop','mobile','headphones','gamepad','football','tree','leaf','sun','moon','cloud','umbrella','fire','bolt','shield','lock','key','search','filter','download','upload','share','copy','edit','trash','plus','minus','check','times','arrow','eye','bookmark','flag','thumbs','smile','comment','bell','cog','tools','paint','image','video','film','microphone','volume','play','pause','stop','forward','backward','random','repeat','refresh','sync','undo','redo','save','folder','file'].some(keyword => n.includes(keyword)));
-      } else if(category === 'business'){
-        items = FONTAWESOME_ICONS.filter(n => ['briefcase','building','chart','calculator','file','receipt','money','coins','credit','university','store','warehouse','factory','truck','shipping','box','package','clipboard','list','check','calendar','clock','network','server','database','cloud','sync','cogs','wrench','hammer','tools','project','users','handshake','bullhorn','target','flag','trophy','medal','award','certificate','diploma','graduation','folder','archive','inbox','mail','phone','print','save','undo','redo','expand','compress','window','times','exclamation','question','info','ban','unlock','eye','sort','table','border','square','circle','ellipsis','equal','divide','percentage','trending','line','bar','pie','area','scatter','bubble','radar','polar','doughnut','gauge','speedometer','thermometer','compass','ruler','protractor','triangle','pentagon','hexagon','octagon','diamond','rhombus','trapezoid','parallelogram','kite'].some(keyword => n.includes(keyword)));
-      } else if(category === 'brands'){
-        items = FONTAWESOME_ICONS.filter(n => ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].some(keyword => n.includes(keyword)));
-      } else {
-        // For 'all' tab, include both FontAwesome icons and custom icons
-        items = [...FONTAWESOME_ICONS, ...customIcons.map(icon => `custom:${icon.id}`)];
-      }
-      
-      // Apply search filter
-      if(q){
-        items = items.filter(n => n.includes(q));
-      }
-      
-      items = items.slice(0, 500);
-      
-      if(!items.length){ 
-        iconGridEl.innerHTML = '<div class="text-sm" style="color:var(--muted)">No icons found</div>'; 
+      if (!pageIcons.length) {
+        iconGridEl.innerHTML = '<div class="text-sm text-center py-8" style="color:var(--muted)">No icons found</div>';
         return; 
       }
       
-      const frag = document.createDocumentFragment();
-      items.forEach(name=>{
+      // Create virtual container
+      const container = document.createElement('div');
+      container.className = 'icon-grid-container';
+      container.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+        gap: 8px;
+        padding: 16px;
+        max-height: 300px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--muted) transparent;
+      `;
+      
+      // Add scroll listener for infinite scroll
+      container.addEventListener('scroll', handleIconScroll);
+      
+      const fragment = document.createDocumentFragment();
+      
+      pageIcons.forEach(name => {
+        const btn = createIconButton(name);
+        fragment.appendChild(btn);
+      });
+      
+      container.appendChild(fragment);
+      iconGridEl.appendChild(container);
+      
+      // Update count
+      const countEl = document.getElementById('iconCount');
+      if (countEl) {
+        countEl.textContent = `Showing ${Math.min(endIndex, filteredIcons.length)} of ${filteredIcons.length} icons`;
+      }
+    }
+
+    function createIconButton(name) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'icon-tile';
+      btn.className = 'icon-tile-modern';
         btn.setAttribute('data-icon', name);
         
         // Handle custom icons
-        if(name.startsWith('custom:')){
+      if (name.startsWith('custom:')) {
           const customId = name.replace('custom:', '');
           const customIcon = customIcons.find(icon => icon.id === customId);
-          if(customIcon){
-            if(customIcon.type === 'image'){
+        if (customIcon) {
+          if (customIcon.type === 'image') {
               btn.innerHTML = `
-                <div class="custom-icon-container">
-                  <img src="${customIcon.data}" />
-                  <button class="custom-icon-delete" data-delete-icon="${customId}" title="Delete icon">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <div class="custom-icon-container-modern">
+                <img src="${customIcon.data}" alt="Custom icon" />
+                <button class="custom-icon-delete-modern" data-delete-icon="${customId}" title="Delete icon">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                   </button>
                 </div>
               `;
-            } else if(customIcon.type === 'glyph'){
+          } else if (customIcon.type === 'glyph') {
               btn.innerHTML = `
-                <div class="custom-icon-container">
+              <div class="custom-icon-container-modern">
                   <i class="fa-solid" style="font-family:'Font Awesome 7 Free'; color:inherit;">&#x${customIcon.data};</i>
-                  <button class="custom-icon-delete" data-delete-icon="${customId}" title="Delete icon">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button class="custom-icon-delete-modern" data-delete-icon="${customId}" title="Delete icon">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
@@ -10818,22 +11053,34 @@ async function saveProfile({ fullName, file }) {
         btn.innerHTML = `<i class="${iconClass} fa-${iconName}" style="color:inherit;"></i>`;
         }
         
-        btn.addEventListener('click', ()=>{
-          if(!iconPickCtx) return;
+      btn.addEventListener('click', () => {
+        selectIcon(name);
+      });
+      
+      return btn;
+    }
+
+    function selectIcon(name) {
+      if (!iconPickCtx) return;
+      
           const { arr, idx } = iconPickCtx;
-          if(name.startsWith('custom:')){
+      
+      if (name.startsWith('custom:')) {
             const customId = name.replace('custom:', '');
             const customIcon = customIcons.find(icon => icon.id === customId);
-            if(customIcon){
-              if(customIcon.type === 'image'){
+        if (customIcon) {
+          if (customIcon.type === 'image') {
                 arr[idx].icon = `custom-image:${customIcon.data}`;
-              } else if(customIcon.type === 'glyph'){
+          } else if (customIcon.type === 'glyph') {
                 arr[idx].icon = `fa-glyph:${customIcon.data}`;
               }
             }
           } else {
           arr[idx].icon = name;
           }
+      
+      // Instant update without full table reload
+      updateRowIcon(arr, idx);
           
           // Use instant save for income rows, regular save for others
           const isIncomeRow = arr === state.income[currentYear] || 
@@ -10846,26 +11093,133 @@ async function saveProfile({ fullName, file }) {
           
         iconPickerEl.close();
         iconPickCtx = null;
-        renderAll(true); // User action - enable animations
-      });
-      frag.appendChild(btn);
-      });
-      iconGridEl.appendChild(frag);
-      
-      // Add delete button event listeners for custom icons
-      document.querySelectorAll('.custom-icon-delete').forEach(deleteBtn => {
-        deleteBtn.addEventListener('click', (e) => {
-          e.stopPropagation(); // Prevent icon selection
-          const customId = deleteBtn.getAttribute('data-delete-icon');
-          deleteCustomIcon(customId);
-        });
-      });
-      
-      // Update count
-      document.getElementById('iconCount').textContent = `Showing ${items.length} icons`;
     }
 
-    iconSearchEl.addEventListener('input', ()=>renderIconPicker(iconSearchEl.value, currentTab));
+    function updateRowIcon(arr, idx) {
+      // Find the specific row and update its icon without reloading the entire table
+      const rowData = arr[idx];
+      if (!rowData) return;
+      
+      // Try multiple methods to find the row element
+      let rowElement = null;
+      
+      // Method 1: Look for data-row-index attribute
+      rowElement = document.querySelector(`[data-row-index="${idx}"]`);
+      
+      // Method 2: Look for data-id attribute if available
+      if (!rowElement && rowData.id) {
+        rowElement = document.querySelector(`[data-id="${rowData.id}"]`);
+      }
+      
+      // Method 3: Find by position in the appropriate container
+      if (!rowElement) {
+        const containers = document.querySelectorAll('#list-personal, #list-biz, #list-income');
+        for (const container of containers) {
+          const rows = container.querySelectorAll('.row:not(.row-head):not(.row-sum)');
+          if (rows[idx]) {
+            rowElement = rows[idx];
+            break;
+          }
+        }
+      }
+      
+      // Method 4: Find by icon content if available
+      if (!rowElement && rowData.icon) {
+        const iconElements = document.querySelectorAll('[data-choose-icon]');
+        for (const iconEl of iconElements) {
+          const parentRow = iconEl.closest('.row');
+          if (parentRow && parentRow.querySelector('input[type="text"]')?.value === rowData.name) {
+            rowElement = parentRow;
+            break;
+          }
+        }
+      }
+      
+      if (rowElement) {
+        const iconElement = rowElement.querySelector('[data-choose-icon] i, [data-choose-icon] img');
+        if (iconElement) {
+          // Update icon based on type with smooth transition
+          iconElement.style.transition = 'all 0.2s ease';
+          iconElement.style.opacity = '0.5';
+          
+          setTimeout(() => {
+            if (rowData.icon.startsWith('custom-image:')) {
+              const imageData = rowData.icon.replace('custom-image:', '');
+              iconElement.outerHTML = `<img src="${imageData}" style="width:16px; height:16px; object-fit:contain;" />`;
+            } else if (rowData.icon.startsWith('fa-glyph:')) {
+              const unicode = rowData.icon.replace('fa-glyph:', '');
+              iconElement.outerHTML = `<i class="fa-solid" style="font-family:'Font Awesome 7 Free'; color:inherit;">&#x${unicode};</i>`;
+            } else if (rowData.icon.startsWith('fa:')) {
+              const iconName = rowData.icon.replace('fa:', '');
+              const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].includes(iconName);
+              const iconClass = isBrand ? 'fa-brands' : 'fa-solid';
+              iconElement.outerHTML = `<i class="${iconClass} fa-${iconName}" style="color:inherit;"></i>`;
+            }
+            
+            // Fade in the new icon
+            const newIconElement = rowElement.querySelector('[data-choose-icon] i, [data-choose-icon] img');
+            if (newIconElement) {
+              newIconElement.style.opacity = '0';
+              newIconElement.style.transition = 'opacity 0.2s ease';
+              setTimeout(() => {
+                newIconElement.style.opacity = '1';
+              }, 10);
+            }
+          }, 100);
+        }
+      } else {
+        // Fallback: trigger a minimal re-render of just the affected row
+        console.warn('Could not find row element for instant update, falling back to minimal re-render');
+        renderAll(false); // Disable animations for fallback
+      }
+    }
+
+    function handleIconScroll(e) {
+      const { scrollTop, scrollHeight, clientHeight } = e.target;
+      const { filteredIcons, currentPage, pageSize } = iconPickerState;
+      
+      // Load more when scrolled to bottom
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        const nextPage = currentPage + 1;
+        const nextStartIndex = nextPage * pageSize;
+        
+        if (nextStartIndex < filteredIcons.length) {
+          iconPickerState.currentPage = nextPage;
+          loadMoreIcons();
+        }
+      }
+    }
+
+    function loadMoreIcons() {
+      const { filteredIcons, currentPage, pageSize } = iconPickerState;
+      const startIndex = currentPage * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, filteredIcons.length);
+      const pageIcons = filteredIcons.slice(startIndex, endIndex);
+      
+      const container = iconGridEl.querySelector('.icon-grid-container');
+      if (!container) return;
+      
+      const fragment = document.createDocumentFragment();
+      
+      pageIcons.forEach(name => {
+        const btn = createIconButton(name);
+        fragment.appendChild(btn);
+      });
+      
+      container.appendChild(fragment);
+      
+      // Update count
+      const countEl = document.getElementById('iconCount');
+      if (countEl) {
+        countEl.textContent = `Showing ${Math.min(endIndex, filteredIcons.length)} of ${filteredIcons.length} icons`;
+      }
+    }
+
+    iconSearchEl.addEventListener('input', (e) => {
+      const query = e.target.value;
+      renderIconPicker(query, currentTab);
+      showSearchSuggestions(query);
+    });
 
     let currentTab = 'all';
     document.getElementById('iconTabs').addEventListener('click', (e)=>{
@@ -10873,7 +11227,23 @@ async function saveProfile({ fullName, file }) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         e.target.classList.add('active');
         currentTab = e.target.dataset.tab;
+        
+        // Refresh custom icons when switching to custom tab
+        if (currentTab === 'custom') {
+          refreshCustomIcons();
+        }
+        
         renderIconPicker(iconSearchEl.value, currentTab);
+      }
+    });
+
+    // Add event delegation for custom icon delete buttons
+    iconGridEl.addEventListener('click', (e) => {
+      if (e.target.closest('.custom-icon-delete-modern')) {
+        e.stopPropagation();
+        const deleteBtn = e.target.closest('.custom-icon-delete-modern');
+        const customId = deleteBtn.getAttribute('data-delete-icon');
+        deleteCustomIcon(customId);
       }
     });
 
@@ -11043,6 +11413,18 @@ async function saveProfile({ fullName, file }) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelector('[data-tab="all"]').classList.add('active');
       
+      // Reset icon picker state
+      iconPickerState.currentPage = 0;
+      iconPickerState.filteredIcons = [];
+      
+      // Show current row name
+      const rowData = arr[idx];
+      const rowNameElement = document.getElementById('currentRowName');
+      if (rowNameElement && rowData) {
+        const rowName = rowData.name || `Row ${idx + 1}`;
+        rowNameElement.textContent = rowName;
+      }
+      
       // Clear inputs
       document.getElementById('glyphInput').value = '';
       document.getElementById('glyphPreview').innerHTML = '';
@@ -11062,13 +11444,26 @@ async function saveProfile({ fullName, file }) {
           const imageData = currentIcon.replace('custom-image:', '');
           document.getElementById('imagePreview').innerHTML = `<img src="${imageData}" style="width:16px; height:16px; object-fit:contain; filter: invert(1);" />`;
           document.getElementById('applyCustomImage').disabled = false;
+        } else if (currentIcon.startsWith('fa:')) {
+          // For regular FontAwesome icons, try to extract Unicode if possible
+          const iconName = currentIcon.replace('fa:', '');
+          // You could add a mapping here to show Unicode for common icons
+          // For now, we'll just show the icon name
+          document.getElementById('glyphInput').value = iconName;
+          document.getElementById('glyphPreview').innerHTML = `<i class="fa-solid fa-${iconName}" style="color:inherit;"></i>`;
         }
       }
       
       // Load custom icons from Supabase
       await loadCustomIconsFromSupabase();
       
-      ensureFontAwesomeLoaded().then(()=>{ renderIconPicker('', 'all'); iconPickerEl.showModal(); });
+      // Refresh custom icons to ensure they're available
+      refreshCustomIcons();
+      
+      ensureFontAwesomeLoaded().then(()=>{ 
+        renderIconPicker('', 'all'); 
+        iconPickerEl.showModal(); 
+      });
     }
 
     // Helper function to update existing rows without clearing them
@@ -11684,7 +12079,7 @@ async function saveProfile({ fullName, file }) {
       dateDiv.style.alignItems = 'center';
       dateDiv.style.justifyContent = 'center';
       
-      // Create improved date picker with proper functionality
+      // Create working date picker with proper click handling
       const datePickerContainer = document.createElement('div');
       datePickerContainer.className = 'untitled-date-picker';
       datePickerContainer.style.cssText = `
@@ -11717,6 +12112,7 @@ async function saveProfile({ fullName, file }) {
         z-index: 1;
         font-family: inherit;
         font-weight: 400;
+        pointer-events: auto;
       `;
       
       // Create calendar icon positioned near the text
@@ -11782,6 +12178,29 @@ async function saveProfile({ fullName, file }) {
       // Add event listeners
       dateInput.addEventListener('change', handleDateChange);
       
+      // Force date picker to open on click
+      dateInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('Date input clicked, attempting to open picker');
+        // Force focus and try to open picker
+        dateInput.focus();
+        if (dateInput.showPicker) {
+          try {
+            dateInput.showPicker();
+          } catch (err) {
+            console.log('showPicker not supported, using fallback');
+          }
+        }
+      });
+      
+      // Also try on focus
+      dateInput.addEventListener('focus', (e) => {
+        e.stopPropagation();
+        console.log('Date input focused');
+        dateInput.style.background = 'var(--glass)';
+        calendarIcon.style.color = 'var(--primary)';
+      });
+      
       // Hover effects
       dateInput.addEventListener('mouseenter', () => {
         dateInput.style.background = 'var(--glass)';
@@ -11791,13 +12210,6 @@ async function saveProfile({ fullName, file }) {
       dateInput.addEventListener('mouseleave', () => {
         dateInput.style.background = 'transparent';
         calendarIcon.style.color = 'var(--muted)';
-      });
-      
-      // Focus effects
-      dateInput.addEventListener('focus', (e) => {
-        e.stopPropagation();
-        dateInput.style.background = 'var(--glass)';
-        calendarIcon.style.color = 'var(--primary)';
       });
       
       dateInput.addEventListener('blur', () => {
