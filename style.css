@@ -1,4 +1,121 @@
-﻿:root{ --bg:#0a0a0b; --fg:#e4e4e7; --muted:#a1a1aa; --card:rgba(24,24,27,.75); --stroke:#27272a; --glass:#1f1f23; --accent:#6366f1; --accent-hover:#4f46e5; --accent-bg:rgba(99,102,241,0.1); }
+﻿/* FontAwesome Pro - Complete Setup */
+@font-face {
+  font-family: "Font Awesome 6 Pro";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("./fonts/fontawesome-pro/fa-solid-900.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Font Awesome 6 Brands";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/fontawesome-pro/fa-brands-400.ttf") format("truetype");
+}
+
+/* Fallback for FontAwesome 5 compatibility */
+@font-face {
+  font-family: "Font Awesome 5 Pro";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("./fonts/fontawesome-pro/fa-solid-900.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Font Awesome 5 Brands";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/fontawesome-pro/fa-brands-400.ttf") format("truetype");
+}
+
+/* FontAwesome Pro CSS Classes - Enhanced Unicode Support */
+.fa-solid, .fas, .fa-regular, .far, .fa-light, .fal, .fa-thin, .fat {
+  font-family: "Font Awesome 6 Pro", "Font Awesome 5 Pro", "FontAwesome" !important;
+  font-weight: 900 !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-rendering: auto !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+.fa-brands, .fab {
+  font-family: "Font Awesome 6 Brands", "Font Awesome 5 Brands", "FontAwesome" !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-rendering: auto !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Brand Icons CSS Classes - ONLY COMMON BRANDS AVAILABLE IN FA PRO */
+.fa-github::before { content: "\f09b"; }
+.fa-twitter::before { content: "\f099"; }
+.fa-facebook::before { content: "\f09a"; }
+.fa-instagram::before { content: "\f16d"; }
+.fa-linkedin::before { content: "\f08c"; }
+.fa-youtube::before { content: "\f167"; }
+.fa-reddit::before { content: "\f1a1"; }
+.fa-discord::before { content: "\f392"; }
+.fa-slack::before { content: "\f198"; }
+.fa-telegram::before { content: "\f2c6"; }
+.fa-whatsapp::before { content: "\f232"; }
+.fa-dropbox::before { content: "\f16b"; }
+.fa-stripe::before { content: "\f1f5"; }
+.fa-paypal::before { content: "\f1ed"; }
+.fa-bitcoin::before { content: "\f379"; }
+.fa-dribbble::before { content: "\f17d"; }
+.fa-behance::before { content: "\f1b4"; }
+.fa-wordpress::before { content: "\f19a"; }
+.fa-medium::before { content: "\f23a"; }
+.fa-chrome::before { content: "\f268"; }
+.fa-firefox::before { content: "\f269"; }
+.fa-android::before { content: "\f17b"; }
+.fa-spotify::before { content: "\f1bc"; }
+.fa-skype::before { content: "\f17e"; }
+.fa-stackoverflow::before { content: "\f16c"; }
+.fa-codepen::before { content: "\f1cb"; }
+.fa-npm::before { content: "\f3d4"; }
+.fa-node-js::before { content: "\f3d3"; }
+.fa-react::before { content: "\f41b"; }
+.fa-vue::before { content: "\f41f"; }
+.fa-angular::before { content: "\f420"; }
+.fa-html5::before { content: "\f13b"; }
+.fa-css3::before { content: "\f13c"; }
+.fa-js::before { content: "\f3b8"; }
+.fa-python::before { content: "\f3e2"; }
+.fa-java::before { content: "\f4e7"; }
+.fa-git::before { content: "\f1d3"; }
+.fa-amazon::before { content: "\f270"; }
+.fa-apple::before { content: "\f179"; }
+.fa-google::before { content: "\f1a0"; }
+.fa-microsoft::before { content: "\f3ca"; }
+
+/* Enhanced Unicode character support */
+.fa-solid::before,
+.fas::before,
+.fa-brands::before,
+.fab::before {
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  font-style: inherit !important;
+}
+
+/* Ensure proper Unicode rendering */
+[class*="fa-"] {
+  display: inline-block !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}
+
+/* Font loading optimization */
+
+:root{ --bg:#0a0a0b; --fg:#e4e4e7; --muted:#a1a1aa; --card:rgba(24,24,27,.75); --stroke:#27272a; --glass:#1f1f23; --accent:#6366f1; --accent-hover:#4f46e5; --accent-bg:rgba(99,102,241,0.1); }
 [data-theme="light"]{ --bg:#f8fafc; --fg:#0f172a; --muted:#475569; --card:#ffffff; --stroke:#e2e8f0; --glass:#f8fafc; --accent:#6366f1; --accent-hover:#4f46e5; --accent-bg:rgba(99,102,241,0.1); }
 
 body {
