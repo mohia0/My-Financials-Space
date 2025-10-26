@@ -53,7 +53,94 @@
   -moz-osx-font-smoothing: grayscale !important;
 }
 
-/* Brand Icons CSS Classes - ONLY COMMON BRANDS AVAILABLE IN FA PRO */
+/* Brand Icons CSS Classes - Full Brand Icons with Unicode Glyphs */
+/* Override font-family for brand icons to ensure they use the Brands font */
+.fa-brands.fa-github::before,
+.fa-brands.fa-twitter::before,
+.fa-brands.fa-facebook::before,
+.fa-brands.fa-instagram::before,
+.fa-brands.fa-linkedin::before,
+.fa-brands.fa-youtube::before,
+.fa-brands.fa-reddit::before,
+.fa-brands.fa-discord::before,
+.fa-brands.fa-slack::before,
+.fa-brands.fa-telegram::before,
+.fa-brands.fa-whatsapp::before,
+.fa-brands.fa-tiktok::before,
+.fa-brands.fa-snapchat::before,
+.fa-brands.fa-pinterest::before,
+.fa-brands.fa-chrome::before,
+.fa-brands.fa-firefox::before,
+.fa-brands.fa-safari::before,
+.fa-brands.fa-edge::before,
+.fa-brands.fa-opera::before,
+.fa-brands.fa-amazon::before,
+.fa-brands.fa-aws::before,
+.fa-brands.fa-google::before,
+.fa-brands.fa-microsoft::before,
+.fa-brands.fa-apple::before,
+.fa-brands.fa-dropbox::before,
+.fa-brands.fa-google-drive::before,
+.fa-brands.fa-stripe::before,
+.fa-brands.fa-paypal::before,
+.fa-brands.fa-bitcoin::before,
+.fa-brands.fa-cc-visa::before,
+.fa-brands.fa-cc-mastercard::before,
+.fa-brands.fa-cc-amex::before,
+.fa-brands.fa-dribbble::before,
+.fa-brands.fa-behance::before,
+.fa-brands.fa-figma::before,
+.fa-brands.fa-adobe::before,
+.fa-brands.fa-sketch::before,
+.fa-brands.fa-webflow::before,
+.fa-brands.fa-wordpress::before,
+.fa-brands.fa-medium::before,
+.fa-brands.fa-blogger::before,
+.fa-brands.fa-wordpress-simple::before,
+.fa-brands.fa-shopify::before,
+.fa-brands.fa-magento::before,
+.fa-brands.fa-wix::before,
+.fa-brands.fa-squarespace::before,
+.fa-brands.fa-trello::before,
+.fa-brands.fa-asana::before,
+.fa-brands.fa-notion::before,
+.fa-brands.fa-jira::before,
+.fa-brands.fa-confluence::before,
+.fa-brands.fa-zoom::before,
+.fa-brands.fa-skype::before,
+.fa-brands.fa-vimeo::before,
+.fa-brands.fa-twitch::before,
+.fa-brands.fa-netflix::before,
+.fa-brands.fa-spotify::before,
+.fa-brands.fa-soundcloud::before,
+.fa-brands.fa-npm::before,
+.fa-brands.fa-node-js::before,
+.fa-brands.fa-react::before,
+.fa-brands.fa-vue::before,
+.fa-brands.fa-angular::before,
+.fa-brands.fa-html5::before,
+.fa-brands.fa-css3::before,
+.fa-brands.fa-js::before,
+.fa-brands.fa-python::before,
+.fa-brands.fa-java::before,
+.fa-brands.fa-git::before,
+.fa-brands.fa-git-alt::before,
+.fa-brands.fa-gitlab::before,
+.fa-brands.fa-bitbucket::before,
+.fa-brands.fa-stack-overflow::before,
+.fa-brands.fa-codepen::before,
+.fa-brands.fa-docker::before,
+.fa-brands.fa-android::before,
+.fa-brands.fa-windows::before,
+.fa-brands.fa-linux::before,
+.fa-brands.fa-airbnb::before,
+.fa-brands.fa-uber::before,
+.fa-brands.fa-salesforce::before,
+.fa-brands.fa-oracle::before {
+  font-family: "Font Awesome 6 Brands" !important;
+}
+
+/* Social Media */
 .fa-github::before { content: "\f09b"; }
 .fa-twitter::before { content: "\f099"; }
 .fa-facebook::before { content: "\f09a"; }
@@ -65,21 +152,70 @@
 .fa-slack::before { content: "\f198"; }
 .fa-telegram::before { content: "\f2c6"; }
 .fa-whatsapp::before { content: "\f232"; }
+.fa-tiktok::before { content: "\e07b"; }
+.fa-snapchat::before { content: "\f2ab"; }
+.fa-pinterest::before { content: "\f0d2"; }
+
+/* Technology Brands */
+.fa-chrome::before { content: "\f268"; }
+.fa-firefox::before { content: "\f269"; }
+.fa-safari::before { content: "\f267"; }
+.fa-edge::before { content: "\f282"; }
+.fa-opera::before { content: "\f26a"; }
+
+/* Cloud & Services */
+.fa-amazon::before { content: "\f270"; }
+.fa-aws::before { content: "\f375"; }
+.fa-google::before { content: "\f1a0"; }
+.fa-microsoft::before { content: "\f3ca"; }
+.fa-apple::before { content: "\f179"; }
 .fa-dropbox::before { content: "\f16b"; }
+.fa-google-drive::before { content: "\f3aa"; }
+
+/* Payment & Financial */
 .fa-stripe::before { content: "\f1f5"; }
 .fa-paypal::before { content: "\f1ed"; }
 .fa-bitcoin::before { content: "\f379"; }
+.fa-cc-visa::before { content: "\f1f0"; }
+.fa-cc-mastercard::before { content: "\f1f1"; }
+.fa-cc-amex::before { content: "\f1f3"; }
+
+/* Design & Development */
 .fa-dribbble::before { content: "\f17d"; }
 .fa-behance::before { content: "\f1b4"; }
+.fa-figma::before { content: "\f799"; }
+.fa-adobe::before { content: "\f778"; }
+.fa-sketch::before { content: "\f6c7"; }
+.fa-webflow::before { content: "\e65c"; }
+
+/* CMS & Platforms */
 .fa-wordpress::before { content: "\f19a"; }
 .fa-medium::before { content: "\f23a"; }
-.fa-chrome::before { content: "\f268"; }
-.fa-firefox::before { content: "\f269"; }
-.fa-android::before { content: "\f17b"; }
-.fa-spotify::before { content: "\f1bc"; }
+.fa-blogger::before { content: "\f37c"; }
+.fa-wordpress-simple::before { content: "\f411"; }
+.fa-shopify::before { content: "\f957"; }
+.fa-magento::before { content: "\f3c4"; }
+.fa-wix::before { content: "\f5cf"; }
+.fa-squarespace::before { content: "\f5be"; }
+
+/* Productivity & Communication */
+.fa-trello::before { content: "\f181"; }
+.fa-asana::before { content: "\f41e"; }
+.fa-notion::before { content: "\e8c3"; }
+.fa-jira::before { content: "\f7b1"; }
+.fa-confluence::before { content: "\e83d"; }
+.fa-zoom::before { content: "\f587"; }
 .fa-skype::before { content: "\f17e"; }
-.fa-stackoverflow::before { content: "\f16c"; }
-.fa-codepen::before { content: "\f1cb"; }
+
+/* Video & Streaming */
+.fa-youtube::before { content: "\f167"; }
+.fa-vimeo::before { content: "\f40a"; }
+.fa-twitch::before { content: "\f1e8"; }
+.fa-netflix::before { content: "\f3fb"; }
+.fa-spotify::before { content: "\f1bc"; }
+.fa-soundcloud::before { content: "\f1be"; }
+
+/* Development Tools */
 .fa-npm::before { content: "\f3d4"; }
 .fa-node-js::before { content: "\f3d3"; }
 .fa-react::before { content: "\f41b"; }
@@ -91,10 +227,114 @@
 .fa-python::before { content: "\f3e2"; }
 .fa-java::before { content: "\f4e7"; }
 .fa-git::before { content: "\f1d3"; }
-.fa-amazon::before { content: "\f270"; }
+.fa-git-alt::before { content: "\f841"; }
+.fa-github::before { content: "\f09b"; }
+.fa-gitlab::before { content: "\f296"; }
+.fa-bitbucket::before { content: "\f171"; }
+.fa-stack-overflow::before { content: "\f16c"; }
+.fa-codepen::before { content: "\f1cb"; }
+.fa-docker::before { content: "\f395"; }
+
+/* Mobile & OS */
+.fa-android::before { content: "\f17b"; }
 .fa-apple::before { content: "\f179"; }
-.fa-google::before { content: "\f1a0"; }
-.fa-microsoft::before { content: "\f3ca"; }
+.fa-windows::before { content: "\f17a"; }
+.fa-linux::before { content: "\f17c"; }
+
+/* Additional Brands */
+.fa-airbnb::before { content: "\f834"; }
+.fa-uber::before { content: "\f402"; }
+.fa-airbnb::before { content: "\f834"; }
+.fa-salesforce::before { content: "\f83b"; }
+.fa-oracle::before { content: "\f797"; }
+
+/* Common Financial Icons CSS Classes */
+.fa-dollar-sign::before { content: "\f155"; }
+.fa-credit-card::before { content: "\f283"; }
+.fa-coins::before { content: "\f51e"; }
+.fa-piggy-bank::before { content: "\f4d3"; }
+.fa-wallet::before { content: "\f555"; }
+.fa-chart-pie::before { content: "\f200"; }
+.fa-chart-bar::before { content: "\f080"; }
+.fa-chart-line::before { content: "\f201"; }
+.fa-chart-area::before { content: "\f1fe"; }
+.fa-calculator::before { content: "\f1ec"; }
+.fa-receipt::before { content: "\f543"; }
+.fa-file-invoice-dollar::before { content: "\f571"; }
+.fa-file-invoice::before { content: "\f570"; }
+.fa-file-invoice-usd::before { content: "\f572"; }
+.fa-hand-holding-usd::before { content: "\f4c0"; }
+.fa-money-bill::before { content: "\f0d6"; }
+.fa-money-bill-wave::before { content: "\f53a"; }
+.fa-money-check::before { content: "\f53c"; }
+.fa-percent::before { content: "\f295"; }
+.fa-trending-up::before { content: "\f526"; }
+.fa-trending-down::before { content: "\f525"; }
+.fa-building::before { content: "\f1ad"; }
+.fa-briefcase::before { content: "\f0b1"; }
+.fa-shopping-cart::before { content: "\f07a"; }
+.fa-home::before { content: "\f015"; }
+.fa-car::before { content: "\f1b9"; }
+.fa-plane::before { content: "\f072"; }
+.fa-train::before { content: "\f238"; }
+.fa-bus::before { content: "\f207"; }
+.fa-laptop::before { content: "\f109"; }
+.fa-mobile::before { content: "\f10b"; }
+.fa-phone::before { content: "\f095"; }
+.fa-envelope::before { content: "\f0e0"; }
+.fa-calendar::before { content: "\f073"; }
+.fa-clock::before { content: "\f017"; }
+.fa-user::before { content: "\f007"; }
+.fa-users::before { content: "\f0c0"; }
+.fa-heart::before { content: "\f004"; }
+.fa-star::before { content: "\f005"; }
+.fa-gift::before { content: "\f06b"; }
+.fa-coffee::before { content: "\f0f4"; }
+.fa-utensils::before { content: "\f2e7"; }
+.fa-bed::before { content: "\f236"; }
+.fa-gamepad::before { content: "\f11b"; }
+.fa-trophy::before { content: "\f091"; }
+.fa-award::before { content: "\f559"; }
+.fa-medal::before { content: "\f5a2"; }
+.fa-certificate::before { content: "\f0a3"; }
+.fa-graduation-cap::before { content: "\f19d"; }
+.fa-file::before { content: "\f15b"; }
+.fa-folder::before { content: "\f07b"; }
+.fa-archive::before { content: "\f187"; }
+.fa-inbox::before { content: "\f01c"; }
+.fa-search::before { content: "\f002"; }
+.fa-filter::before { content: "\f0b0"; }
+.fa-download::before { content: "\f019"; }
+.fa-upload::before { content: "\f093"; }
+.fa-share::before { content: "\f064"; }
+.fa-copy::before { content: "\f0c5"; }
+.fa-edit::before { content: "\f044"; }
+.fa-trash::before { content: "\f1f8"; }
+.fa-plus::before { content: "\f067"; }
+.fa-minus::before { content: "\f068"; }
+.fa-check::before { content: "\f00c"; }
+.fa-times::before { content: "\f00d"; }
+.fa-arrow-up::before { content: "\f062"; }
+.fa-arrow-down::before { content: "\f063"; }
+.fa-arrow-left::before { content: "\f060"; }
+.fa-arrow-right::before { content: "\f061"; }
+.fa-eye::before { content: "\f06e"; }
+.fa-eye-slash::before { content: "\f070"; }
+.fa-lock::before { content: "\f023"; }
+.fa-unlock::before { content: "\f09c"; }
+.fa-key::before { content: "\f084"; }
+.fa-cog::before { content: "\f013"; }
+.fa-tools::before { content: "\f7d9"; }
+.fa-settings::before { content: "\f013"; }
+.fa-bell::before { content: "\f0f3"; }
+.fa-comment::before { content: "\f075"; }
+.fa-bookmark::before { content: "\f02e"; }
+.fa-flag::before { content: "\f024"; }
+.fa-shield::before { content: "\f3ed"; }
+.fa-exclamation-circle::before { content: "\f06a"; }
+.fa-question-circle::before { content: "\f059"; }
+.fa-info-circle::before { content: "\f05a"; }
+.fa-check-circle::before { content: "\f058"; }
 
 /* Enhanced Unicode character support */
 .fa-solid::before,

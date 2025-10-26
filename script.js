@@ -10738,8 +10738,31 @@ async function saveProfile({ fullName, file }) {
           // Add brand icons to the main array
           FONTAWESOME_ICONS = [...FONTAWESOME_ICONS, ...brandIcons];
           
+          // Add common financial icons
+          const financialIcons = [
+            'fa:dollar-sign', 'fa:credit-card', 'fa:coins', 'fa:piggy-bank', 'fa:wallet',
+            'fa:chart-pie', 'fa:chart-bar', 'fa:chart-line', 'fa:chart-area', 'fa:calculator',
+            'fa:receipt', 'fa:file-invoice-dollar', 'fa:file-invoice', 'fa:file-invoice-usd',
+            'fa:hand-holding-usd', 'fa:money-bill', 'fa:money-bill-wave', 'fa:money-check',
+            'fa:percent', 'fa:trending-up', 'fa:trending-down', 'fa:building', 'fa:briefcase',
+            'fa:shopping-cart', 'fa:home', 'fa:car', 'fa:plane', 'fa:train', 'fa:bus',
+            'fa:laptop', 'fa:mobile', 'fa:phone', 'fa:envelope', 'fa:calendar', 'fa:clock',
+            'fa:user', 'fa:users', 'fa:heart', 'fa:star', 'fa:gift', 'fa:coffee', 'fa:utensils',
+            'fa:bed', 'fa:gamepad', 'fa:trophy', 'fa:award', 'fa:medal', 'fa:certificate',
+            'fa:graduation-cap', 'fa:briefcase', 'fa:file', 'fa:folder', 'fa:archive', 'fa:inbox',
+            'fa:search', 'fa:filter', 'fa:download', 'fa:upload', 'fa:share', 'fa:copy',
+            'fa:edit', 'fa:trash', 'fa:plus', 'fa:minus', 'fa:check', 'fa:times',
+            'fa:arrow-up', 'fa:arrow-down', 'fa:arrow-left', 'fa:arrow-right', 'fa:eye',
+            'fa:eye-slash', 'fa:lock', 'fa:unlock', 'fa:key', 'fa:cog', 'fa:tools',
+            'fa:settings', 'fa:bell', 'fa:comment', 'fa:bookmark', 'fa:flag', 'fa:shield',
+            'fa:exclamation-circle', 'fa:question-circle', 'fa:info-circle', 'fa:check-circle'
+          ];
+          
+          // Add financial icons to the main array
+          FONTAWESOME_ICONS = [...FONTAWESOME_ICONS, ...financialIcons];
+          
           faLoaded = true;
-          console.log('FontAwesome Pro optimized picker loaded with', FONTAWESOME_ICONS.length, 'glyphs including brands');
+          console.log('FontAwesome Pro optimized picker loaded with', FONTAWESOME_ICONS.length, 'glyphs including brands and financial');
           
           // Save to cache for faster future loads
           saveIconsToCache(FONTAWESOME_ICONS);
@@ -10791,7 +10814,7 @@ async function saveProfile({ fullName, file }) {
     };
 
     // Enhanced caching system for icons
-    const ICON_CACHE_VERSION = 'v5'; // Bumped to force cache refresh for brand icons
+    const ICON_CACHE_VERSION = 'v6'; // Bumped to force cache refresh for brands tab
     const ICON_CACHE_KEY = `finance-icon-cache-fontawesome-${ICON_CACHE_VERSION}`;
     const ICON_CATEGORY_CACHE_KEY = `finance-icon-categories-${ICON_CACHE_VERSION}`;
     
@@ -10871,30 +10894,40 @@ async function saveProfile({ fullName, file }) {
       if (iconCache.categories && Object.keys(iconCache.categories).length > 0) {
         // Update custom icons in cached categories
         iconCache.categories.custom = customIcons.map(icon => `custom:${icon.id}`);
+        iconCache.categories.brands = iconCache.categories.brands || [];
         iconCache.categories.all = [...FONTAWESOME_ICONS, ...customIcons.map(icon => `custom:${icon.id}`)];
         return iconCache.categories;
       }
       
-      const personalKeywords = ['home','user','heart','star','gift','coffee','book','music','camera','tv','car','plane','train','bus','shopping','wallet','calendar','phone','envelope','utensils','bed','laptop','mobile','headphones','gamepad','football','tree','leaf','sun','moon','cloud','umbrella','fire','bolt','shield','lock','key','search','filter','download','upload','share','copy','edit','trash','plus','minus','check','times','arrow','eye','bookmark','flag','thumbs','smile','comment','bell','cog','tools','paint','image','video','film','microphone','volume','play','pause','stop','forward','backward','random','repeat','refresh','sync','undo','redo','save','folder','file'];
+      // Define brand keywords
+      const brandKeywords = [
+        'github', 'twitter', 'facebook', 'instagram', 'linkedin', 'youtube', 'reddit', 'discord', 'slack',
+        'telegram', 'whatsapp', 'tiktok', 'snapchat', 'pinterest', 'chrome', 'firefox', 'safari', 'edge',
+        'opera', 'amazon', 'aws', 'google', 'microsoft', 'apple', 'dropbox', 'google-drive', 'stripe',
+        'paypal', 'bitcoin', 'cc-visa', 'cc-mastercard', 'cc-amex', 'dribbble', 'behance', 'figma',
+        'adobe', 'sketch', 'webflow', 'wordpress', 'medium', 'blogger', 'shopify', 'magento', 'wix',
+        'squarespace', 'trello', 'asana', 'notion', 'jira', 'confluence', 'zoom', 'skype', 'youtube',
+        'vimeo', 'twitch', 'netflix', 'spotify', 'soundcloud', 'npm', 'node-js', 'react', 'vue',
+        'angular', 'html5', 'css3', 'js', 'python', 'java', 'git', 'gitlab', 'bitbucket', 'stack-overflow',
+        'codepen', 'docker', 'android', 'windows', 'linux', 'airbnb', 'uber', 'salesforce', 'oracle'
+      ];
       
-      const businessKeywords = ['briefcase','building','chart','calculator','file','receipt','money','coins','credit','university','store','warehouse','factory','truck','shipping','box','package','clipboard','list','check','calendar','clock','network','server','database','cloud','sync','cogs','wrench','hammer','tools','project','users','handshake','bullhorn','target','flag','trophy','medal','award','certificate','diploma','graduation','folder','archive','inbox','mail','phone','print','save','undo','redo','expand','compress','window','times','exclamation','question','info','ban','unlock','eye','sort','table','border','square','circle','ellipsis','equal','divide','percentage','trending','line','bar','pie','area','scatter','bubble','radar','polar','doughnut','gauge','speedometer','thermometer','compass','ruler','protractor','triangle','pentagon','hexagon','octagon','diamond','rhombus','trapezoid','parallelogram','kite'];
+      // Separate icons into categories
+      const brands = FONTAWESOME_ICONS.filter(icon => {
+        const iconName = icon.replace('fa:', '').toLowerCase();
+        return brandKeywords.some(keyword => iconName.includes(keyword));
+      });
       
-      const brandKeywords = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'];
-
       const categories = {
-        personal: FONTAWESOME_ICONS.filter(n => personalKeywords.some(keyword => n.includes(keyword))),
-        business: FONTAWESOME_ICONS.filter(n => businessKeywords.some(keyword => n.includes(keyword))),
-        brands: FONTAWESOME_ICONS.filter(n => brandKeywords.some(keyword => n.includes(keyword))),
-        custom: customIcons.map(icon => `custom:${icon.id}`),
-        all: [...FONTAWESOME_ICONS, ...customIcons.map(icon => `custom:${icon.id}`)]
+        all: [...FONTAWESOME_ICONS, ...customIcons.map(icon => `custom:${icon.id}`)],
+        brands: brands,
+        custom: customIcons.map(icon => `custom:${icon.id}`)
       };
       
       console.log('Categorized icons:', {
-        personal: categories.personal.length,
-        business: categories.business.length,
+        all: categories.all.length,
         brands: categories.brands.length,
         custom: categories.custom.length,
-        all: categories.all.length,
         customIconsCount: customIcons.length
       });
       
@@ -11098,7 +11131,7 @@ async function saveProfile({ fullName, file }) {
                     name.toLowerCase().includes(brand.toLowerCase())
                 );
                 
-                if (currentTab === 'brands' || isBrandIcon) {
+                if (isBrandIcon) {
                     btn.innerHTML = `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands'; color:inherit;">&#x${unicode};</i>`;
                 } else {
                     btn.innerHTML = `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
@@ -11107,9 +11140,15 @@ async function saveProfile({ fullName, file }) {
         } else {
             // Use appropriate style - brands use fa-brands, others use fa-solid
             const iconName = name.replace('fa:', '');
-            const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].includes(iconName);
-            const iconClass = isBrand ? 'fa-brands' : 'fa-solid';
-            btn.innerHTML = `<i class="${iconClass} fa-${iconName}" style="color:inherit;"></i>`;
+            const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow','tiktok','snapchat','pinterest','safari','edge','opera','aws','google-drive','cc-visa','cc-mastercard','cc-amex','sketch','adobe','blogger','shopify','magento','squarespace','asana','notion','jira','confluence','vimeo','twitch','soundcloud','gitlab','bitbucket','stack-overflow','git-alt','windows','airbnb','uber','salesforce','oracle'].includes(iconName);
+            
+            if (isBrand) {
+                // For brand icons, use Brands font explicitly
+                btn.innerHTML = `<i class="fa-brands fa-${iconName}" style="font-family:'Font Awesome 6 Brands'; color:inherit;"></i>`;
+            } else {
+                // For regular icons, use Pro font
+                btn.innerHTML = `<i class="fa-solid fa-${iconName}" style="font-family:'Font Awesome 6 Pro'; color:inherit;"></i>`;
+            }
         }
         
         btn.addEventListener('click', () => {
