@@ -12,7 +12,8 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("./fonts/fontawesome-pro/fa-brands-400.ttf") format("truetype");
+  src: url("./fonts/fontawesome-pro/fa-brands-400.woff2") format("woff2"),
+       url("./fonts/fontawesome-pro/fa-brands-400.ttf") format("truetype");
 }
 
 /* Fallback for FontAwesome 5 compatibility */
@@ -29,7 +30,8 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("./fonts/fontawesome-pro/fa-brands-400.ttf") format("truetype");
+  src: url("./fonts/fontawesome-pro/fa-brands-400.woff2") format("woff2"),
+       url("./fonts/fontawesome-pro/fa-brands-400.ttf") format("truetype");
 }
 
 /* FontAwesome Pro CSS Classes - Enhanced Unicode Support */

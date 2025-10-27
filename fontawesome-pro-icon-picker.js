@@ -9,12 +9,15 @@ class FontAwesomeProIconPicker {
         this.cacheExpiry = 7 * 24 * 60 * 60 * 1000; // 7 days
         
         // Comprehensive FontAwesome Pro glyph data (extracted from font file)
+        // Supporting both Solid (fa-solid-900) and Brands (fa-brands-400) fonts
         this.defaultGlyphData = {
-            version: '1.0',
+            version: '2.0',
             fontFamily: 'Font Awesome 6 Pro',
+            fontFamilyBrands: 'Font Awesome 6 Brands',
             fontWeight: 900,
+            fontWeightBrands: 400,
             extractedAt: new Date().toISOString(),
-            totalGlyphs: 2000, // Approximate count
+            totalGlyphs: 300, // Updated count including brand icons
             glyphs: [
                 // Common icons
                 { unicode: 61440, hex: '0xF000', name: 'home', char: '󰀀' },
@@ -114,6 +117,15 @@ class FontAwesomeProIconPicker {
                 { unicode: 61528, hex: '0xF058', name: 'graduation-cap', char: '󰁘' },
                 { unicode: 61529, hex: '0xF059', name: 'yahoo', char: '󰁙' },
                 { unicode: 61530, hex: '0xF05A', name: 'google', char: '󰁚' },
+                { unicode: 61808, hex: '0xF190', name: 'facebook', char: '󰆐' },
+                { unicode: 61809, hex: '0xF191', name: 'twitter', char: '󰆑' },
+                { unicode: 61810, hex: '0xF192', name: 'instagram', char: '󰆒' },
+                { unicode: 61811, hex: '0xF193', name: 'linkedin', char: '󰆓' },
+                { unicode: 61812, hex: '0xF194', name: 'youtube', char: '󰆔' },
+                { unicode: 61813, hex: '0xF195', name: 'github', char: '󰆕' },
+                { unicode: 61814, hex: '0xF196', name: 'apple', char: '󰆖' },
+                { unicode: 61815, hex: '0xF197', name: 'microsoft', char: '󰆗' },
+                { unicode: 61816, hex: '0xF198', name: 'amazon', char: '󰆘' },
                 { unicode: 61531, hex: '0xF05B', name: 'reddit', char: '󰁛' },
                 { unicode: 61532, hex: '0xF05C', name: 'reddit-square', char: '󰁜' },
                 { unicode: 61533, hex: '0xF05D', name: 'stumbleupon-circle', char: '󰁝' },
@@ -201,14 +213,7 @@ class FontAwesomeProIconPicker {
                 { unicode: 61615, hex: '0xF0AF', name: 'newspaper-o', char: '󰂯' },
                 { unicode: 61616, hex: '0xF0B0', name: 'wifi', char: '󰂰' },
                 { unicode: 61617, hex: '0xF0B1', name: 'calculator', char: '󰂱' },
-                { unicode: 61618, hex: '0xF0B2', name: 'paypal', char: '󰂲' },
                 { unicode: 61619, hex: '0xF0B3', name: 'google-wallet', char: '󰂳' },
-                { unicode: 61620, hex: '0xF0B4', name: 'cc-visa', char: '󰂴' },
-                { unicode: 61621, hex: '0xF0B5', name: 'cc-mastercard', char: '󰂵' },
-                { unicode: 61622, hex: '0xF0B6', name: 'cc-discover', char: '󰂶' },
-                { unicode: 61623, hex: '0xF0B7', name: 'cc-amex', char: '󰂷' },
-                { unicode: 61624, hex: '0xF0B8', name: 'cc-paypal', char: '󰂸' },
-                { unicode: 61625, hex: '0xF0B9', name: 'cc-stripe', char: '󰂹' },
                 { unicode: 61626, hex: '0xF0BA', name: 'bell-slash', char: '󰂺' },
                 { unicode: 61627, hex: '0xF0BB', name: 'bell-slash-o', char: '󰂻' },
                 { unicode: 61628, hex: '0xF0BC', name: 'trash', char: '󰂼' },
@@ -279,6 +284,49 @@ class FontAwesomeProIconPicker {
                 { unicode: 61693, hex: '0xF0FD', name: 'optin-monster', char: '󰃽' },
                 { unicode: 61694, hex: '0xF0FE', name: 'opencart', char: '󰃾' },
                 { unicode: 61695, hex: '0xF0FF', name: 'expeditedssl', char: '󰃿' },
+                
+                // Brand icons (using fa-brands-400 font)
+                // Social Media
+                { unicode: 0xF09B, hex: '0xF09B', name: 'github', char: '', isBrand: true },
+                { unicode: 0xF09A, hex: '0xF09A', name: 'facebook', char: '', isBrand: true },
+                { unicode: 0xF099, hex: '0xF099', name: 'twitter', char: '', isBrand: true },
+                { unicode: 0xF16D, hex: '0xF16D', name: 'instagram', char: '', isBrand: true },
+                { unicode: 0xF08C, hex: '0xF08C', name: 'linkedin', char: '', isBrand: true },
+                { unicode: 0xF167, hex: '0xF167', name: 'youtube', char: '', isBrand: true },
+                { unicode: 0xF1A1, hex: '0xF1A1', name: 'reddit', char: '', isBrand: true },
+                { unicode: 0xF392, hex: '0xF392', name: 'discord', char: '', isBrand: true },
+                { unicode: 0xF198, hex: '0xF198', name: 'slack', char: '', isBrand: true },
+                { unicode: 0xF2C6, hex: '0xF2C6', name: 'telegram', char: '', isBrand: true },
+                { unicode: 0xF232, hex: '0xF232', name: 'whatsapp', char: '', isBrand: true },
+                { unicode: 0xE07B, hex: '0xE07B', name: 'tiktok', char: '', isBrand: true },
+                { unicode: 0xF2AB, hex: '0xF2AB', name: 'snapchat', char: '', isBrand: true },
+                { unicode: 0xF0D2, hex: '0xF0D2', name: 'pinterest', char: '', isBrand: true },
+                // Technology
+                { unicode: 0xF268, hex: '0xF268', name: 'chrome', char: '', isBrand: true },
+                { unicode: 0xF269, hex: '0xF269', name: 'firefox', char: '', isBrand: true },
+                { unicode: 0xF267, hex: '0xF267', name: 'safari', char: '', isBrand: true },
+                { unicode: 0xF182, hex: '0xF182', name: 'android', char: '', isBrand: true },
+                { unicode: 0xF179, hex: '0xF179', name: 'apple', char: '', isBrand: true },
+                // Cloud & Services
+                { unicode: 0xF270, hex: '0xF270', name: 'amazon', char: '', isBrand: true },
+                { unicode: 0xF375, hex: '0xF375', name: 'aws', char: '', isBrand: true },
+                { unicode: 0xF1A0, hex: '0xF1A0', name: 'google', char: '', isBrand: true },
+                { unicode: 0xF3CA, hex: '0xF3CA', name: 'microsoft', char: '', isBrand: true },
+                { unicode: 0xF16B, hex: '0xF16B', name: 'dropbox', char: '', isBrand: true },
+                // Payment
+                { unicode: 0xF1F5, hex: '0xF1F5', name: 'stripe', char: '', isBrand: true },
+                { unicode: 0xF1ED, hex: '0xF1ED', name: 'paypal', char: '', isBrand: true },
+                { unicode: 0xF379, hex: '0xF379', name: 'bitcoin', char: '', isBrand: true },
+                // Design
+                { unicode: 0xF17D, hex: '0xF17D', name: 'dribbble', char: '', isBrand: true },
+                { unicode: 0xF1B4, hex: '0xF1B4', name: 'behance', char: '', isBrand: true },
+                { unicode: 0xF799, hex: '0xF799', name: 'figma', char: '', isBrand: true },
+                // CMS & Development
+                { unicode: 0xF19A, hex: '0xF19A', name: 'wordpress', char: '', isBrand: true },
+                { unicode: 0xF1D0, hex: '0xF1D0', name: 'stack-overflow', char: '', isBrand: true },
+                { unicode: 0xF1CB, hex: '0xF1CB', name: 'git', char: '', isBrand: true },
+                { unicode: 0xF17C, hex: '0xF17C', name: 'linux', char: '', isBrand: true },
+                { unicode: 0xF17A, hex: '0xF17A', name: 'windows', char: '', isBrand: true },
                 
                 // Add more glyphs as needed...
                 // This is a sample of the most common FontAwesome Pro icons
@@ -367,7 +415,8 @@ class FontAwesomeProIconPicker {
             name: glyph.name,
             unicode: glyph.unicode,
             hex: glyph.hex,
-            char: glyph.char
+            char: glyph.char,
+            isBrand: glyph.isBrand || false
         }));
     }
     
@@ -444,6 +493,16 @@ class FontAwesomeProIconPicker {
         };
         
         if (categoryKeywords[category]) {
+            // Special handling for brands - check both keywords and isBrand property
+            if (category === 'brands') {
+                return glyphs.filter(glyph => 
+                    glyph.isBrand === true || 
+                    categoryKeywords[category].some(keyword => 
+                        glyph.name.toLowerCase().includes(keyword.toLowerCase())
+                    )
+                );
+            }
+            
             return glyphs.filter(glyph => 
                 categoryKeywords[category].some(keyword => 
                     glyph.name.toLowerCase().includes(keyword.toLowerCase())
@@ -459,13 +518,20 @@ class FontAwesomeProIconPicker {
         if (iconId.startsWith('fa-glyph:')) {
             const unicode = iconId.replace('fa-glyph:', '');
             
+            // Find the glyph to check if it's a brand icon
+            const glyph = this.glyphData.glyphs.find(g => {
+                const glyphUnicode = g.unicode.toString(16).toUpperCase();
+                const iconUnicode = unicode.toUpperCase();
+                return glyphUnicode === iconUnicode;
+            });
+            
             // Use brand font for brand icons
-            if (category === 'brands') {
-                return `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands'; color:inherit;">&#x${unicode};</i>`;
+            if (category === 'brands' || (glyph && glyph.isBrand)) {
+                return `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands' !important; color:inherit;">&#x${unicode};</i>`;
             }
             
             // Use solid font for all other categories
-            return `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
+            return `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro' !important; color:inherit;">&#x${unicode};</i>`;
         }
         return '';
     }
@@ -475,15 +541,21 @@ class FontAwesomeProIconPicker {
         if (iconId.startsWith('fa-glyph:')) {
             const unicode = iconId.replace('fa-glyph:', '');
             
-            // Check if this is a brand icon by name
-            const iconName = this.getIconName(iconId);
-            const isBrandIcon = this.isBrandIcon(iconName);
+            // Find the glyph to check if it's a brand icon
+            const glyph = this.glyphData.glyphs.find(g => {
+                const glyphUnicode = g.unicode.toString(16).toUpperCase();
+                const iconUnicode = unicode.toUpperCase();
+                return glyphUnicode === iconUnicode;
+            });
             
-            if (category === 'brands' || isBrandIcon) {
-                return `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands'; color:inherit;">&#x${unicode};</i>`;
+            // Check if this is a brand icon
+            const isBrandIcon = (glyph && glyph.isBrand) || category === 'brands';
+            
+            if (isBrandIcon) {
+                return `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands' !important; color:inherit;">&#x${unicode};</i>`;
             }
             
-            return `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
+            return `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro' !important; color:inherit;">&#x${unicode};</i>`;
         }
         return '';
     }
@@ -520,7 +592,7 @@ class FontAwesomeProIconPicker {
     
     // Get all available categories
     getCategories() {
-        return {
+        const categories = {
             all: this.glyphData.glyphs.length,
             personal: this.filterByCategory(this.glyphData.glyphs, 'personal').length,
             business: this.filterByCategory(this.glyphData.glyphs, 'business').length,
@@ -528,11 +600,40 @@ class FontAwesomeProIconPicker {
             technology: this.filterByCategory(this.glyphData.glyphs, 'technology').length,
             brands: this.filterByCategory(this.glyphData.glyphs, 'brands').length
         };
+        
+        console.log('Icon categories:', categories);
+        return categories;
     }
     
     // Check if picker is ready
     isReady() {
         return this.isLoaded && this.glyphData;
+    }
+    
+    // Helper: Check if an icon is a brand icon by unicode
+    isBrandIconByUnicode(unicode) {
+        if (!this.isLoaded || !this.glyphData) return false;
+        
+        const glyph = this.glyphData.glyphs.find(g => {
+            const glyphUnicode = g.unicode.toString(16).toUpperCase();
+            const iconUnicode = unicode.toUpperCase();
+            return glyphUnicode === iconUnicode;
+        });
+        
+        return glyph && glyph.isBrand === true;
+    }
+    
+    // Helper: Get the correct HTML for rendering an icon by unicode
+    getIconHTMLByUnicode(unicode) {
+        if (!this.isLoaded || !this.glyphData) return '';
+        
+        const isBrand = this.isBrandIconByUnicode(unicode);
+        
+        if (isBrand) {
+            return `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands' !important; color:inherit;">&#x${unicode};</i>`;
+        } else {
+            return `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro' !important; color:inherit;">&#x${unicode};</i>`;
+        }
     }
 }
 
