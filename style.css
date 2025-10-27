@@ -9840,15 +9840,23 @@ body.splash-complete .mobile-bottom-nav {
   align-items: start;
 }
 
-/* Mobile Responsive Heatmap */
-@media (max-width: 1200px) {
+/* Tablet Portrait (vertical) - 3 rows (4 columns) */
+@media (max-width: 1200px) and (orientation: portrait) {
   .heatmap-months{ 
     grid-template-columns:repeat(4, 1fr);
     justify-items: center;
   }
 }
 
-/* Tablets and small laptops */
+/* Tablet Landscape (wide) - 2 rows (6 columns) for iPad Air/Pro */
+@media (min-width: 769px) and (max-width: 1400px) and (orientation: landscape) {
+  .heatmap-months{ 
+    grid-template-columns:repeat(6, 1fr);
+    justify-items: center;
+  }
+}
+
+/* Tablets and small devices */
 @media (max-width: 768px) {
   .heatmap-months{ 
     grid-template-columns:repeat(3, 1fr);

@@ -9222,35 +9222,36 @@ async function saveProfile({ fullName, file }) {
     
     function setupTooltip(trigger, tooltip) {
       let tooltipTimeout;
+      let autoCloseTimeout;
       let isTooltipVisible = false;
+      let isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       
-      trigger.addEventListener('mouseenter', (e) => {
-        // Clear any existing timeout
-        if (tooltipTimeout) {
-          clearTimeout(tooltipTimeout);
+      function showTooltip() {
+        if (!isTooltipVisible) {
+          // Position tooltip relative to the trigger element, not the event target
+          positionTooltipOnElement(trigger, tooltip);
+          
+          tooltip.style.display = 'block';
+          
+          // Use requestAnimationFrame for smooth animation
+          requestAnimationFrame(() => {
+            tooltip.classList.add('show');
+            isTooltipVisible = true;
+            
+            // Auto-close after 3 seconds on mobile/tablet
+            if (isTouchDevice) {
+              autoCloseTimeout = setTimeout(() => {
+                hideTooltip();
+              }, 3000);
+            }
+          });
         }
-        
-        // Perfect delay: 800ms for quick but not instant tooltips
-        tooltipTimeout = setTimeout(() => {
-          if (!isTooltipVisible) {
-            // Position tooltip relative to the trigger element, not the event target
-            positionTooltipOnElement(trigger, tooltip);
-            
-            tooltip.style.display = 'block';
-            
-            // Use requestAnimationFrame for smooth animation
-            requestAnimationFrame(() => {
-              tooltip.classList.add('show');
-              isTooltipVisible = true;
-            });
-          }
-        }, 800);
-      });
+      }
       
-      trigger.addEventListener('mouseleave', () => {
-        // Clear timeout if mouse leaves before tooltip shows
-        if (tooltipTimeout) {
-          clearTimeout(tooltipTimeout);
+      function hideTooltip() {
+        if (autoCloseTimeout) {
+          clearTimeout(autoCloseTimeout);
+          autoCloseTimeout = null;
         }
         
         if (isTooltipVisible) {
@@ -9262,9 +9263,100 @@ async function saveProfile({ fullName, file }) {
             tooltip.style.display = 'none';
           }, 300);
         }
+      }
+      
+      // Mouse events for desktop
+      trigger.addEventListener('mouseenter', (e) => {
+        // Clear any existing timeout
+        if (tooltipTimeout) {
+          clearTimeout(tooltipTimeout);
+        }
+        
+        // Perfect delay: 800ms for quick but not instant tooltips
+        tooltipTimeout = setTimeout(() => {
+          showTooltip();
+        }, 800);
       });
       
-      // No need for mouse movement tracking since tooltip is positioned relative to element
+      trigger.addEventListener('mouseleave', () => {
+        // Clear timeout if mouse leaves before tooltip shows
+        if (tooltipTimeout) {
+          clearTimeout(tooltipTimeout);
+        }
+        hideTooltip();
+      });
+      
+      // Touch events for mobile/tablet
+      if (isTouchDevice) {
+        // Track if this specific trigger is being touched
+        let isTouchingTrigger = false;
+        
+        trigger.addEventListener('touchstart', (e) => {
+          // Don't prevent default to allow scrolling
+          isTouchingTrigger = true;
+          
+          // Clear any existing timeout
+          if (tooltipTimeout) {
+            clearTimeout(tooltipTimeout);
+          }
+          
+          // Show tooltip after a short delay on touch
+          tooltipTimeout = setTimeout(() => {
+            if (isTouchingTrigger) {
+              showTooltip();
+            }
+          }, 400);
+        });
+        
+        trigger.addEventListener('touchend', (e) => {
+          isTouchingTrigger = false;
+          // Don't hide immediately - let auto-close handle it after 3 seconds
+        });
+        
+        trigger.addEventListener('touchcancel', (e) => {
+          isTouchingTrigger = false;
+          if (!isTooltipVisible && tooltipTimeout) {
+            clearTimeout(tooltipTimeout);
+          }
+        });
+      }
+      
+      // Global touch event handlers to hide tooltips when touching elsewhere
+      if (isTouchDevice) {
+        // Only add these listeners once for all tooltips
+        if (!window.tooltipGlobalListenersAdded) {
+          window.tooltipGlobalListenersAdded = true;
+          
+          document.addEventListener('touchstart', (e) => {
+            // If touching outside any tooltip trigger, hide all tooltips
+            if (!e.target.closest('.tooltip-trigger')) {
+              const allTooltips = document.querySelectorAll('.tooltip.show');
+              allTooltips.forEach(t => {
+                t.classList.remove('show');
+                setTimeout(() => {
+                  t.style.display = 'none';
+                }, 300);
+              });
+            }
+          });
+          
+          // Hide tooltips on scroll on mobile
+          let lastScrollY = 0;
+          window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+            if (Math.abs(currentScrollY - lastScrollY) > 10) {
+              const allTooltips = document.querySelectorAll('.tooltip.show');
+              allTooltips.forEach(t => {
+                t.classList.remove('show');
+                setTimeout(() => {
+                  t.style.display = 'none';
+                }, 300);
+              });
+            }
+            lastScrollY = currentScrollY;
+          });
+        }
+      }
     }
     
     function positionTooltipOnElement(triggerElement, tooltip) {
