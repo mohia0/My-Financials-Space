@@ -1,0 +1,19 @@
+{
+  "name": "My Financials",
+  "short_name": "Financials",
+  "description": "Personal Financial Management Tool",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "Images/Favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

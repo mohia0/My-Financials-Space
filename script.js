@@ -793,6 +793,9 @@ async function saveProfile({ fullName, file }) {
   document.addEventListener('DOMContentLoaded', function(){
     const $ = (s, el)=> (el||document).querySelector(s);
     
+    // Set initial page title
+    document.title = 'My Financials';
+    
     // Initialize splash screen
     initializeSplashScreen();
     
@@ -6494,10 +6497,9 @@ async function saveProfile({ fullName, file }) {
       // Update UI
       document.getElementById('currencySymbol').textContent = state.currencySymbol;
       
-      // Update page title
-      const titleCurrencyEl = document.getElementById('titleCurrency');
-      if (titleCurrencyEl) {
-        titleCurrencyEl.textContent = state.currencySymbol;
+      // Update page title with currency symbol
+      if (document.title) {
+        document.title = `My Financials · ${state.currencySymbol}`;
       }
       
       // Update table headers
