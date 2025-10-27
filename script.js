@@ -5234,7 +5234,7 @@ async function saveProfile({ fullName, file }) {
               left: 0;
               right: 0;
               bottom: 0;
-              background: rgba(0, 0, 0, 0.1);
+              background: transparent;
               border-radius: inherit;
               pointer-events: none;
               z-index: 1;
@@ -5243,6 +5243,8 @@ async function saveProfile({ fullName, file }) {
             // Make parent relative if not already
             const computedStyle = getComputedStyle(element);
             if (computedStyle.position === 'static') {
+              // Store original position before changing it
+              element.dataset.originalPosition = 'static';
               element.style.position = 'relative';
             }
             
@@ -5253,6 +5255,18 @@ async function saveProfile({ fullName, file }) {
           element.disabled = false;
           element.style.pointerEvents = 'auto';
           element.style.userSelect = 'auto';
+          
+          // Restore original position if it was saved
+          if (element.dataset.originalPosition) {
+            const originalPosition = element.dataset.originalPosition;
+            // If original was static, remove inline style to restore default
+            if (originalPosition === 'static') {
+              element.style.position = '';
+            } else {
+              element.style.position = originalPosition;
+            }
+            delete element.dataset.originalPosition;
+          }
           
           // Remove lock indicator
           const lockIndicator = element.querySelector('.lock-indicator');
@@ -10704,6 +10718,13 @@ async function saveProfile({ fullName, file }) {
       };
       customIcons.push(customIcon);
       saveCustomIcons();
+      
+      // Clear icon cache to force refresh
+      iconCache.categories = {};
+      localStorage.removeItem(ICON_CATEGORY_CACHE_KEY);
+      
+      // Re-categorize immediately to include new custom icon
+      categorizeIcons();
     }
 
     // FontAwesome Pro Optimized Icon Picker
@@ -11083,6 +11104,162 @@ async function saveProfile({ fullName, file }) {
       }
     }
 
+    // Centralized icon rendering function
+    // Single source of truth for all icon rendering logic
+    function renderIcon(iconDataOrName) {
+      // Handle both string (iconName) and object ({ icon: name })
+      const iconName = typeof iconDataOrName === 'string' ? iconDataOrName : iconDataOrName.icon;
+      if (!iconName) return '';
+      
+      // Custom image icons
+      if (iconName.startsWith('custom-image:')) {
+        const imageData = iconName.replace('custom-image:', '');
+        return `<img src="${imageData}" class="custom-svg-icon" onload="applySmartSVGInversion(this)" />`;
+      }
+      
+      // Custom Unicode glyph icons
+      if (iconName.startsWith('fa-glyph:')) {
+        const unicode = iconName.replace('fa-glyph:', '');
+        const isBrandIcon = BRAND_ICON_UNICODE_MAP && Object.values(BRAND_ICON_UNICODE_MAP).some(u => u.unicode === unicode);
+        
+        if (isBrandIcon) {
+          return `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands'; color:inherit;">&#x${unicode};</i>`;
+        } else {
+          return `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
+        }
+      }
+      
+      // Named FontAwesome icons (fa:icon-name)
+      if (iconName.startsWith('fa:')) {
+        const cleanName = iconName.replace('fa:', '');
+        const isBrand = BRAND_ICON_KEYWORDS.includes(cleanName);
+        
+        if (isBrand) {
+          // Use data-driven Unicode from our map
+          const unicode = BRAND_ICON_UNICODE_MAP[cleanName]?.unicode || BRAND_ICON_UNICODE_MAP[cleanName]?.content?.replace('\\u', '').replace(/[^0-9a-fA-F]/g, '');
+          if (unicode) {
+            return `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands'; color:inherit; font-family: 'Font Awesome 6 Brands';">&#x${unicode};</i>`;
+          }
+          return `<i class="fa-brands fa-${cleanName}" style="color:inherit; font-family:'Font Awesome 6 Brands';"></i>`;
+        } else {
+          return `<i class="fa-solid fa-${cleanName}" style="font-family:'Font Awesome 6 Pro'; color:inherit;"></i>`;
+        }
+      }
+      
+      // Fallback
+      return `<i class="fa-solid fa-question" style="color:inherit;"></i>`;
+    }
+    
+    // Brand icon Unicode data - Single source of truth
+    const BRAND_ICON_UNICODE_MAP = {
+      // Social Media
+      'github': { unicode: 'f09b', name: 'github' },
+      'twitter': { unicode: 'f099', name: 'twitter' },
+      'facebook': { unicode: 'f09a', name: 'facebook' },
+      'instagram': { unicode: 'f16d', name: 'instagram' },
+      'linkedin': { unicode: 'f08c', name: 'linkedin' },
+      'youtube': { unicode: 'f167', name: 'youtube' },
+      'reddit': { unicode: 'f1a1', name: 'reddit' },
+      'discord': { unicode: 'f392', name: 'discord' },
+      'slack': { unicode: 'f198', name: 'slack' },
+      'telegram': { unicode: 'f2c6', name: 'telegram' },
+      'whatsapp': { unicode: 'f232', name: 'whatsapp' },
+      'tiktok': { unicode: 'e07b', name: 'tiktok' },
+      'snapchat': { unicode: 'f2ab', name: 'snapchat' },
+      'pinterest': { unicode: 'f0d2', name: 'pinterest' },
+      
+      // Technology
+      'chrome': { unicode: 'f268', name: 'chrome' },
+      'firefox': { unicode: 'f269', name: 'firefox' },
+      'safari': { unicode: 'f267', name: 'safari' },
+      'edge': { unicode: 'f282', name: 'edge' },
+      'opera': { unicode: 'f26a', name: 'opera' },
+      
+      // Cloud & Services
+      'amazon': { unicode: 'f270', name: 'amazon' },
+      'aws': { unicode: 'f375', name: 'aws' },
+      'google': { unicode: 'f1a0', name: 'google' },
+      'microsoft': { unicode: 'f3ca', name: 'microsoft' },
+      'apple': { unicode: 'f179', name: 'apple' },
+      'dropbox': { unicode: 'f16b', name: 'dropbox' },
+      'google-drive': { unicode: 'f3aa', name: 'google-drive' },
+      
+      // Payment
+      'stripe': { unicode: 'f1f5', name: 'stripe' },
+      'paypal': { unicode: 'f1ed', name: 'paypal' },
+      'bitcoin': { unicode: 'f379', name: 'bitcoin' },
+      'cc-visa': { unicode: 'f1f0', name: 'cc-visa' },
+      'cc-mastercard': { unicode: 'f1f1', name: 'cc-mastercard' },
+      'cc-amex': { unicode: 'f1f3', name: 'cc-amex' },
+      
+      // Design
+      'dribbble': { unicode: 'f17d', name: 'dribbble' },
+      'behance': { unicode: 'f1b4', name: 'behance' },
+      'figma': { unicode: 'f799', name: 'figma' },
+      'adobe': { unicode: 'f778', name: 'adobe' },
+      'sketch': { unicode: 'f6c7', name: 'sketch' },
+      'webflow': { unicode: 'e65c', name: 'webflow' },
+      
+      // CMS & Platforms
+      'wordpress': { unicode: 'f19a', name: 'wordpress' },
+      'medium': { unicode: 'f23a', name: 'medium' },
+      'blogger': { unicode: 'f37c', name: 'blogger' },
+      'wordpress-simple': { unicode: 'f411', name: 'wordpress-simple' },
+      'shopify': { unicode: 'f957', name: 'shopify' },
+      'magento': { unicode: 'f3c4', name: 'magento' },
+      'wix': { unicode: 'f5cf', name: 'wix' },
+      'squarespace': { unicode: 'f5be', name: 'squarespace' },
+      
+      // Productivity
+      'trello': { unicode: 'f181', name: 'trello' },
+      'asana': { unicode: 'f41e', name: 'asana' },
+      'notion': { unicode: 'e8c3', name: 'notion' },
+      'jira': { unicode: 'f7b1', name: 'jira' },
+      'confluence': { unicode: 'e83d', name: 'confluence' },
+      'zoom': { unicode: 'f587', name: 'zoom' },
+      'skype': { unicode: 'f17e', name: 'skype' },
+      
+      // Video & Streaming
+      'vimeo': { unicode: 'f40a', name: 'vimeo' },
+      'twitch': { unicode: 'f1e8', name: 'twitch' },
+      'netflix': { unicode: 'f3fb', name: 'netflix' },
+      'spotify': { unicode: 'f1bc', name: 'spotify' },
+      'soundcloud': { unicode: 'f1be', name: 'soundcloud' },
+      
+      // Development
+      'npm': { unicode: 'f3d4', name: 'npm' },
+      'node-js': { unicode: 'f3d3', name: 'node-js' },
+      'react': { unicode: 'f41b', name: 'react' },
+      'vue': { unicode: 'f41f', name: 'vue' },
+      'angular': { unicode: 'f420', name: 'angular' },
+      'html5': { unicode: 'f13b', name: 'html5' },
+      'css3': { unicode: 'f13c', name: 'css3' },
+      'js': { unicode: 'f3b8', name: 'js' },
+      'python': { unicode: 'f3e2', name: 'python' },
+      'java': { unicode: 'f4e7', name: 'java' },
+      'git': { unicode: 'f1d3', name: 'git' },
+      'git-alt': { unicode: 'f841', name: 'git-alt' },
+      'gitlab': { unicode: 'f296', name: 'gitlab' },
+      'bitbucket': { unicode: 'f171', name: 'bitbucket' },
+      'stack-overflow': { unicode: 'f16c', name: 'stack-overflow' },
+      'codepen': { unicode: 'f1cb', name: 'codepen' },
+      'docker': { unicode: 'f395', name: 'docker' },
+      
+      // Mobile & OS
+      'android': { unicode: 'f17b', name: 'android' },
+      'windows': { unicode: 'f17a', name: 'windows' },
+      'linux': { unicode: 'f17c', name: 'linux' },
+      
+      // Additional Brands
+      'airbnb': { unicode: 'f834', name: 'airbnb' },
+      'uber': { unicode: 'f402', name: 'uber' },
+      'salesforce': { unicode: 'f83b', name: 'salesforce' },
+      'oracle': { unicode: 'f797', name: 'oracle' }
+    };
+    
+    // Brand keywords for automatic detection
+    const BRAND_ICON_KEYWORDS = Object.keys(BRAND_ICON_UNICODE_MAP);
+
     function createIconButton(name) {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -11120,35 +11297,9 @@ async function saveProfile({ fullName, file }) {
                     `;
                 }
             }
-        } else if (name.startsWith('fa-glyph:')) {
-            // Use optimized picker for glyph icons with category-aware font selection
-            if (fontAwesomeProPicker && fontAwesomeProPicker.isReady()) {
-                btn.innerHTML = fontAwesomeProPicker.getIconHTMLWithCategory(name, currentTab);
-            } else {
-                const unicode = name.replace('fa-glyph:', '');
-                // Check if this is a brand icon
-                const isBrandIcon = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].some(brand => 
-                    name.toLowerCase().includes(brand.toLowerCase())
-                );
-                
-                if (isBrandIcon) {
-                    btn.innerHTML = `<i class="fa-brands" style="font-family:'Font Awesome 6 Brands'; color:inherit;">&#x${unicode};</i>`;
-                } else {
-                    btn.innerHTML = `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
-                }
-            }
         } else {
-            // Use appropriate style - brands use fa-brands, others use fa-solid
-            const iconName = name.replace('fa:', '');
-            const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow','tiktok','snapchat','pinterest','safari','edge','opera','aws','google-drive','cc-visa','cc-mastercard','cc-amex','sketch','adobe','blogger','shopify','magento','squarespace','asana','notion','jira','confluence','vimeo','twitch','soundcloud','gitlab','bitbucket','stack-overflow','git-alt','windows','airbnb','uber','salesforce','oracle'].includes(iconName);
-            
-            if (isBrand) {
-                // For brand icons, use Brands font explicitly
-                btn.innerHTML = `<i class="fa-brands fa-${iconName}" style="font-family:'Font Awesome 6 Brands'; color:inherit;"></i>`;
-            } else {
-                // For regular icons, use Pro font
-                btn.innerHTML = `<i class="fa-solid fa-${iconName}" style="font-family:'Font Awesome 6 Pro'; color:inherit;"></i>`;
-            }
+            // Use centralized renderIcon function for all non-custom icons
+            btn.innerHTML = renderIcon(name);
         }
         
         btn.addEventListener('click', () => {
@@ -11309,19 +11460,8 @@ async function saveProfile({ fullName, file }) {
         console.log('updateRowIconImmediately: Found row element', rowElement);
         const iconCell = rowElement.querySelector('.icon-cell');
         if (iconCell && rowData.icon) {
-          let iconHTML = '';
-          if (rowData.icon.startsWith('custom-image:')) {
-            const imageData = rowData.icon.replace('custom-image:', '');
-            iconHTML = `<img src="${imageData}" class="custom-svg-icon" onload="applySmartSVGInversion(this)" />`;
-          } else if (rowData.icon.startsWith('fa-glyph:')) {
-            const unicode = rowData.icon.replace('fa-glyph:', '');
-            iconHTML = `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
-          } else if (rowData.icon.startsWith('fa:')) {
-            const iconName = rowData.icon.replace('fa:', '');
-            const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].includes(iconName);
-            const iconClass = isBrand ? 'fa-brands' : 'fa-solid';
-            iconHTML = `<i class="${iconClass} fa-${iconName}" style="color:inherit;"></i>`;
-          }
+          // Use centralized renderIcon function
+          const iconHTML = renderIcon(rowData);
           
           // Update the button content with the new icon
           const button = iconCell.querySelector('button[data-choose-icon]');
@@ -11672,22 +11812,10 @@ async function saveProfile({ fullName, file }) {
           if (monthlySelected) monthlySelected.textContent = formatCurrency(mSelected);
           if (yearlySelected) yearlySelected.textContent = formatCurrency(ySelected);
           
-          // Update icon - more robust approach
+          // Update icon using centralized renderIcon function
           const iconCell = row.querySelector('.icon-cell');
           if (iconCell && rowData.icon) {
-            let iconHTML = '';
-            if (rowData.icon.startsWith('custom-image:')) {
-              const imageData = rowData.icon.replace('custom-image:', '');
-              iconHTML = `<img src="${imageData}" class="custom-svg-icon" onload="applySmartSVGInversion(this)" />`;
-            } else if (rowData.icon.startsWith('fa-glyph:')) {
-              const unicode = rowData.icon.replace('fa-glyph:', '');
-              iconHTML = `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
-            } else if (rowData.icon.startsWith('fa:')) {
-              const iconName = rowData.icon.replace('fa:', '');
-              const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].includes(iconName);
-              const iconClass = isBrand ? 'fa-brands' : 'fa-solid';
-              iconHTML = `<i class="${iconClass} fa-${iconName}" style="color:inherit;"></i>`;
-            }
+            const iconHTML = renderIcon(rowData);
             
             // Update the button content with the new icon
             const button = iconCell.querySelector('button[data-choose-icon]');
@@ -11732,22 +11860,10 @@ async function saveProfile({ fullName, file }) {
           if (monthlySelected) monthlySelected.textContent = formatCurrency(mSelected);
           if (yearlySelected) yearlySelected.textContent = formatCurrency(ySelected);
           
-          // Update icon - more robust approach
+          // Update icon using centralized renderIcon function
           const iconCell = row.querySelector('.icon-cell');
           if (iconCell && rowData.icon) {
-            let iconHTML = '';
-            if (rowData.icon.startsWith('custom-image:')) {
-              const imageData = rowData.icon.replace('custom-image:', '');
-              iconHTML = `<img src="${imageData}" class="custom-svg-icon" onload="applySmartSVGInversion(this)" />`;
-            } else if (rowData.icon.startsWith('fa-glyph:')) {
-              const unicode = rowData.icon.replace('fa-glyph:', '');
-              iconHTML = `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
-            } else if (rowData.icon.startsWith('fa:')) {
-              const iconName = rowData.icon.replace('fa:', '');
-              const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].includes(iconName);
-              const iconClass = isBrand ? 'fa-brands' : 'fa-solid';
-              iconHTML = `<i class="${iconClass} fa-${iconName}" style="color:inherit;"></i>`;
-            }
+            const iconHTML = renderIcon(rowData);
             
             // Update the button content with the new icon
             const button = iconCell.querySelector('button[data-choose-icon]');
