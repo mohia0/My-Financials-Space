@@ -865,7 +865,7 @@ async function saveProfile({ fullName, file }) {
       let touchEndX = 0;
       let touchEndY = 0;
       
-      const swipeThreshold = 50; // Minimum distance for swipe
+      const swipeThreshold = 150; // Minimum distance for swipe (increased for better scroll compatibility)
       const swipeVelocityThreshold = 0.3; // Minimum velocity for swipe
       
       // Page order: analytics -> expenses -> income
@@ -916,8 +916,14 @@ async function saveProfile({ fullName, file }) {
         const absDeltaX = Math.abs(deltaX);
         const absDeltaY = Math.abs(deltaY);
         
-        // Only trigger swipe if horizontal movement is greater than vertical (horizontal swipe)
-        if (absDeltaX > absDeltaY && absDeltaX > swipeThreshold) {
+        // Calculate the ratio to ensure it's clearly a horizontal swipe
+        // Horizontal movement should be at least 2x the vertical movement
+        const horizontalRatio = absDeltaX / Math.max(absDeltaY, 1);
+        
+        // Only trigger swipe if:
+        // 1. Horizontal movement is clearly dominant (2x vertical)
+        // 2. Minimum swipe distance is reached (150px)
+        if (horizontalRatio >= 2 && absDeltaX > swipeThreshold) {
           // Swipe left (next page)
           if (deltaX < 0) {
             const nextPage = getNextPage();
