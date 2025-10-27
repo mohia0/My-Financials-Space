@@ -1,6 +1,6 @@
 {
   "name": "My Financials",
-  "short_name": "Financials",
+  "short_name": "My Financials",
   "description": "Personal Financial Management Tool",
   "start_url": "/",
   "display": "standalone",
@@ -9,9 +9,21 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "Images/Favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "Images/Icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "Images/Icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "Images/Icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
