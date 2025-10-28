@@ -6448,6 +6448,21 @@ async function saveProfile({ fullName, file }) {
       return `${symbol} ${formatted}`;
     };
     
+    // Format currency with original USD amount shown as tiny text above
+    const formatCurrencyWithUSD = (convertedAmount, originalUSD, currency = state.selectedCurrency) => {
+      if (!convertedAmount || isNaN(convertedAmount)) return `${currencySymbols[currency] || currency} 0`;
+      if (!originalUSD || isNaN(originalUSD)) return formatCurrency(convertedAmount, currency);
+      
+      const symbol = currencySymbols[currency] || currency;
+      const formatted = nfINT.format(Math.round(convertedAmount));
+      const usdFormatted = nfUSD.format(Math.round(originalUSD));
+      
+      return `<div class="currency-with-usd">
+        <div class="usd-original">${usdFormatted}</div>
+        <div class="converted-amount">${symbol} ${formatted}</div>
+      </div>`;
+    };
+    
     // Initialize currency system
     const initializeCurrencySystem = () => {
       try {
@@ -7393,15 +7408,15 @@ async function saveProfile({ fullName, file }) {
               <div class="metric-label">Best Year</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">${formatCurrency(usdToSelectedCurrency(bestYearAmount))}</div>
+              <div class="metric-value">${formatCurrencyWithUSD(usdToSelectedCurrency(bestYearAmount), bestYearAmount)}</div>
               <div class="metric-label">Best Year Total</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">${highestIncome ? formatCurrency(usdToSelectedCurrency(Number(highestIncome.paidUsd || 0))) : 'N/A'}</div>
+              <div class="metric-value">${highestIncome ? formatCurrencyWithUSD(usdToSelectedCurrency(Number(highestIncome.paidUsd || 0)), Number(highestIncome.paidUsd || 0)) : 'N/A'}</div>
               <div class="metric-label">Highest Entry</div>
             </div>
             <div class="metric-item">
-              <div class="metric-value">${lowestIncome ? formatCurrency(usdToSelectedCurrency(Number(lowestIncome.paidUsd || 0))) : 'N/A'}</div>
+              <div class="metric-value">${lowestIncome ? formatCurrencyWithUSD(usdToSelectedCurrency(Number(lowestIncome.paidUsd || 0)), Number(lowestIncome.paidUsd || 0)) : 'N/A'}</div>
               <div class="metric-label">Lowest Entry</div>
             </div>
           </div>
@@ -7411,10 +7426,10 @@ async function saveProfile({ fullName, file }) {
           <div class="section-title">Smart Insights</div>
           <div class="insight-card">
             <div class="insight-text">
-              You've earned <strong>${formatCurrency(usdToSelectedCurrency(lifetimeIncome.totalUSD))}</strong> across <strong>${totalItems}</strong> projects over <strong>${Object.keys(yearDistribution).length}</strong> years.
-              That's <strong>${formatCurrency(usdToSelectedCurrency(lifetimeIncome.dailyUSD))}</strong> per day or <strong>${formatCurrency(usdToSelectedCurrency(lifetimeIncome.hourlyUSD))}</strong> per hour!
-              ${bestYear ? ` Your best year was <strong>${bestYear}</strong> with <strong>${formatCurrency(usdToSelectedCurrency(bestYearAmount))}</strong>.` : ''}
-              ${highestIncome ? ` Your highest single entry was <strong>${formatCurrency(usdToSelectedCurrency(Number(highestIncome.paidUsd || 0)))}</strong> from "${highestIncome.name || 'Unnamed Project'}".` : ''}
+              You've earned <strong>${formatCurrencyWithUSD(usdToSelectedCurrency(lifetimeIncome.totalUSD), lifetimeIncome.totalUSD)}</strong> across <strong>${totalItems}</strong> projects over <strong>${Object.keys(yearDistribution).length}</strong> years.
+              That's <strong>${formatCurrencyWithUSD(usdToSelectedCurrency(lifetimeIncome.dailyUSD), lifetimeIncome.dailyUSD)}</strong> per day or <strong>${formatCurrencyWithUSD(usdToSelectedCurrency(lifetimeIncome.hourlyUSD), lifetimeIncome.hourlyUSD)}</strong> per hour!
+              ${bestYear ? ` Your best year was <strong>${bestYear}</strong> with <strong>${formatCurrencyWithUSD(usdToSelectedCurrency(bestYearAmount), bestYearAmount)}</strong>.` : ''}
+              ${highestIncome ? ` Your highest single entry was <strong>${formatCurrencyWithUSD(usdToSelectedCurrency(Number(highestIncome.paidUsd || 0)), Number(highestIncome.paidUsd || 0))}</strong> from "${highestIncome.name || 'Unnamed Project'}".` : ''}
             </div>
           </div>
         </div>
@@ -7546,7 +7561,7 @@ async function saveProfile({ fullName, file }) {
               This month you're earning <strong>${nfUSD.format(currentMonthIncome)}</strong>, which is 
               <strong>${vsAverage >= 0 ? vsAverage.toFixed(1) + '% above' : Math.abs(vsAverage).toFixed(1) + '% below'}</strong> your all-time monthly average.
               ${bestMonth > 0 ? ` Your best month ever was <strong>${nfUSD.format(bestMonth)}</strong>.` : ''}
-              At this rate, you earn <strong>${nfUSD.format(lifetimeIncome.dailyUSD)}</strong> per day!
+              At this rate, you earn <strong>${formatCurrencyWithUSD(usdToSelectedCurrency(lifetimeIncome.dailyUSD), lifetimeIncome.dailyUSD)}</strong> per day!
             </div>
           </div>
         </div>
@@ -9459,7 +9474,7 @@ async function saveProfile({ fullName, file }) {
         const hourlySpending = dailySpending / 24;
         
         // Basic spending velocity - always show
-        insights.push(`💰 Daily spending: ${formatCurrency(usdToSelectedCurrency(dailySpending))} per day, ${formatCurrency(usdToSelectedCurrency(hourlySpending))} per hour.`);
+        insights.push(`💰 Daily spending: ${formatCurrencyWithUSD(usdToSelectedCurrency(dailySpending), dailySpending)} per day, ${formatCurrencyWithUSD(usdToSelectedCurrency(hourlySpending), hourlySpending)} per hour.`);
         
         // Income percentage if we have income data
         if (incomeTotals.monthly > 0) {
@@ -9482,7 +9497,7 @@ async function saveProfile({ fullName, file }) {
           const topPercentage = monthlyPersonal > 0 ? (topCost / monthlyPersonal) * 100 : 0;
           
           if (topCost > 0) {
-            insights.push(`🏆 Largest expense: ${topExpense.name || 'Unnamed'} at ${formatCurrency(usdToSelectedCurrency(topCost))} (${Math.round(topPercentage)}% of total).`);
+            insights.push(`🏆 Largest expense: ${topExpense.name || 'Unnamed'} at ${formatCurrencyWithUSD(usdToSelectedCurrency(topCost), topCost)} (${Math.round(topPercentage)}% of total).`);
           }
         }
         
@@ -9497,7 +9512,7 @@ async function saveProfile({ fullName, file }) {
         // Cost per item analysis
         const avgCostPerItem = monthlyPersonal / personalActive.length;
         if (avgCostPerItem > 0) {
-          insights.push(`📈 Average cost per expense: ${formatCurrency(usdToSelectedCurrency(avgCostPerItem))} per item.`);
+          insights.push(`📈 Average cost per expense: ${formatCurrencyWithUSD(usdToSelectedCurrency(avgCostPerItem), avgCostPerItem)} per item.`);
         }
         
         // Spending concentration
@@ -9514,11 +9529,11 @@ async function saveProfile({ fullName, file }) {
         
         // Lifestyle assessment
         if (monthlyPersonal > 1000) {
-          insights.push(`💎 High-spending lifestyle: ${formatCurrency(usdToSelectedCurrency(monthlyPersonal))} monthly personal expenses.`);
+          insights.push(`💎 High-spending lifestyle: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyPersonal), monthlyPersonal)} monthly personal expenses.`);
         } else if (monthlyPersonal > 500) {
-          insights.push(`⚖️ Moderate lifestyle: ${formatCurrency(usdToSelectedCurrency(monthlyPersonal))} monthly personal expenses.`);
+          insights.push(`⚖️ Moderate lifestyle: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyPersonal), monthlyPersonal)} monthly personal expenses.`);
         } else {
-          insights.push(`🎯 Lean lifestyle: ${formatCurrency(usdToSelectedCurrency(monthlyPersonal))} monthly personal expenses.`);
+          insights.push(`🎯 Lean lifestyle: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyPersonal), monthlyPersonal)} monthly personal expenses.`);
         }
         
       } else {
@@ -9550,7 +9565,7 @@ async function saveProfile({ fullName, file }) {
         const hourlyBusinessCost = dailyBusinessCost / 24;
         
         // Basic business spending - always show
-        insights.push(`💼 Daily business cost: ${formatCurrency(usdToSelectedCurrency(dailyBusinessCost))} per day, ${formatCurrency(usdToSelectedCurrency(hourlyBusinessCost))} per hour.`);
+        insights.push(`💼 Daily business cost: ${formatCurrencyWithUSD(usdToSelectedCurrency(dailyBusinessCost), dailyBusinessCost)} per day, ${formatCurrencyWithUSD(usdToSelectedCurrency(hourlyBusinessCost), hourlyBusinessCost)} per hour.`);
         
         // Income percentage if we have income data
         if (incomeTotals.monthly > 0) {
@@ -9584,7 +9599,7 @@ async function saveProfile({ fullName, file }) {
           const topPercentage = totalMonthlyEquivalent > 0 ? (topCost / totalMonthlyEquivalent) * 100 : 0;
           
           if (topCost > 0) {
-            insights.push(`🔧 Most expensive tool: ${topTool.name || 'Unnamed'} at ${formatCurrency(usdToSelectedCurrency(topCost))} (${Math.round(topPercentage)}% of total).`);
+            insights.push(`🔧 Most expensive tool: ${topTool.name || 'Unnamed'} at ${formatCurrencyWithUSD(usdToSelectedCurrency(topCost), topCost)} (${Math.round(topPercentage)}% of total).`);
           }
         }
         
@@ -9599,7 +9614,7 @@ async function saveProfile({ fullName, file }) {
         // Cost per tool analysis
         const avgCostPerTool = monthlyBiz / bizActive.length;
         if (avgCostPerTool > 0) {
-          insights.push(`📈 Average cost per tool: ${formatCurrency(usdToSelectedCurrency(avgCostPerTool))} per tool.`);
+          insights.push(`📈 Average cost per tool: ${formatCurrencyWithUSD(usdToSelectedCurrency(avgCostPerTool), avgCostPerTool)} per tool.`);
         }
         
         // Tool concentration
@@ -9616,11 +9631,11 @@ async function saveProfile({ fullName, file }) {
         
         // Business scale assessment
         if (monthlyBiz > 500) {
-          insights.push(`🚀 Enterprise-level tools: ${formatCurrency(usdToSelectedCurrency(monthlyBiz))} monthly business expenses.`);
+          insights.push(`🚀 Enterprise-level tools: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyBiz), monthlyBiz)} monthly business expenses.`);
         } else if (monthlyBiz > 200) {
-          insights.push(`⚡ Growing business: ${formatCurrency(usdToSelectedCurrency(monthlyBiz))} monthly business expenses.`);
+          insights.push(`⚡ Growing business: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyBiz), monthlyBiz)} monthly business expenses.`);
         } else {
-          insights.push(`🎯 Lean startup: ${formatCurrency(usdToSelectedCurrency(monthlyBiz))} monthly business expenses.`);
+          insights.push(`🎯 Lean startup: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyBiz), monthlyBiz)} monthly business expenses.`);
         }
         
         // Tool count analysis
@@ -9667,14 +9682,14 @@ async function saveProfile({ fullName, file }) {
           const hourlyIncome = dailyIncome / 24;
           const weeklyIncome = currentYearTotal / (monthsElapsed * 4.33);
           
-          insights.push(`⚡ Income velocity: ${formatCurrency(usdToSelectedCurrency(dailyIncome))} daily, ${formatCurrency(usdToSelectedCurrency(hourlyIncome))} hourly.`);
+          insights.push(`⚡ Income velocity: ${formatCurrencyWithUSD(usdToSelectedCurrency(dailyIncome), dailyIncome)} daily, ${formatCurrencyWithUSD(usdToSelectedCurrency(hourlyIncome), hourlyIncome)} hourly.`);
           
           // Year total
-          insights.push(`💰 Year-to-date earnings: ${formatCurrency(usdToSelectedCurrency(currentYearTotal))} (${monthsElapsed} months).`);
+          insights.push(`💰 Year-to-date earnings: ${formatCurrencyWithUSD(usdToSelectedCurrency(currentYearTotal), currentYearTotal)} (${monthsElapsed} months).`);
           
           // Monthly average
           if (monthlyAverage > 0) {
-            insights.push(`📊 Monthly average: ${formatCurrency(usdToSelectedCurrency(monthlyAverage))} per month this year.`);
+            insights.push(`📊 Monthly average: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyAverage), monthlyAverage)} per month this year.`);
           }
           
           // Project count
@@ -9713,13 +9728,13 @@ async function saveProfile({ fullName, file }) {
           
           // Income scale assessment
           if (currentYearTotal > 100000) {
-            insights.push(`🚀 High-earning year: ${formatCurrency(usdToSelectedCurrency(currentYearTotal))} - excellent performance!`);
+            insights.push(`🚀 High-earning year: ${formatCurrencyWithUSD(usdToSelectedCurrency(currentYearTotal), currentYearTotal)} - excellent performance!`);
           } else if (currentYearTotal > 50000) {
-            insights.push(`📈 Strong earnings: ${formatCurrency(usdToSelectedCurrency(currentYearTotal))} - good progress.`);
+            insights.push(`📈 Strong earnings: ${formatCurrencyWithUSD(usdToSelectedCurrency(currentYearTotal), currentYearTotal)} - good progress.`);
           } else if (currentYearTotal > 20000) {
-            insights.push(`📊 Moderate earnings: ${formatCurrency(usdToSelectedCurrency(currentYearTotal))} - building momentum.`);
+            insights.push(`📊 Moderate earnings: ${formatCurrencyWithUSD(usdToSelectedCurrency(currentYearTotal), currentYearTotal)} - building momentum.`);
           } else {
-            insights.push(`🎯 Early stage: ${formatCurrency(usdToSelectedCurrency(currentYearTotal))} - foundation building.`);
+            insights.push(`🎯 Early stage: ${formatCurrencyWithUSD(usdToSelectedCurrency(currentYearTotal), currentYearTotal)} - foundation building.`);
           }
           
         } else {
@@ -9756,9 +9771,9 @@ async function saveProfile({ fullName, file }) {
       if (totalExpenses > 0 || incomeTotals.monthly > 0) {
         // Cash flow analysis - always show
         if (netIncome > 0) {
-          insights.push(`💰 Positive cash flow: +${formatCurrency(usdToSelectedCurrency(netIncome))}/month (${Math.round(savingsRate)}% savings rate).`);
+          insights.push(`💰 Positive cash flow: +${formatCurrencyWithUSD(usdToSelectedCurrency(netIncome), netIncome)}/month (${Math.round(savingsRate)}% savings rate).`);
         } else if (netIncome < 0) {
-          insights.push(`⚠️ Negative cash flow: -${formatCurrency(usdToSelectedCurrency(Math.abs(netIncome)))}/month deficit.`);
+          insights.push(`⚠️ Negative cash flow: -${formatCurrencyWithUSD(usdToSelectedCurrency(Math.abs(netIncome)), Math.abs(netIncome))}/month deficit.`);
         } else {
           insights.push(`⚖️ Break-even: $0 monthly surplus.`);
         }
@@ -9770,7 +9785,7 @@ async function saveProfile({ fullName, file }) {
           const hourlyIncome = dailyIncome / 24;
           const hourlyExpenses = dailyExpenses / 24;
           
-          insights.push(`⚡ Financial velocity: Earning ${formatCurrency(usdToSelectedCurrency(hourlyIncome))}/hour, spending ${formatCurrency(usdToSelectedCurrency(hourlyExpenses))}/hour.`);
+          insights.push(`⚡ Financial velocity: Earning ${formatCurrencyWithUSD(usdToSelectedCurrency(hourlyIncome), hourlyIncome)}/hour, spending ${formatCurrencyWithUSD(usdToSelectedCurrency(hourlyExpenses), hourlyExpenses)}/hour.`);
         }
         
         // Expense breakdown
@@ -9794,7 +9809,7 @@ async function saveProfile({ fullName, file }) {
               insights.push(`⚠️ Short runway: Only ${currentRunway} months of expenses covered by current monthly savings.`);
             }
           } else {
-            insights.push(`🚨 No runway: Monthly deficit of ${formatCurrency(usdToSelectedCurrency(Math.abs(netIncome)))} - burning through savings.`);
+            insights.push(`🚨 No runway: Monthly deficit of ${formatCurrencyWithUSD(usdToSelectedCurrency(Math.abs(netIncome)), Math.abs(netIncome))} - burning through savings.`);
           }
         }
         
@@ -9824,11 +9839,11 @@ async function saveProfile({ fullName, file }) {
         
         // Wealth building potential
         if (netIncome > 1000) {
-          insights.push(`💎 High wealth building potential: ${formatCurrency(usdToSelectedCurrency(netIncome))} monthly surplus.`);
+          insights.push(`💎 High wealth building potential: ${formatCurrencyWithUSD(usdToSelectedCurrency(netIncome), netIncome)} monthly surplus.`);
         } else if (netIncome > 500) {
-          insights.push(`📈 Good wealth building potential: ${formatCurrency(usdToSelectedCurrency(netIncome))} monthly surplus.`);
+          insights.push(`📈 Good wealth building potential: ${formatCurrencyWithUSD(usdToSelectedCurrency(netIncome), netIncome)} monthly surplus.`);
         } else if (netIncome > 0) {
-          insights.push(`🎯 Building wealth: ${formatCurrency(usdToSelectedCurrency(netIncome))} monthly surplus.`);
+          insights.push(`🎯 Building wealth: ${formatCurrencyWithUSD(usdToSelectedCurrency(netIncome), netIncome)} monthly surplus.`);
         }
         
       } else {

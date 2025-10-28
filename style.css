@@ -6449,6 +6449,31 @@ header img:hover {
   margin-bottom: 0;
 }
 
+/* Currency with USD display styles */
+.currency-with-usd {
+  display: inline-block;
+  vertical-align: top;
+  position: relative;
+}
+
+.usd-original {
+  font-size: 0.5rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1;
+  margin-bottom: 0.1rem;
+  font-weight: 400;
+  position: absolute;
+  top: -0.4rem;
+  left: 0;
+  white-space: nowrap;
+}
+
+.converted-amount {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  display: inline-block;
+}
 
 /* Editable Values */
 .editable-value {
