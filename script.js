@@ -13621,14 +13621,14 @@ function loadNonCriticalResources() {
       row.style.gridTemplateColumns = bizTemplate;
     });
     
-    // For Income table (responsive structure)
+    // For Income table - use consistent grid templates that match CSS
     let incomeTemplate;
     if (window.innerWidth <= 480) {
-      incomeTemplate = `16px 20px 1fr 1.2fr 80px 70px 70px 80px 1fr 60px 80px 20px`;
+      incomeTemplate = `20px 30px 120px 150px 120px 120px 120px 140px 180px 100px 80px 30px`;
     } else if (window.innerWidth <= 768) {
-      incomeTemplate = `18px 24px 1fr 1.2fr 100px 85px 85px 100px 1fr 70px 90px 24px`;
+      incomeTemplate = `20px 30px 120px 150px 120px 120px 120px 140px 180px 100px 80px 30px`;
     } else {
-      incomeTemplate = `20px 28px 1fr 1.2fr 100px 100px 100px 120px 1fr 100px 1fr 28px`;
+      incomeTemplate = `20px 28px 108px 1.2fr 100px 100px 100px 120px 1fr 100px 80px 28px`;
     }
     
     document.querySelectorAll('.row-income').forEach(row => {

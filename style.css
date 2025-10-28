@@ -3313,11 +3313,13 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--card);
-  z-index: 5;
+  z-index: 10;
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
+  min-width: 80px; /* Reduced width for name inputs */
+  max-width: 120px; /* Maximum width to prevent excessive expansion */
 }
 .row > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -3358,11 +3360,13 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--card);
-  z-index: 5;
+  z-index: 10;
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
+  min-width: 80px; /* Reduced width for name inputs */
+  max-width: 120px; /* Maximum width to prevent excessive expansion */
 }
 .row-biz > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-biz > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -4298,7 +4302,7 @@ textarea {
   
   /* Extra small screens - more compact income table */
   .table-container .row-income {
-    grid-template-columns: 18px 28px 108px 130px 110px 110px 110px 130px 160px 100px 80px 28px;
+    grid-template-columns: 20px 30px 120px 150px 120px 120px 120px 140px 180px 100px 80px 30px;
     gap: 0.25rem;
     padding: 0.35rem 0.25rem 0.35rem 0.25rem;
     min-height: 36px;
@@ -4452,7 +4456,7 @@ textarea {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 16px 24px 96px 120px 100px 100px 100px 120px 140px 80px 60px 24px;
+    grid-template-columns: 20px 30px 120px 150px 120px 120px 120px 140px 180px 100px 80px 30px;
     font-size: 0.5rem;
     text-align: center;
     align-items: center;
@@ -4600,7 +4604,7 @@ textarea {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 14px 22px 90px 110px 90px 90px 90px 110px 130px 80px 60px 22px;
+    grid-template-columns: 20px 30px 120px 150px 120px 120px 120px 140px 180px 100px 80px 30px;
     font-size: 0.45rem;
     text-align: center;
     align-items: center;
@@ -4669,7 +4673,7 @@ textarea {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 12px 20px 140px 100px 80px 80px 80px 100px 120px 80px 20px;
+    grid-template-columns: 20px 30px 120px 150px 120px 120px 120px 140px 180px 100px 80px 30px;
     font-size: 0.4rem;
     text-align: center;
     align-items: center;
@@ -4737,11 +4741,13 @@ textarea {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--glass);
-  z-index: 10;
+  z-index: 15;
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
+  min-width: 80px; /* Reduced width for name inputs */
+  max-width: 120px; /* Maximum width to prevent excessive expansion */
 }
 .row-head > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-head > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -4774,11 +4780,13 @@ textarea {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--glass);
-  z-index: 10;
+  z-index: 15;
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
+  min-width: 80px; /* Reduced width for name inputs */
+  max-width: 120px; /* Maximum width to prevent excessive expansion */
 }
 .row-head.row-biz > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-head.row-biz > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -4896,6 +4904,8 @@ textarea {
     justify-content: flex-start;
     padding: 0;
     margin: 0;
+    min-width: 80px; /* Reduced width for name inputs */
+    max-width: 120px; /* Maximum width to prevent excessive expansion */
   }
   
   .row-income > div:nth-child(3) {
@@ -4915,6 +4925,8 @@ textarea {
     justify-content: flex-start;
     padding: 0;
     margin: 0;
+    min-width: 80px; /* Reduced width for name inputs */
+    max-width: 120px; /* Maximum width to prevent excessive expansion */
   }
   
   .row-head.row-income > div:nth-child(3) {
