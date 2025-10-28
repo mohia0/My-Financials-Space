@@ -9965,6 +9965,297 @@ body.splash-complete .mobile-bottom-nav {
   }
 }
 
+/* Tablet Table Layout - Income Table Responsive Design */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet-specific table container with horizontal scroll */
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth;
+    touch-action: pan-x;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted) var(--glass);
+    width: 100% !important;
+    max-width: 100% !important;
+    position: relative !important;
+    /* Add subtle shadow to indicate scrollable content */
+    box-shadow: inset -15px 0 15px -15px rgba(0,0,0,0.1);
+  }
+  
+  /* Add scroll indicator for tablet tables */
+  .table-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 25px;
+    height: 100%;
+    background: linear-gradient(to left, var(--card) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  /* Tablet income table rows - ensure they don't overflow */
+  .table-container .row-head.row-income,
+  .table-container .row-income {
+    min-width: 1200px; /* Ensure table has minimum width for all columns */
+    max-width: none; /* Allow horizontal expansion */
+    font-size: 0.8rem;
+  }
+  
+  /* Tablet income table grid layout */
+  .table-container .row-head.row-income {
+    grid-template-columns: 25px 35px 200px 150px 130px 130px 130px 150px 200px 120px 90px 35px;
+    text-align: center;
+    align-items: center;
+    padding: 0.5rem 0.4rem;
+    gap: 0.4rem;
+  }
+  
+  .table-container .row-income {
+    grid-template-columns: 25px 35px 200px 150px 130px 130px 130px 150px 200px 120px 90px 35px;
+    gap: 0.4rem;
+    padding: 0.5rem 0.4rem;
+    min-height: 45px;
+    white-space: nowrap;
+  }
+  
+  /* Tablet income table input styling */
+  .table-container .row-income input {
+    font-size: 0.8rem !important;
+    min-height: 36px !important;
+    padding: 0.6rem 0.8rem !important;
+    line-height: 1.4 !important;
+    color: var(--fg) !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    text-align: left !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  
+  /* Tablet income table cells */
+  .table-container .row-income > * {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 0 !important;
+  }
+  
+  /* Tablet date input styling */
+  .table-container .row-income input[type="date"] {
+    font-size: 0.75rem !important;
+    min-height: 36px !important;
+    padding: 0.5rem 0.7rem !important;
+    line-height: 1.3 !important;
+    color: var(--fg) !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    text-align: left !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+  
+  /* Tablet financial input wrappers */
+  .table-container .row-income .cost-input-wrapper,
+  .table-container .row-income .financial-input-wrapper {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  
+  .table-container .row-income .cost-input,
+  .table-container .row-income .financial-value {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  
+  /* Tablet financial input elements */
+  .table-container .row-income .cost-input-wrapper input,
+  .table-container .row-income .financial-input-wrapper input {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.7rem !important;
+  }
+  
+  .table-container .row-income .cost-dollar-display,
+  .table-container .row-income .financial-symbol {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    min-width: 0 !important;
+    flex-shrink: 0 !important;
+    margin-right: 0px !important;
+    padding-right: 0px !important;
+  }
+  
+  /* Tablet header alignment */
+  .table-container .row-head.row-income > div:nth-child(3) { text-align: left; } /* Project Name */
+  .table-container .row-head.row-income > div:nth-child(4) { text-align: left; } /* Tags */
+  .table-container .row-head.row-income > div:nth-child(5) { text-align: center; } /* Date */
+  .table-container .row-head.row-income > div:nth-child(6) { text-align: center; } /* All Payment */
+  .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
+  .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
+  .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
+  .table-container .row-head.row-income > div:nth-child(10) { text-align: left; } /* Note */
+  .table-container .row-head.row-income > div:nth-child(11) { text-align: right; } /* Progress */
+  
+  /* Tablet delete button styling */
+  .table-container .row-income .delete-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0.25rem !important;
+    border-radius: 4px !important;
+    background: var(--danger) !important;
+    color: white !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  .table-container .row-income .delete-btn svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+  
+  .table-container .row-income .delete-btn:hover {
+    background: var(--danger-hover) !important;
+    transform: scale(1.05) !important;
+  }
+}
+
+/* Tablet Landscape Orientation - Additional Optimizations */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  /* Optimize table for landscape tablet view */
+  .table-container .row-head.row-income,
+  .table-container .row-income {
+    min-width: 1400px; /* Slightly wider for landscape */
+    font-size: 0.85rem;
+  }
+  
+  /* Adjust grid columns for landscape */
+  .table-container .row-head.row-income {
+    grid-template-columns: 30px 40px 220px 160px 140px 140px 140px 160px 220px 140px 100px 40px;
+    padding: 0.6rem 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .table-container .row-income {
+    grid-template-columns: 30px 40px 220px 160px 140px 140px 140px 160px 220px 140px 100px 40px;
+    gap: 0.5rem;
+    padding: 0.6rem 0.5rem;
+    min-height: 50px;
+  }
+  
+  /* Larger inputs for landscape */
+  .table-container .row-income input {
+    font-size: 0.85rem !important;
+    min-height: 40px !important;
+    padding: 0.7rem 0.9rem !important;
+  }
+  
+  .table-container .row-income input[type="date"] {
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+    padding: 0.6rem 0.8rem !important;
+  }
+  
+  .table-container .row-income .cost-input-wrapper input,
+  .table-container .row-income .financial-input-wrapper input {
+    font-size: 0.8rem !important;
+    padding: 0.6rem 0.8rem !important;
+  }
+  
+  /* Larger delete button for landscape */
+  .table-container .row-income .delete-btn {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0.3rem !important;
+  }
+  
+  .table-container .row-income .delete-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
+/* Tablet Portrait Orientation - Additional Optimizations */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+  /* Optimize table for portrait tablet view */
+  .table-container .row-head.row-income,
+  .table-container .row-income {
+    min-width: 1100px; /* Slightly narrower for portrait */
+    font-size: 0.75rem;
+  }
+  
+  /* Adjust grid columns for portrait */
+  .table-container .row-head.row-income {
+    grid-template-columns: 20px 30px 180px 140px 120px 120px 120px 140px 180px 100px 80px 30px;
+    padding: 0.4rem 0.3rem;
+    gap: 0.3rem;
+  }
+  
+  .table-container .row-income {
+    grid-template-columns: 20px 30px 180px 140px 120px 120px 120px 140px 180px 100px 80px 30px;
+    gap: 0.3rem;
+    padding: 0.4rem 0.3rem;
+    min-height: 42px;
+  }
+  
+  /* Smaller inputs for portrait */
+  .table-container .row-income input {
+    font-size: 0.75rem !important;
+    min-height: 34px !important;
+    padding: 0.5rem 0.7rem !important;
+  }
+  
+  .table-container .row-income input[type="date"] {
+    font-size: 0.7rem !important;
+    min-height: 34px !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+  
+  .table-container .row-income .cost-input-wrapper input,
+  .table-container .row-income .financial-input-wrapper input {
+    font-size: 0.7rem !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+  
+  /* Smaller delete button for portrait */
+  .table-container .row-income .delete-btn {
+    width: 26px !important;
+    height: 26px !important;
+    padding: 0.2rem !important;
+  }
+  
+  .table-container .row-income .delete-btn svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+}
+
 /* Tablets and small devices */
 @media (max-width: 768px) {
   .heatmap-months{ 
