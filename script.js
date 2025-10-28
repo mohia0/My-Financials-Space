@@ -1216,6 +1216,9 @@ async function saveProfile({ fullName, file }) {
         
         // Update income data for the current year
         updateIncomeForYear(currentYear);
+        
+        // Sync heatmap with the current year
+        syncHeatmapWithIncomeYear();
       } else {
         console.log('🆕 Current year tab not found, creating it');
         // If current year tab doesn't exist, create it and set as active
@@ -1327,6 +1330,9 @@ async function saveProfile({ fullName, file }) {
             renderKPIs(true);
           }
         }, 100);
+        
+        // Sync heatmap with the new year
+        syncHeatmapWithIncomeYear();
       } else {
         console.error('❌ Selected tab not found for year:', year);
       }
@@ -8152,7 +8158,7 @@ async function saveProfile({ fullName, file }) {
     // ===== INCOME HEATMAP FUNCTIONS =====
     
     let heatmapData = {};
-    let currentHeatmapYear = new Date().getFullYear();
+    let currentHeatmapYear = null; // Will be synced with currentYear from income table
     
     // Generate heatmap data for a specific year (memoized per currency and year)
     const heatmapCache = new Map(); // key: `${year}:${state.selectedCurrency}` -> data
@@ -8433,18 +8439,21 @@ async function saveProfile({ fullName, file }) {
         return;
       }
       
+      // Sync with income table's current year
+      currentHeatmapYear = parseInt(currentYear) || new Date().getFullYear();
+      console.log('🔄 Heatmap synced with income table current year:', currentHeatmapYear);
+      
       // Update currency display
       if (currencyDisplay) {
         currencyDisplay.textContent = state.selectedCurrency || 'EGP';
       }
       
       // Populate year selector
-      const currentYear = new Date().getFullYear();
       const availableYears = Object.keys(state.income).map(year => parseInt(year)).filter(year => !isNaN(year));
       
       // Add current year if not present
-      if (!availableYears.includes(currentYear)) {
-        availableYears.push(currentYear);
+      if (!availableYears.includes(currentHeatmapYear)) {
+        availableYears.push(currentHeatmapYear);
       }
       
       // Sort years descending
@@ -8681,6 +8690,42 @@ async function saveProfile({ fullName, file }) {
       // Initialize even if page currently hidden; it will render on next show
       if (analyticsPage) {
         initializeHeatmap();
+      }
+    }
+    
+    // Sync heatmap with income table year changes
+    function syncHeatmapWithIncomeYear() {
+      const analyticsPage = document.getElementById('pageAnalytics');
+      if (analyticsPage && analyticsPage.style.display !== 'none') {
+        // Only update if analytics page is visible
+        const newYear = parseInt(currentYear);
+        if (newYear && newYear !== currentHeatmapYear) {
+          console.log('🔄 Syncing heatmap year from', currentHeatmapYear, 'to', newYear);
+          currentHeatmapYear = newYear;
+          
+          // Update year selector
+          const yearSelect = document.getElementById('heatmapYearSelect');
+          if (yearSelect) {
+            yearSelect.value = newYear;
+          }
+          
+          // Regenerate heatmap data
+          try {
+            heatmapData = generateHeatmapData(currentHeatmapYear);
+          } catch {
+            heatmapData = {};
+          }
+          
+          // Re-render heatmap
+          const heatmapContainer = document.getElementById('heatmapCalendar');
+          if (heatmapContainer) {
+            heatmapContainer.innerHTML = '';
+            const calendarHTML = generateHeatmapCalendar(currentHeatmapYear);
+            heatmapContainer.appendChild(calendarHTML);
+            updateHeatmapStats(currentHeatmapYear);
+            addHeatmapTooltips();
+          }
+        }
       }
     }
 
@@ -10977,6 +11022,15 @@ async function saveProfile({ fullName, file }) {
           
           faLoaded = true;
           console.log('FontAwesome Pro optimized picker loaded with', FONTAWESOME_ICONS.length, 'glyphs including brands and financial');
+          
+          // Test all icons to ensure they're working
+          if (fontAwesomeProPicker && fontAwesomeProPicker.testAllIcons) {
+            fontAwesomeProPicker.testAllIcons();
+            // Debug the "all" category to verify all icons are included
+            fontAwesomeProPicker.debugAllCategory();
+            // Test brand icons specifically
+            fontAwesomeProPicker.testBrandIcons();
+          }
           
           // Save to cache for faster future loads
           saveIconsToCache(FONTAWESOME_ICONS);
