@@ -813,8 +813,8 @@ header.scrolled .icon-btn {
   header.scrolled {
     padding: 0;
     margin: 0;
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg) !important;
+    border-bottom: 1px solid var(--stroke);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateZ(0);
@@ -852,14 +852,14 @@ header.scrolled .icon-btn {
   }
   
   header.scrolled .icon-btn svg {
-    color: white;
+    color: var(--fg);
   }
   
   /* Navigation button icons */
   header.scrolled .nav-btn svg {
     width: 0.875rem;
     height: 0.875rem;
-    color: white;
+    color: var(--fg);
   }
   
   /* Minimal gap between elements */
@@ -879,7 +879,7 @@ header.scrolled .icon-btn {
   
   header.scrolled #currencySymbol {
     font-size: 0.6rem;
-    color: white;
+    color: var(--fg);
   }
   
   /* Ensure smooth transition for logo container */
@@ -956,6 +956,38 @@ header.scrolled .icon-btn {
     }
   }
 }
+
+/* Disable all tooltips on header elements */
+header [title],
+header .tooltip-trigger,
+header .tooltip {
+  pointer-events: none !important;
+}
+
+header [title]:hover::after,
+header .tooltip-trigger:hover::after {
+  display: none !important;
+}
+
+/* Ensure header elements don't show tooltips but allow button interactions */
+header * {
+  cursor: default !important;
+}
+
+/* Allow proper interaction for clickable elements */
+header button,
+header .nav-btn,
+header .icon-btn,
+header #btnCurrency,
+header #btnLock,
+header #btnTheme,
+header #btnSync,
+header #btnSettings {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+/* Title attributes are removed via JavaScript in initializeTooltips() function */
 
 /* ===== NEW ROW ANIMATION ===== */
 .new-row-animation {
