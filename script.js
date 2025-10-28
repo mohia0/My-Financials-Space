@@ -12224,7 +12224,9 @@ async function saveProfile({ fullName, file }) {
         const mUSD=rowMonthlyUSD(row), yUSD=rowYearlyUSD(row), mEGP=usdToEgp(mUSD), yEGP=usdToEgp(yUSD);
         const mSelected=usdToSelectedCurrency(mUSD), ySelected=usdToSelectedCurrency(yUSD);
         const div=document.createElement('div'); 
-        div.className=isBiz?'row row-biz row-draggable row-drop-zone':'row row-draggable row-drop-zone';
+        const baseClass = isBiz ? 'row row-biz row-draggable row-drop-zone' : 'row row-draggable row-drop-zone';
+        const inactiveClass = row.status !== 'Active' ? ' inactive' : '';
+        div.className = baseClass + inactiveClass;
         div.setAttribute('data-row-index', idx);
         div.setAttribute('draggable', 'true');
         
@@ -12314,10 +12316,12 @@ async function saveProfile({ fullName, file }) {
              row.status = 'Cancelled';
              statusToggle.className = 'toggle-switch status-cancelled';
              statusText.textContent = 'OFF';
+             div.classList.add('inactive');
            } else {
              row.status = 'Active';
              statusToggle.className = 'toggle-switch status-active';
              statusText.textContent = 'ON';
+             div.classList.remove('inactive');
            }
            
            save('status-toggle');

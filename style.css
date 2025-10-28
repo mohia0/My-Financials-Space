@@ -2426,6 +2426,13 @@ input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
   text-align: center;
 }
 
+/* Note column alignment for income table */
+.table-container .row-income > div:nth-child(10) {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
 /* Minimal Date Input for Income Rows */
 .date-input-minimal {
   font-size: 0.65rem;
@@ -3426,7 +3433,7 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .row-income{ 
   display:grid; 
-  grid-template-columns:20px 28px 108px 1.2fr 100px 100px 100px 120px 1fr 100px 120px 28px; 
+  grid-template-columns:20px 28px 108px 1.2fr 100px 100px 100px 120px 1fr 100px 80px 28px; 
   gap:0.4rem; 
   align-items:center; 
   padding:.5rem .4rem; 
@@ -3459,11 +3466,11 @@ input[type="range"]::-moz-range-thumb:hover {
 .row-income > div:nth-child(7) { grid-column: 7; } /* Paid USD */
 .row-income > div:nth-child(8) { grid-column: 8; } /* Paid EGP */
 .row-income > div:nth-child(9) { grid-column: 9; } /* Method */
-.row-income > div:nth-child(10) { grid-column: 10; } /* Progress */
-.row-income > div:nth-child(11) { 
-  grid-column: 11; /* Note */
+.row-income > div:nth-child(10) { 
+  grid-column: 10; /* Note */
   min-width: 120px; /* Minimum width to prevent shrinking */
 }
+.row-income > div:nth-child(11) { grid-column: 11; } /* Progress */
 .row-income > div:nth-child(12) { grid-column: 12; } /* Delete */
 
 /* CRITICAL: Preserve empty divs to maintain grid structure */
@@ -3494,45 +3501,96 @@ input[type="range"]::-moz-range-thumb:hover {
   display: grid !important;
 }
 
-/* Progress toggle styles */
+/* Progress toggle styles - Enhanced with distinctive patterns */
 .progress-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  min-height: 32px;
+  min-height: 28px;
 }
 
 .progress-toggle button {
   background: var(--card);
   border: 1px solid var(--stroke);
-  border-radius: 6px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.7rem;
-  font-weight: 600;
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 700;
   color: var(--fg);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 60px;
+  min-width: 50px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .progress-toggle button:hover {
   background: var(--glass);
   border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
 }
 
-.progress-toggle button.progress-10 { background: var(--muted); color: var(--fg); }
-.progress-toggle button.progress-20 { background: var(--muted); color: var(--fg); }
-.progress-toggle button.progress-30 { background: var(--muted); color: var(--fg); }
-.progress-toggle button.progress-40 { background: var(--muted); color: var(--fg); }
-.progress-toggle button.progress-50 { background: var(--accent); color: var(--fg); }
-.progress-toggle button.progress-60 { background: var(--accent); color: var(--fg); }
-.progress-toggle button.progress-70 { background: var(--accent); color: var(--fg); }
-.progress-toggle button.progress-80 { background: var(--accent); color: var(--fg); }
-.progress-toggle button.progress-90 { background: var(--accent); color: var(--fg); }
-.progress-toggle button.progress-100 { background: var(--accent); color: var(--fg); }
+/* Distinctive progress patterns using primary color */
+.progress-toggle button.progress-10 { 
+  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 10%, transparent 10%);
+  color: var(--fg);
+  border-color: var(--muted);
+}
+.progress-toggle button.progress-20 { 
+  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 20%, transparent 20%);
+  color: var(--fg);
+  border-color: var(--muted);
+}
+.progress-toggle button.progress-30 { 
+  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 30%, transparent 30%);
+  color: var(--fg);
+  border-color: var(--muted);
+}
+.progress-toggle button.progress-40 { 
+  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 40%, transparent 40%);
+  color: var(--fg);
+  border-color: var(--muted);
+}
+.progress-toggle button.progress-50 { 
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 50%, transparent 50%);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+.progress-toggle button.progress-60 { 
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 60%, transparent 60%);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+.progress-toggle button.progress-70 { 
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 70%, transparent 70%);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+.progress-toggle button.progress-80 { 
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 80%, transparent 80%);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+.progress-toggle button.progress-90 { 
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 90%, transparent 90%);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+.progress-toggle button.progress-100 { 
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
+}
 
 /* Note input styles */
 .note-input {
@@ -3548,6 +3606,11 @@ input[type="range"]::-moz-range-thumb:hover {
   resize: none;
   min-height: 32px;
   max-height: 80px;
+}
+
+/* Remove resize arrow from all textareas */
+textarea {
+  resize: none;
 }
 
 .note-input:focus {
@@ -3579,6 +3642,23 @@ input[type="range"]::-moz-range-thumb:hover {
 
 [data-theme="light"] .row-income:hover {
   background: rgba(241, 245, 249, 0.9);
+}
+
+/* Grey effect for inactive rows in expense tables */
+.row.inactive,
+.row-biz.inactive {
+  opacity: 0.5;
+  color: var(--muted);
+}
+
+.row.inactive *,
+.row-biz.inactive * {
+  color: var(--muted) !important;
+}
+
+.row.inactive:hover,
+.row-biz.inactive:hover {
+  opacity: 0.6;
 }
 
 /* Delete button styling for income table - matches expenses table */
@@ -4031,7 +4111,7 @@ input[type="range"]::-moz-range-thumb:hover {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 20px 30px 200px 150px 120px 120px 120px 140px 180px 60px 80px 30px;
+    grid-template-columns: 20px 30px 200px 150px 120px 120px 120px 140px 180px 100px 80px 30px;
     text-align: center;
     align-items: center;
   }
@@ -4039,15 +4119,17 @@ input[type="range"]::-moz-range-thumb:hover {
   /* Align specific header columns with their content */
   .table-container .row-head.row-income > div:nth-child(3) { text-align: left; } /* Project Name */
   .table-container .row-head.row-income > div:nth-child(4) { text-align: left; } /* Tags */
-  .table-container .row-head.row-income > div:nth-child(5) { text-align: left; } /* Date */
+  .table-container .row-head.row-income > div:nth-child(5) { text-align: center; } /* Date */
   .table-container .row-head.row-income > div:nth-child(6) { text-align: center; } /* All Payment */
   .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
   .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
   .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
+  .table-container .row-head.row-income > div:nth-child(10) { text-align: left; } /* Note */
+  .table-container .row-head.row-income > div:nth-child(11) { text-align: right; } /* Progress */
   
   /* Better mobile layout for income table */
   .table-container .row-income {
-    grid-template-columns: 20px 30px 120px 150px 120px 120px 120px 140px 180px 60px 80px 30px;
+    grid-template-columns: 20px 30px 120px 150px 120px 120px 120px 140px 180px 100px 80px 30px;
     gap: 0.3rem;
     padding: 0.4rem 0.5rem 0.4rem 0.5rem;
     min-height: 40px;
@@ -4056,8 +4138,8 @@ input[type="range"]::-moz-range-thumb:hover {
   
   /* Fixed widths for name and note inputs on 500px screens */
   .table-container .row-income > div:nth-child(3) input,
-  .table-container .row-income > div:nth-child(11) input,
-  .table-container .row-income > div:nth-child(11) textarea {
+  .table-container .row-income > div:nth-child(10) input,
+  .table-container .row-income > div:nth-child(10) textarea {
     min-width: 100% !important;
     width: 100% !important;
   }
@@ -4066,7 +4148,7 @@ input[type="range"]::-moz-range-thumb:hover {
   .table-container .row-income > div:nth-child(3) {
     min-width: 120px !important;
   }
-  .table-container .row-income > div:nth-child(11) {
+  .table-container .row-income > div:nth-child(10) {
     min-width: 80px !important;
   }
   
@@ -4162,7 +4244,7 @@ input[type="range"]::-moz-range-thumb:hover {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 18px 28px 180px 130px 110px 110px 110px 130px 160px 50px 70px 28px;
+    grid-template-columns: 18px 28px 180px 130px 110px 110px 110px 130px 160px 100px 80px 28px;
     text-align: center;
     align-items: center;
   }
@@ -4170,19 +4252,27 @@ input[type="range"]::-moz-range-thumb:hover {
   /* Align specific header columns with their content - 480px */
   .table-container .row-head.row-income > div:nth-child(3) { text-align: left; } /* Project Name */
   .table-container .row-head.row-income > div:nth-child(4) { text-align: left; } /* Tags */
-  .table-container .row-head.row-income > div:nth-child(5) { text-align: left; } /* Date */
+  .table-container .row-head.row-income > div:nth-child(5) { text-align: center; } /* Date */
   .table-container .row-head.row-income > div:nth-child(6) { text-align: center; } /* All Payment */
   .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
   .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
   .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
+  .table-container .row-head.row-income > div:nth-child(10) { text-align: left; } /* Note */
+  .table-container .row-head.row-income > div:nth-child(11) { text-align: right; } /* Progress */
   
   /* Ensure proper alignment on 480px screens for tags and date */
-  .table-container .row-income > div:nth-child(4),
-  .table-container .row-income > div:nth-child(5) {
+  .table-container .row-income > div:nth-child(4) {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     text-align: left;
+  }
+  
+  .table-container .row-income > div:nth-child(5) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
   }
   
   /* 480px date input styling - positioned directly under DATE title */
@@ -4208,7 +4298,7 @@ input[type="range"]::-moz-range-thumb:hover {
   
   /* Extra small screens - more compact income table */
   .table-container .row-income {
-    grid-template-columns: 18px 28px 108px 130px 110px 110px 110px 130px 160px 50px 70px 28px;
+    grid-template-columns: 18px 28px 108px 130px 110px 110px 110px 130px 160px 100px 80px 28px;
     gap: 0.25rem;
     padding: 0.35rem 0.25rem 0.35rem 0.25rem;
     min-height: 36px;
@@ -4216,10 +4306,17 @@ input[type="range"]::-moz-range-thumb:hover {
     white-space: nowrap;
   }
   
+  /* Mobile progress button adjustments */
+  .progress-toggle button {
+    min-width: 40px;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.3rem;
+  }
+  
   /* Fixed widths for name and note inputs on 480px screens */
   .table-container .row-income > div:nth-child(3) input,
-  .table-container .row-income > div:nth-child(11) input,
-  .table-container .row-income > div:nth-child(11) textarea {
+  .table-container .row-income > div:nth-child(10) input,
+  .table-container .row-income > div:nth-child(10) textarea {
     min-width: 100% !important;
     width: 100% !important;
   }
@@ -4228,7 +4325,7 @@ input[type="range"]::-moz-range-thumb:hover {
   .table-container .row-income > div:nth-child(3) {
     min-width: 108px !important;
   }
-  .table-container .row-income > div:nth-child(11) {
+  .table-container .row-income > div:nth-child(10) {
     min-width: 70px !important;
   }
   
@@ -4256,7 +4353,7 @@ input[type="range"]::-moz-range-thumb:hover {
 /* Extra small screens - 320px and below */
 @media (max-width: 320px) {
   .table-container .row-income {
-    grid-template-columns: 16px 24px 96px 120px 100px 100px 100px 120px 140px 60px 80px 24px;
+    grid-template-columns: 16px 24px 96px 120px 100px 100px 100px 120px 140px 80px 60px 24px;
     gap: 0.3rem;
     padding: 0.3rem 0.2rem 0.3rem 0.2rem;
     min-height: 32px;
@@ -4268,7 +4365,7 @@ input[type="range"]::-moz-range-thumb:hover {
   .table-container .row-income > div:nth-child(3) {
     min-width: 96px !important;
   }
-  .table-container .row-income > div:nth-child(11) {
+  .table-container .row-income > div:nth-child(10) {
     min-width: 80px !important;
   }
   
@@ -4290,8 +4387,8 @@ input[type="range"]::-moz-range-thumb:hover {
   
   /* Fixed widths for name and note inputs on 320px screens */
   .table-container .row-income > div:nth-child(3) input,
-  .table-container .row-income > div:nth-child(11) input,
-  .table-container .row-income > div:nth-child(11) textarea {
+  .table-container .row-income > div:nth-child(10) input,
+  .table-container .row-income > div:nth-child(10) textarea {
     min-width: 100% !important;
     width: 100% !important;
   }
@@ -4355,7 +4452,7 @@ input[type="range"]::-moz-range-thumb:hover {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 16px 24px 96px 120px 100px 100px 100px 120px 140px 60px 80px 24px;
+    grid-template-columns: 16px 24px 96px 120px 100px 100px 100px 120px 140px 80px 60px 24px;
     font-size: 0.5rem;
     text-align: center;
     align-items: center;
@@ -4404,7 +4501,7 @@ input[type="range"]::-moz-range-thumb:hover {
 /* Smart responsive design for very small screens */
 @media (max-width: 360px) {
   .table-container .row-income {
-    grid-template-columns: 14px 22px 90px 110px 90px 90px 90px 110px 130px 60px 80px 22px;
+    grid-template-columns: 14px 22px 90px 110px 90px 90px 90px 110px 130px 80px 60px 22px;
     gap: 0.25rem;
     padding: 0.25rem 0.15rem 0.25rem 0.15rem;
     min-height: 30px;
@@ -4416,7 +4513,7 @@ input[type="range"]::-moz-range-thumb:hover {
   .table-container .row-income > div:nth-child(3) {
     min-width: 90px !important;
   }
-  .table-container .row-income > div:nth-child(11) {
+  .table-container .row-income > div:nth-child(10) {
     min-width: 80px !important;
   }
   
@@ -4438,8 +4535,8 @@ input[type="range"]::-moz-range-thumb:hover {
   
   /* Fixed widths for name and note inputs on 360px screens */
   .table-container .row-income > div:nth-child(3) input,
-  .table-container .row-income > div:nth-child(11) input,
-  .table-container .row-income > div:nth-child(11) textarea {
+  .table-container .row-income > div:nth-child(10) input,
+  .table-container .row-income > div:nth-child(10) textarea {
     min-width: 100% !important;
     width: 100% !important;
   }
@@ -4503,7 +4600,7 @@ input[type="range"]::-moz-range-thumb:hover {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 14px 22px 150px 110px 90px 90px 90px 110px 130px 22px;
+    grid-template-columns: 14px 22px 90px 110px 90px 90px 90px 110px 130px 80px 60px 22px;
     font-size: 0.45rem;
     text-align: center;
     align-items: center;
@@ -4552,7 +4649,7 @@ input[type="range"]::-moz-range-thumb:hover {
 /* Ultra-compact design for very small devices */
 @media (max-width: 280px) {
   .table-container .row-income {
-    grid-template-columns: 12px 20px 140px 100px 80px 80px 80px 100px 120px 20px;
+    grid-template-columns: 12px 20px 140px 100px 80px 80px 80px 100px 120px 80px 20px;
     gap: 0.2rem;
     padding: 0.2rem 0.1rem 0.2rem 0.1rem;
     min-height: 28px;
@@ -4572,7 +4669,7 @@ input[type="range"]::-moz-range-thumb:hover {
   }
   
   .table-container .row-head.row-income {
-    grid-template-columns: 12px 20px 140px 100px 80px 80px 80px 100px 120px 20px;
+    grid-template-columns: 12px 20px 140px 100px 80px 80px 80px 100px 120px 80px 20px;
     font-size: 0.4rem;
     text-align: center;
     align-items: center;
@@ -5195,7 +5292,7 @@ input[type="range"]::-moz-range-thumb:hover {
   .row-income{ 
     gap:.25rem; 
     padding:.35rem .25rem; 
-    grid-template-columns: 18px 28px 180px 130px 110px 110px 110px 130px 160px 50px 70px 28px;
+    grid-template-columns: 18px 28px 180px 130px 110px 110px 110px 130px 160px 70px 50px 28px;
     font-size: 0.65rem;
     white-space: nowrap;
   }
