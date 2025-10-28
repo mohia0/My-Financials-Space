@@ -9434,14 +9434,32 @@ async function saveProfile({ fullName, file }) {
       // Get the exact position of the trigger element
       const rect = triggerElement.getBoundingClientRect();
       
+      // Get header height to avoid overlap
+      const header = document.querySelector('header');
+      const headerHeight = header ? header.getBoundingClientRect().height : 0;
+      
       // Calculate center position of the element
       const centerX = rect.left + (rect.width / 2);
-      const topY = rect.top - 10; // 10px above the element
+      let topY = rect.top - 10; // 10px above the element
+      
+      // Check if tooltip would appear behind the header
+      const tooltipHeight = 40; // Approximate tooltip height
+      const tooltipTop = topY - tooltipHeight;
+      const headerBuffer = 5; // Extra buffer to ensure tooltip doesn't touch header
+      
+      // If tooltip would be behind header, position it below the element instead
+      if (tooltipTop < (headerHeight + headerBuffer)) {
+        topY = rect.bottom + 10; // 10px below the element
+        tooltip.style.transform = 'translate(-50%, 0%) scale(0.95)';
+        tooltip.classList.add('tooltip-below');
+      } else {
+        tooltip.style.transform = 'translate(-50%, -100%) scale(0.95)';
+        tooltip.classList.remove('tooltip-below');
+      }
       
       // Set the tooltip position using fixed positioning
       tooltip.style.left = centerX + 'px';
       tooltip.style.top = topY + 'px';
-      tooltip.style.transform = 'translate(-50%, -100%) scale(0.95)';
       
       // Ensure tooltip is visible and properly positioned
       tooltip.style.display = 'block';
@@ -9454,6 +9472,8 @@ async function saveProfile({ fullName, file }) {
         rect: rect,
         centerX: centerX,
         topY: topY,
+        headerHeight: headerHeight,
+        tooltipTop: tooltipTop,
         tooltip: tooltip,
         tooltipText: tooltip.textContent?.trim()
       });
