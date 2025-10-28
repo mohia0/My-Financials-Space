@@ -3505,95 +3505,199 @@ input[type="range"]::-moz-range-thumb:hover {
   display: grid !important;
 }
 
-/* Progress toggle styles - Enhanced with distinctive patterns */
+/* Minimal Progress Toggle - Clean and Interactive Design */
 .progress-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  min-height: 28px;
+  min-height: 32px;
 }
 
 .progress-toggle button {
   background: var(--card);
   border: 1px solid var(--stroke);
-  border-radius: 4px;
-  padding: 0.2rem 0.4rem;
-  font-size: 0.65rem;
-  font-weight: 700;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.7rem;
+  font-weight: 600;
   color: var(--fg);
   cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 50px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 60px;
   text-align: center;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .progress-toggle button:hover {
   background: var(--glass);
   border-color: var(--accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
-/* Distinctive progress patterns using primary color */
-.progress-toggle button.progress-10 { 
-  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 10%, transparent 10%);
-  color: var(--fg);
-  border-color: var(--muted);
+.progress-toggle button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
 }
-.progress-toggle button.progress-20 { 
-  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 20%, transparent 20%);
-  color: var(--fg);
-  border-color: var(--muted);
+
+/* Minimal Progress States - Clean Visual Design */
+.progress-toggle button.progress-0 { 
+  background: var(--card);
+  color: var(--muted);
+  border-color: var(--stroke);
+  position: relative;
 }
-.progress-toggle button.progress-30 { 
-  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 30%, transparent 30%);
-  color: var(--fg);
-  border-color: var(--muted);
+
+.progress-toggle button.progress-0::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--danger) 0%, var(--danger) 0%, transparent 0%);
+  border-radius: 6px;
+  z-index: -1;
 }
-.progress-toggle button.progress-40 { 
-  background: linear-gradient(135deg, var(--muted) 0%, var(--muted) 40%, transparent 40%);
+
+.progress-toggle button.progress-25 { 
+  background: var(--card);
   color: var(--fg);
-  border-color: var(--muted);
+  border-color: var(--stroke);
+  position: relative;
 }
+
+.progress-toggle button.progress-25::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--warning) 0%, var(--warning) 25%, transparent 25%);
+  border-radius: 6px;
+  z-index: -1;
+}
+
 .progress-toggle button.progress-50 { 
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 50%, transparent 50%);
+  background: var(--card);
+  color: var(--fg);
+  border-color: var(--accent);
+  position: relative;
+}
+
+.progress-toggle button.progress-50::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 50%, transparent 50%);
+  border-radius: 6px;
+  z-index: -1;
+}
+
+.progress-toggle button.progress-75 { 
+  background: var(--card);
   color: white;
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+  position: relative;
 }
-.progress-toggle button.progress-60 { 
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 60%, transparent 60%);
-  color: white;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+
+.progress-toggle button.progress-75::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 75%, transparent 75%);
+  border-radius: 6px;
+  z-index: -1;
 }
-.progress-toggle button.progress-70 { 
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 70%, transparent 70%);
-  color: white;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
-}
-.progress-toggle button.progress-80 { 
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 80%, transparent 80%);
-  color: white;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
-}
-.progress-toggle button.progress-90 { 
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 90%, transparent 90%);
-  color: white;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
-}
+
 .progress-toggle button.progress-100 { 
   background: var(--accent);
   color: white;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
+  position: relative;
+}
+
+.progress-toggle button.progress-100::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--accent);
+  border-radius: 6px;
+  z-index: -1;
+}
+
+/* Enhanced hover effects for progress states */
+.progress-toggle button.progress-0:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.progress-toggle button.progress-25:hover {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.progress-toggle button.progress-50:hover,
+.progress-toggle button.progress-75:hover,
+.progress-toggle button.progress-100:hover {
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Smooth progress bar animations */
+.progress-toggle button::before {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Progress state transitions */
+.progress-toggle button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Interactive click animation */
+.progress-toggle button:active {
+  transform: scale(0.95) !important;
+  transition: transform 0.1s ease;
+}
+
+/* Focus states for accessibility */
+.progress-toggle button:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Progress indicator tooltip enhancement */
+.progress-toggle button[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  color: var(--fg);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--stroke);
+  z-index: 1000;
+  pointer-events: none;
 }
 
 /* Note input styles */
@@ -4312,9 +4416,20 @@ textarea {
   
   /* Mobile progress button adjustments */
   .progress-toggle button {
-    min-width: 40px;
-    font-size: 0.6rem;
-    padding: 0.15rem 0.3rem;
+    min-width: 45px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.65rem;
+    border-radius: 4px;
+  }
+  
+  .progress-toggle button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+  }
+  
+  .progress-toggle button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(99, 102, 241, 0.2);
   }
   
   /* Fixed widths for name and note inputs on 480px screens */

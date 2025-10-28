@@ -13272,10 +13272,10 @@ async function saveProfile({ fullName, file }) {
       progressDiv.className = 'progress-toggle';
       
       const progressButton = document.createElement('button');
-      const currentProgress = row.progress || 10;
+      const currentProgress = row.progress || 0;
       progressButton.className = `progress-${currentProgress}`;
       progressButton.textContent = `${currentProgress}%`;
-      progressButton.title = 'Click to cycle through progress (10% to 100%)';
+      progressButton.title = 'Click to cycle through progress (0%, 25%, 50%, 75%, 100%)';
       
       console.log('🎯 Creating progress button for row:', {
         id: row.id,
@@ -13285,15 +13285,47 @@ async function saveProfile({ fullName, file }) {
       });
       
       progressButton.addEventListener('click', function() {
-        const currentProgress = parseInt(row.progress) || 10;
-        let newProgress = currentProgress + 10;
-        if (newProgress > 100) {
-          newProgress = 10;
+        const currentProgress = parseInt(row.progress) || 0;
+        let newProgress;
+        
+        // Cycle through the new progress values: 0 -> 25 -> 50 -> 75 -> 100 -> 0
+        switch(currentProgress) {
+          case 0:
+            newProgress = 25;
+            break;
+          case 25:
+            newProgress = 50;
+            break;
+          case 50:
+            newProgress = 75;
+            break;
+          case 75:
+            newProgress = 100;
+            break;
+          case 100:
+            newProgress = 0;
+            break;
+          default:
+            newProgress = 0;
         }
         
         row.progress = newProgress;
         this.textContent = `${newProgress}%`;
         this.className = `progress-${newProgress}`;
+        
+        // Add enhanced visual feedback with animation
+        this.style.transform = 'scale(0.95)';
+        this.style.transition = 'transform 0.1s ease';
+        
+        // Add a subtle color flash effect
+        const originalColor = this.style.color;
+        this.style.color = 'var(--accent)';
+        
+        setTimeout(() => {
+          this.style.transform = '';
+          this.style.color = originalColor;
+          this.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        }, 150);
         
         console.log('🔄 Progress changed to:', newProgress, 'for row:', row.id || row.name);
         console.log('🔄 Row data before save:', {
