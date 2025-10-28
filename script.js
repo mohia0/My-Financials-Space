@@ -5183,13 +5183,13 @@ async function saveProfile({ fullName, file }) {
       const lockBtn = $('#btnLock');
       
       if (state.inputsLocked) {
-        // Show open lock icon when inputs are locked (unlock state)
-        lockIcon.innerHTML = '<path d="M8 11V7a4 4 0 0 1 8 0v4"/><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M12 15v2"/>';
+        // Show closed lock icon when inputs are locked (indicates you can unlock)
+        lockIcon.innerHTML = '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
         lockBtn.style.borderColor = 'var(--primary)';
         lockBtn.style.background = 'rgba(var(--primary-rgb), 0.1)';
       } else {
-        // Show closed lock icon when inputs are unlocked (lock state)
-        lockIcon.innerHTML = '<path d="M12 15v2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>';
+        // Show open lock icon when inputs are unlocked (indicates you can lock)
+        lockIcon.innerHTML = '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>';
         lockBtn.style.borderColor = 'var(--stroke)';
         lockBtn.style.background = 'transparent';
       }
