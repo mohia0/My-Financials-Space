@@ -5185,16 +5185,18 @@ async function saveProfile({ fullName, file }) {
       if (state.inputsLocked) {
         // Show open lock icon when inputs are locked (unlock state)
         lockIcon.innerHTML = '<path d="M8 11V7a4 4 0 0 1 8 0v4"/><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M12 15v2"/>';
-        lockBtn.title = 'Unlock all inputs';
         lockBtn.style.borderColor = 'var(--primary)';
         lockBtn.style.background = 'rgba(var(--primary-rgb), 0.1)';
       } else {
         // Show closed lock icon when inputs are unlocked (lock state)
         lockIcon.innerHTML = '<path d="M12 15v2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>';
-        lockBtn.title = 'Lock all inputs';
         lockBtn.style.borderColor = 'var(--stroke)';
         lockBtn.style.background = 'transparent';
       }
+      
+      // Ensure lock button is always clickable
+      lockBtn.style.pointerEvents = 'auto';
+      lockBtn.style.cursor = 'pointer';
     }
     
     function toggleInputsLock() {
@@ -9255,8 +9257,8 @@ async function saveProfile({ fullName, file }) {
 
     // Enhanced Tooltip System with Perfect Delays
     function initializeTooltips() {
-      // Initialize existing tooltip triggers
-      const tooltipTriggers = document.querySelectorAll('.tooltip-trigger');
+      // Initialize existing tooltip triggers (exclude header elements)
+      const tooltipTriggers = document.querySelectorAll('.tooltip-trigger:not(header .tooltip-trigger)');
       
       tooltipTriggers.forEach((trigger, index) => {
         const tooltip = trigger.querySelector('.tooltip');
@@ -9265,8 +9267,8 @@ async function saveProfile({ fullName, file }) {
         setupTooltip(trigger, tooltip);
       });
       
-      // Auto-create tooltips for elements with title attributes
-      const elementsWithTitles = document.querySelectorAll('[title]:not(.tooltip-trigger)');
+      // Auto-create tooltips for elements with title attributes (exclude header elements)
+      const elementsWithTitles = document.querySelectorAll('[title]:not(.tooltip-trigger):not(header [title])');
       
       elementsWithTitles.forEach((element, index) => {
         const title = element.getAttribute('title');
@@ -9284,6 +9286,30 @@ async function saveProfile({ fullName, file }) {
           setupTooltip(element, tooltip);
         }
       });
+      
+      // Remove all tooltips from header elements
+      const headerElements = document.querySelectorAll('header [title], header .tooltip-trigger');
+      headerElements.forEach((element) => {
+        // Remove title attribute to prevent default browser tooltips
+        element.removeAttribute('title');
+        
+        // Remove existing tooltip elements
+        const existingTooltip = element.querySelector('.tooltip');
+        if (existingTooltip) {
+          existingTooltip.remove();
+        }
+        
+        // Remove tooltip-trigger class
+        element.classList.remove('tooltip-trigger');
+      });
+      
+      // Specifically ensure lock button works properly
+      const lockButton = document.getElementById('btnLock');
+      if (lockButton) {
+        lockButton.removeAttribute('title');
+        lockButton.style.pointerEvents = 'auto';
+        lockButton.style.cursor = 'pointer';
+      }
     }
     
     function setupTooltip(trigger, tooltip) {
