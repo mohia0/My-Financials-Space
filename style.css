@@ -3767,6 +3767,100 @@ input[type="range"]::-moz-range-thumb:hover {
   pointer-events: none;
 }
 
+/* Light mode progress button improvements with primary colors for better contrast */
+[data-theme="light"] .progress-toggle button {
+  background: var(--card);
+  border: 1.5px solid var(--stroke);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .progress-toggle button:hover {
+  background: var(--glass);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+[data-theme="light"] .progress-toggle button.progress-0 {
+  background: var(--card);
+  color: var(--fg);
+  border-color: var(--stroke);
+}
+
+[data-theme="light"] .progress-toggle button.progress-0::before {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.15) 0%, transparent 0%);
+}
+
+[data-theme="light"] .progress-toggle button.progress-0:hover {
+  color: #dc2626;
+  border-color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="light"] .progress-toggle button.progress-25 {
+  background: var(--card);
+  color: var(--fg);
+  border-color: var(--stroke);
+}
+
+[data-theme="light"] .progress-toggle button.progress-25::before {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.3) 0%, rgba(251, 191, 36, 0.3) 25%, transparent 25%);
+}
+
+[data-theme="light"] .progress-toggle button.progress-25:hover {
+  color: #d97706;
+  border-color: #f59e0b;
+  background: rgba(251, 191, 36, 0.15);
+}
+
+[data-theme="light"] .progress-toggle button.progress-50 {
+  background: var(--card);
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+[data-theme="light"] .progress-toggle button.progress-50::before {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0.25) 50%, transparent 50%);
+}
+
+[data-theme="light"] .progress-toggle button.progress-50:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+[data-theme="light"] .progress-toggle button.progress-75 {
+  background: var(--card);
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+[data-theme="light"] .progress-toggle button.progress-75::before {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0.4) 75%, transparent 75%);
+}
+
+[data-theme="light"] .progress-toggle button.progress-75:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="light"] .progress-toggle button.progress-100 {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3), 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+[data-theme="light"] .progress-toggle button.progress-100::before {
+  background: var(--accent);
+}
+
+[data-theme="light"] .progress-toggle button.progress-100:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
 /* Note input styles */
 .note-input {
   width: 100%;
