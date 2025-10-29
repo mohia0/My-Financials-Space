@@ -12341,6 +12341,10 @@ async function saveProfile({ fullName, file }) {
            save('cost-input');
           // Live calculations as you type
            updateRowCalculations(div, row, isBiz);
+           // Update totals live
+           const containerId = isBiz ? 'list-biz' : 'list-personal';
+           const arr = isBiz ? state.biz : state.personal;
+           updateExpenseSum(containerId, arr, isBiz);
            // KPIs will be updated by updateRowCalculations
          });
          costDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
@@ -12387,6 +12391,10 @@ async function saveProfile({ fullName, file }) {
            
            save('status-toggle');
            updateRowCalculations(div, row, isBiz);
+           // Update totals live
+           const containerId = isBiz ? 'list-biz' : 'list-personal';
+           const arr = isBiz ? state.biz : state.personal;
+           updateExpenseSum(containerId, arr, isBiz);
            // KPIs will be updated by updateRowCalculations
          });
          
@@ -12423,6 +12431,10 @@ async function saveProfile({ fullName, file }) {
            
            save('billing-toggle');
            updateRowCalculations(div, row, isBiz);
+           // Update totals live
+           const containerId = isBiz ? 'list-biz' : 'list-personal';
+           const arr = isBiz ? state.biz : state.personal;
+           updateExpenseSum(containerId, arr, isBiz);
            // KPIs will be updated by updateRowCalculations
          });
          
@@ -12645,27 +12657,8 @@ async function saveProfile({ fullName, file }) {
       wrap.appendChild(div);
     });
 
-      // sums
-      const sumEl=document.getElementById(containerId==='list-personal'?'sum-personal':'sum-biz');
-      const t=totals(arr);
-      let sumHTML='';
-      // drag handle column
-      sumHTML += '<div></div>';
-      // icon column (present for both personal and biz)
-      sumHTML += '<div></div>';
-      // label
-      sumHTML += '<div class="font-medium" style="color:var(--muted)">Totals</div>';
-      // spacer columns before computed values (Cost USD, Status, Billing, Next for Biz)
-      if(isBiz){ sumHTML += '<div></div><div></div><div></div><div></div>'; } // Cost, Status, Billing, Next
-      else { sumHTML += '<div></div><div></div><div></div>'; } // Cost, Status, Billing
-      // computed sum cells
-      sumHTML += '<div class="font-semibold">$'+nfINT.format(t.mUSD)+'</div>';
-      sumHTML += '<div class="font-semibold">$'+nfINT.format(t.yUSD)+'</div>';
-      sumHTML += '<div class="font-semibold">'+state.currencySymbol+' '+nfINT.format(Math.round(t.mSelected))+'</div>';
-      sumHTML += '<div class="font-semibold">'+state.currencySymbol+' '+nfINT.format(Math.round(t.ySelected))+'</div>';
-      // delete column spacer
-      sumHTML += '<div></div>';
-      sumEl.innerHTML=sumHTML;
+      // sums - use helper function for live updates
+      updateExpenseSum(containerId, arr, isBiz);
     }
 
 
@@ -12793,7 +12786,8 @@ async function saveProfile({ fullName, file }) {
         saveInputValue('projectName', this.value);
         instantSaveIncomeRow(row, currentYear);
       });
-      addAutocompleteToInput(nameInput, 'projectName');
+      // Removed autocomplete to remove the dropdown arrow
+      // addAutocompleteToInput(nameInput, 'projectName');
       nameDiv.appendChild(nameInput);
       
       // Modern Tags input with selection system
@@ -12977,6 +12971,9 @@ async function saveProfile({ fullName, file }) {
         row.allPayment = Number(this.value) || 0;
         instantSaveIncomeRow(row, currentYear);
         updateIncomeRowCalculations(div, row);
+        // Update totals live
+        const currentYearData = state.income[currentYear] || [];
+        updateIncomeSum(currentYearData);
         // Live KPI updates are already handled in updateIncomeRowCalculations
       });
       allPaymentDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
@@ -13003,6 +13000,9 @@ async function saveProfile({ fullName, file }) {
         row.paidUsd = Number(this.value) || 0;
         instantSaveIncomeRow(row, currentYear);
         updateIncomeRowCalculations(div, row);
+        // Update totals live
+        const currentYearData = state.income[currentYear] || [];
+        updateIncomeSum(currentYearData);
         // Live KPI updates are already handled in updateIncomeRowCalculations
       });
       paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
@@ -13444,6 +13444,13 @@ async function saveProfile({ fullName, file }) {
     });
     
     // Update income sum
+    updateIncomeSum(arr);
+    
+    // Apply lock state to newly rendered income rows
+    updateInputsLockState();
+  }
+  
+  function updateIncomeSum(arr) {
     const sumEl = document.getElementById('sum-income');
     if (sumEl) {
       const totalAllPayment = arr.reduce((sum, r) => sum + (Number(r.allPayment) || 0), 0);
@@ -13464,9 +13471,31 @@ async function saveProfile({ fullName, file }) {
       sumHTML += '<div></div>'; // delete
       sumEl.innerHTML = sumHTML;
     }
-    
-    // Apply lock state to newly rendered income rows
-    updateInputsLockState();
+  }
+  
+  function updateExpenseSum(containerId, arr, isBiz) {
+    const sumEl = document.getElementById(containerId === 'list-personal' ? 'sum-personal' : 'sum-biz');
+    if (sumEl) {
+      const t = totals(arr);
+      let sumHTML = '';
+      // drag handle column
+      sumHTML += '<div></div>';
+      // icon column (present for both personal and biz)
+      sumHTML += '<div></div>';
+      // label
+      sumHTML += '<div class="font-medium" style="color:var(--muted)">Totals</div>';
+      // spacer columns before computed values (Cost USD, Status, Billing, Next for Biz)
+      if (isBiz) { sumHTML += '<div></div><div></div><div></div><div></div>'; } // Cost, Status, Billing, Next
+      else { sumHTML += '<div></div><div></div><div></div>'; } // Cost, Status, Billing
+      // computed sum cells
+      sumHTML += '<div class="font-semibold">$' + nfINT.format(t.mUSD) + '</div>';
+      sumHTML += '<div class="font-semibold">$' + nfINT.format(t.yUSD) + '</div>';
+      sumHTML += '<div class="font-semibold">' + state.currencySymbol + ' ' + nfINT.format(Math.round(t.mSelected)) + '</div>';
+      sumHTML += '<div class="font-semibold">' + state.currencySymbol + ' ' + nfINT.format(Math.round(t.ySelected)) + '</div>';
+      // delete column spacer
+      sumHTML += '<div></div>';
+      sumEl.innerHTML = sumHTML;
+    }
   }
   
   function updateIncomeRowCalculations(rowEl, row) {
