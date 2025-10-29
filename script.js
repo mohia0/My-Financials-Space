@@ -5462,6 +5462,55 @@ async function saveProfile({ fullName, file }) {
         }
       });
       
+      // Handle all placeholders - hide them when locked (including note inputs)
+      const allPlaceholderInputs = document.querySelectorAll('input[placeholder], textarea[placeholder], select[placeholder]');
+      allPlaceholderInputs.forEach(input => {
+        // Skip auth modal and settings modal inputs
+        const authModal = document.getElementById('authModal');
+        const settingsModal = document.getElementById('settings');
+        if ((authModal && authModal.contains(input)) || (settingsModal && settingsModal.contains(input))) {
+          return; // Skip these inputs
+        }
+        
+        if (state.inputsLocked) {
+          // Store original placeholder if not already stored
+          if (!input.dataset.originalPlaceholder) {
+            input.dataset.originalPlaceholder = input.placeholder || '';
+          }
+          // Clear placeholder
+          input.placeholder = '';
+        } else {
+          // Restore original placeholder
+          if (input.dataset.originalPlaceholder) {
+            input.placeholder = input.dataset.originalPlaceholder;
+            delete input.dataset.originalPlaceholder;
+          }
+        }
+      });
+      
+      // Handle note textarea resize arrows - hide completely when locked
+      const allNoteTextareas = document.querySelectorAll('.row-income textarea, textarea.note-input');
+      allNoteTextareas.forEach(textarea => {
+        // Skip auth modal and settings modal textareas
+        const authModal = document.getElementById('authModal');
+        const settingsModal = document.getElementById('settings');
+        if ((authModal && authModal.contains(textarea)) || (settingsModal && settingsModal.contains(textarea))) {
+          return; // Skip these textareas
+        }
+        
+        if (state.inputsLocked) {
+          // Disable resize completely and hide any resize indicators
+          textarea.style.resize = 'none';
+          textarea.style.overflow = 'hidden';
+          // Hide webkit resize handle
+          textarea.style.setProperty('--webkit-resizer', 'none', 'important');
+        } else {
+          // Restore default resize behavior (but keep it as 'none' since we don't want resize)
+          textarea.style.resize = 'none';
+          textarea.style.overflow = '';
+        }
+      });
+      
       // Show notification
       // Set context for user action
       smartNotifications.setContext({ 
@@ -12802,16 +12851,78 @@ async function saveProfile({ fullName, file }) {
         tagsWrapper.appendChild(chip);
       });
       
+      // Set expanded state if there are 3+ tags
+      if (existingTags.length >= 3) {
+        tagsWrapper.classList.add('expanded');
+      }
+      
       const tagsInput = document.createElement('input');
       tagsInput.className = 'tag-input';
       tagsInput.type = 'text';
-      tagsInput.placeholder = '';
+      tagsInput.placeholder = 'Add tag...';
+      // Track if Enter key was processed to prevent duplicate handling
+      let enterKeyProcessed = false;
+      
+      // Prevent form submission on Enter key (important for mobile devices)
+      tagsInput.addEventListener('keydown', function(e) {
+        // Handle Enter key to convert text to tag
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          enterKeyProcessed = true;
+          
+          // Process the tag conversion
+          handleTagKeydown(e, this, tagsWrapper, row);
+          
+          // Blur the input to prevent any form submission behavior on mobile
+          setTimeout(() => {
+            this.blur();
+            enterKeyProcessed = false;
+          }, 100);
+          return false;
+        }
+        // Handle other keys (comma, backspace, etc.)
+        handleTagKeydown(e, this, tagsWrapper, row);
+      });
+      
+      // Also handle keyup as fallback for mobile devices (only if keydown didn't process it)
+      tagsInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter' && !enterKeyProcessed && this.value.trim()) {
+          // Fallback: if keydown didn't work (mobile keyboard issue), try to convert to tag
+          e.preventDefault();
+          e.stopPropagation();
+          const value = this.value.trim();
+          const currentTagCount = tagsWrapper.querySelectorAll('.tag-chip').length;
+          const maxTags = 5;
+          const isDuplicate = Array.from(tagsWrapper.querySelectorAll('.tag-chip')).some(chip => {
+            const textSpan = chip.querySelector('span:first-child');
+            return textSpan && textSpan.textContent.trim() === value;
+          });
+          
+          if (!isDuplicate && currentTagCount < maxTags) {
+            const chip = createTagChip(value);
+            tagsWrapper.insertBefore(chip, this);
+            this.value = '';
+            this.placeholder = 'Add tag...';
+            
+            // Update wrapper expanded state if needed
+            if (currentTagCount >= 2) {
+              tagsWrapper.classList.add('expanded');
+            }
+            
+            const rowData = tagsWrapper.__rowData || row;
+            if (rowData) {
+              updateRowTags(tagsWrapper, rowData);
+            }
+            
+            setTimeout(() => this.blur(), 100);
+          }
+          return false;
+        }
+      });
       tagsInput.addEventListener('input', function() {
         handleTagInput(this, tagsWrapper, row);
         instantSaveIncomeRow(row, currentYear); // Instant save when tags are modified
-      });
-      tagsInput.addEventListener('keydown', function(e) {
-        handleTagKeydown(e, this, tagsWrapper, row);
       });
       tagsInput.addEventListener('focus', function() {
         showTagSuggestions(this, tagsWrapper);
@@ -15660,6 +15771,7 @@ function loadNonCriticalResources() {
     function handleTagKeydown(e, input, wrapper, row) {
       if (e.key === 'Enter' || e.key === ',') {
         e.preventDefault();
+        e.stopPropagation();
         const value = input.value.trim();
         const currentTagCount = wrapper.querySelectorAll('.tag-chip').length;
         const maxTags = 5;
@@ -15668,6 +15780,19 @@ function loadNonCriticalResources() {
           const chip = createTagChip(value);
           wrapper.insertBefore(chip, input);
           input.value = '';
+          input.placeholder = 'Add tag...';
+          
+          // Add visual feedback - highlight the new tag
+          chip.style.transform = 'scale(1.1)';
+          chip.style.transition = 'transform 0.2s ease';
+          setTimeout(() => {
+            chip.style.transform = 'scale(1)';
+          }, 200);
+          
+          // Update wrapper expanded state if needed
+          if (currentTagCount >= 2) {
+            wrapper.classList.add('expanded');
+          }
           
           // Use stored row data or fallback to parameter
           const rowData = wrapper.__rowData || row;
@@ -15676,16 +15801,36 @@ function loadNonCriticalResources() {
           }
           
           // Update placeholder if max tags reached
-          if (wrapper.querySelectorAll('.tag-chip').length >= maxTags) {
+          const finalTagCount = wrapper.querySelectorAll('.tag-chip').length;
+          if (finalTagCount >= maxTags) {
             input.placeholder = '';
             input.disabled = true;
           }
+          
+          // Focus back on input for better UX (except on mobile)
+          if (!('ontouchstart' in window)) {
+            setTimeout(() => input.focus(), 50);
+          }
+          
+          return false; // Prevent any default behavior
+        } else if (value && isTagAlreadyAdded(wrapper, value)) {
+          // Tag already exists - provide feedback
+          input.style.border = '1px solid rgba(239, 68, 68, 0.5)';
+          setTimeout(() => {
+            input.style.border = '';
+          }, 1000);
         }
       } else if (e.key === 'Backspace' && input.value === '') {
         const chips = wrapper.querySelectorAll('.tag-chip');
         if (chips.length > 0) {
           const lastChip = chips[chips.length - 1];
           lastChip.remove();
+          
+          // Update wrapper expanded state - remove if less than 3 tags
+          const remainingTagCount = wrapper.querySelectorAll('.tag-chip').length;
+          if (remainingTagCount < 3) {
+            wrapper.classList.remove('expanded');
+          }
           
           // Use stored row data or fallback to parameter
           const rowData = wrapper.__rowData || row;
@@ -15694,8 +15839,8 @@ function loadNonCriticalResources() {
           }
           
           // Re-enable input if under max tags
-          if (wrapper.querySelectorAll('.tag-chip').length < 5) {
-            input.placeholder = '';
+          if (remainingTagCount < 5) {
+            input.placeholder = 'Add tag...';
             input.disabled = false;
           }
         }

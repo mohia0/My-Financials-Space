@@ -3788,6 +3788,30 @@ textarea {
   resize: none;
 }
 
+/* Hide resize arrow/corner indicator completely for note inputs */
+.row-income textarea {
+  resize: none !important;
+  overflow: hidden;
+  scrollbar-width: none; /* Hide scrollbar in Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+}
+
+/* Hide resize handle specifically - for browsers that still show it */
+.row-income textarea::-webkit-resizer {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hide scrollbar in Chrome/Safari */
+.row-income textarea::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .note-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-bg);
