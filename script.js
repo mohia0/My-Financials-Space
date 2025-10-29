@@ -11339,10 +11339,49 @@ async function saveProfile({ fullName, file }) {
         return false;
       });
       
+      // Filter custom icons to exclude FontAwesome icons
+      // Custom tab should ONLY show uploaded images/SVG/unicode NOT in FontAwesome library
+      const filteredCustomIcons = customIcons.filter(icon => {
+        // Check if this icon ID exists in FontAwesome icons
+        const iconId = `custom:${icon.id}`;
+        
+        // Check if it's a FontAwesome glyph by checking if unicode exists
+        if (icon.type === 'glyph' && icon.unicode) {
+          // Check if this unicode exists in FontAwesome Pro picker
+          if (fontAwesomeProPicker && fontAwesomeProPicker.isReady()) {
+            const hexStr = parseInt(icon.unicode, 16).toString(16).toLowerCase().padStart(4, '0');
+            const faGlyphId = `fa-glyph:${hexStr}`;
+            // If this unicode exists in FontAwesome, exclude it from custom
+            const existsInFA = FONTAWESOME_ICONS.some(faIcon => 
+              faIcon === faGlyphId || faIcon.toLowerCase().includes(hexStr.toLowerCase())
+            );
+            if (existsInFA) {
+              return false; // Exclude this icon from custom tab
+            }
+          }
+        }
+        
+        // Include custom images (uploaded SVG/images) - these are always custom
+        if (icon.type === 'image' || icon.id.startsWith('custom-image:')) {
+          return true;
+        }
+        
+        // Include unicode that doesn't exist in FontAwesome
+        if (icon.type === 'glyph') {
+          // Already checked above, if we reach here it means it's not in FA
+          return true;
+        }
+        
+        // Default: include if we can't determine it's a FontAwesome icon
+        return true;
+      }).map(icon => `custom:${icon.id}`);
+      
       const categories = {
-        all: [...FONTAWESOME_ICONS, ...customIcons.map(icon => `custom:${icon.id}`)],
+        all: [...FONTAWESOME_ICONS, ...filteredCustomIcons],
         brands: brands,
-        custom: customIcons.map(icon => `custom:${icon.id}`)
+        personal: [], // Will be populated by FontAwesome Pro picker
+        business: [], // Will be populated by FontAwesome Pro picker
+        custom: filteredCustomIcons // Only non-FontAwesome custom icons
       };
       
       console.log('Categorized icons:', {
@@ -11390,7 +11429,37 @@ async function saveProfile({ fullName, file }) {
 
     // Enhanced search with better filtering and suggestions
     function performIconSearch(query, category) {
-      // Use optimized FontAwesome Pro picker if available
+      // Custom tab - handled separately, not by FontAwesome Pro picker
+      if (category === 'custom') {
+        const categorized = categorizeIcons();
+        let items = categorized.custom || [];
+        
+        // Apply search filter if query provided
+        if (query) {
+          const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
+          items = items.filter(iconId => {
+            // Find the custom icon object to search in its name
+            const customId = iconId.replace('custom:', '');
+            const customIcon = customIcons.find(ci => ci.id === customId);
+            if (!customIcon) return false;
+            
+            const iconName = (customIcon.name || '').toLowerCase();
+            // Exact match gets highest priority
+            if (iconName.includes(query.toLowerCase())) {
+              return true;
+            }
+            // Fuzzy match for all search terms
+            return searchTerms.every(term => iconName.includes(term));
+          });
+        }
+        
+        iconPickerState.filteredIcons = items;
+        iconPickerState.currentPage = 0;
+        renderIconGrid();
+        return;
+      }
+      
+      // Use optimized FontAwesome Pro picker if available (for all, personal, business, brands)
       if (fontAwesomeProPicker && fontAwesomeProPicker.isReady()) {
         const searchResults = fontAwesomeProPicker.searchGlyphs(query, category);
         iconPickerState.filteredIcons = searchResults.map(glyph => glyph.id);
