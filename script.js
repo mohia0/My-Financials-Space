@@ -9622,6 +9622,23 @@ async function saveProfile({ fullName, file }) {
           }
         }
         
+        // Subscription optimization insight
+        if (sortedByCost.length >= 4) {
+          const bottom25Percent = Math.ceil(sortedByCost.length * 0.25);
+          const bottomItems = sortedByCost.slice(-bottom25Percent);
+          const potentialSavings = bottomItems.reduce((sum, item) => sum + rowMonthlyUSD(item), 0);
+          if (potentialSavings > 0) {
+            insights.push(`💡 Bottom 25% costs: ${formatCurrencyWithUSD(usdToSelectedCurrency(potentialSavings), potentialSavings)} monthly (potential savings).`);
+          }
+        }
+        
+        // Annual commitment comparison
+        const yearlyPersonal = personalTotals.yUSD;
+        if (yearlyPersonal > 0) {
+          const equivalentSalaryPercent = Math.round((yearlyPersonal / 50000) * 100);
+          insights.push(`💸 Living standard economics: ${formatCurrencyWithUSD(usdToSelectedCurrency(yearlyPersonal), yearlyPersonal)} yearly (${equivalentSalaryPercent}% of $50k salary).`);
+        }
+        
         // Lifestyle assessment
         if (monthlyPersonal > 1000) {
           insights.push(`💎 High-spending lifestyle: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyPersonal), monthlyPersonal)} monthly personal expenses.`);
@@ -9642,7 +9659,7 @@ async function saveProfile({ fullName, file }) {
 
       return {
         title: "🏠 Lifestyle Insights",
-        insights: insights.slice(0, 6)
+        insights: insights.slice(0, 8)
       };
     }
 
@@ -9724,6 +9741,25 @@ async function saveProfile({ fullName, file }) {
           }
         }
         
+        // Tool efficiency insight
+        if (bizActive.length > 0 && incomeTotals.monthly > 0) {
+          const avgToolCost = monthlyBiz / bizActive.length;
+          const revenuePerToolDollar = incomeTotals.monthly / monthlyBiz;
+          if (revenuePerToolDollar > 0) {
+            insights.push(`🎯 Tool ROI: ${formatCurrencyWithUSD(usdToSelectedCurrency(avgToolCost), avgToolCost)}/tool monthly, ${revenuePerToolDollar.toFixed(1)}x revenue per dollar.`);
+          }
+        }
+        
+        // Annual billing optimization
+        if (monthlyTools.length > 0) {
+          const monthlyToolsTotal = monthlyTools.reduce((sum, tool) => sum + getMonthlyEquivalentCost(tool), 0);
+          // Typical annual billing saves ~1 month's payment (switching from 12 monthly payments to 11-month equivalent annual payment)
+          const yearlySavings = monthlyToolsTotal; // One month's payment saved per year
+          if (yearlySavings > 1) {
+            insights.push(`💡 Annual billing: Switch ${monthlyTools.length} tools to save ${formatCurrencyWithUSD(usdToSelectedCurrency(yearlySavings), yearlySavings)} yearly.`);
+          }
+        }
+        
         // Business scale assessment
         if (monthlyBiz > 500) {
           insights.push(`🚀 Enterprise-level tools: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyBiz), monthlyBiz)} monthly business expenses.`);
@@ -9753,7 +9789,7 @@ async function saveProfile({ fullName, file }) {
 
       return {
         title: "💼 Business Insights",
-        insights: insights.slice(0, 6)
+        insights: insights.slice(0, 8)
       };
     }
 
@@ -9821,6 +9857,20 @@ async function saveProfile({ fullName, file }) {
             insights.push(`🏆 Top project type: ${topProjectType[0]} (${Math.round(percentage)}% of income).`);
           }
           
+          // Payment frequency insight
+          if (currentYearIncome.length > 0 && monthsElapsed > 0) {
+            const avgDaysBetweenPayments = Math.round((monthsElapsed * 30) / currentYearIncome.length);
+            insights.push(`📅 Payment frequency: Every ${avgDaysBetweenPayments} days on average.`);
+          }
+          
+          // Projected year-end earnings
+          if (monthlyAverage > 0 && monthsElapsed < 12) {
+            const remainingMonths = 12 - monthsElapsed;
+            const projectedAdditional = monthlyAverage * remainingMonths;
+            const projectedYearEnd = currentYearTotal + projectedAdditional;
+            insights.push(`🔮 Year-end projection: ${formatCurrencyWithUSD(usdToSelectedCurrency(projectedYearEnd), projectedYearEnd)} (${formatCurrencyWithUSD(usdToSelectedCurrency(projectedAdditional), projectedAdditional)} more).`);
+          }
+          
           // Income scale assessment
           if (currentYearTotal > 100000) {
             insights.push(`🚀 High-earning year: ${formatCurrencyWithUSD(usdToSelectedCurrency(currentYearTotal), currentYearTotal)} - excellent performance!`);
@@ -9847,7 +9897,7 @@ async function saveProfile({ fullName, file }) {
 
       return {
         title: "💰 Income Insights",
-        insights: insights.slice(0, 6)
+        insights: insights.slice(0, 8)
       };
     }
 
@@ -9932,6 +9982,22 @@ async function saveProfile({ fullName, file }) {
           }
         }
         
+        // Time to wealth milestone
+        if (netIncome > 100) {
+          const milestoneAmount = 50000;
+          const monthsToMilestone = Math.ceil(milestoneAmount / netIncome);
+          if (monthsToMilestone < 120) { // Only show if achievable within 10 years
+            insights.push(`🎯 $50k milestone: ${monthsToMilestone} months (${Math.round(monthsToMilestone / 12)} years) at current rate.`);
+          }
+        }
+        
+        // Financial momentum
+        if (netIncome > 0) {
+          const savingsPerDay = netIncome / 30;
+          const daysToBuild = Math.ceil(1000 / savingsPerDay);
+          insights.push(`📈 Daily savings: ${formatCurrencyWithUSD(usdToSelectedCurrency(savingsPerDay), savingsPerDay)}/day, ${formatCurrencyWithUSD(usdToSelectedCurrency(netIncome), netIncome)}/month.`);
+        }
+        
         // Wealth building potential
         if (netIncome > 1000) {
           insights.push(`💎 High wealth building potential: ${formatCurrencyWithUSD(usdToSelectedCurrency(netIncome), netIncome)} monthly surplus.`);
@@ -9952,7 +10018,7 @@ async function saveProfile({ fullName, file }) {
 
       return {
         title: "📊 Financial Health",
-        insights: insights.slice(0, 6)
+        insights: insights.slice(0, 8)
       };
     }
 
@@ -10196,41 +10262,156 @@ async function saveProfile({ fullName, file }) {
     }
 
     function updateInsightCards() {
+      // Helper function to get tooltip explanation for an insight
+      function getInsightTooltip(insightText, type) {
+        const tooltipMap = {
+          personal: {
+            'Daily spending': 'Your average daily and hourly personal spending based on monthly expenses.',
+            'Personal expenses consume': 'Percentage of monthly income spent on personal expenses.',
+            'Largest expense': 'Your biggest personal expense and what percentage it represents.',
+            'Billing mix': 'How many subscriptions are monthly vs annual.',
+            'Average cost per expense': 'Average monthly cost across all personal expenses.',
+            'Top 3 expenses': 'How much of your spending comes from just the top 3 expenses.',
+            'Bottom 25% costs': 'Total cost of your cheapest 25% of expenses - canceling these could save this amount.',
+            'Living standard economics': 'Your total yearly personal spending compared to a $50k annual salary.',
+            'High-spending lifestyle': 'Assessment based on total monthly personal expenses.',
+            'Moderate lifestyle': 'Assessment based on total monthly personal expenses.',
+            'Lean lifestyle': 'Assessment based on total monthly personal expenses.'
+          },
+          business: {
+            'Daily business cost': 'Average daily and hourly cost of all business tools and subscriptions.',
+            'Business tools consume': 'Percentage of monthly income spent on business tools.',
+            'Most expensive tool': 'Your highest-cost business tool and percentage of total.',
+            'Tool billing': 'Number of monthly vs annual business tool subscriptions.',
+            'Average cost per tool': 'Average monthly cost per business tool.',
+            'Top 3 tools': 'What percentage of tool spending goes to your top 3 most expensive tools.',
+            'Tool ROI': 'Average tool cost and revenue generated per dollar spent on tools.',
+            'Annual billing': 'Potential yearly savings by switching monthly tools to annual billing.',
+            'Enterprise-level tools': 'Assessment based on total monthly business expenses.',
+            'Growing business': 'Assessment based on total monthly business expenses.',
+            'Lean startup': 'Assessment based on total monthly business expenses.',
+            'Extensive tool stack': 'Assessment based on number of active business tools.',
+            'Moderate tool stack': 'Assessment based on number of active business tools.',
+            'Focused tool stack': 'Assessment based on number of active business tools.'
+          },
+          income: {
+            'Income velocity': 'Your average daily and hourly earnings rate this year.',
+            'Year-to-date earnings': 'Total income earned so far this year across all projects.',
+            'Monthly average': 'Average monthly income this year based on months elapsed.',
+            'Active projects': 'Number of different projects you\'ve received income from this year.',
+            'Primary payment method': 'The payment method that handles most of your income.',
+            'Top project type': 'The project category/tag that generates the most income.',
+            'Payment frequency': 'Average number of days between income payments this year.',
+            'Year-end projection': 'Estimated total income for the year if current pace continues.',
+            'High-earning year': 'Assessment based on total yearly income.',
+            'Strong earnings': 'Assessment based on total yearly income.',
+            'Moderate earnings': 'Assessment based on total yearly income.',
+            'Early stage': 'Assessment based on total yearly income.'
+          },
+          overall: {
+            'Positive cash flow': 'Monthly income exceeds expenses - you\'re saving money.',
+            'Negative cash flow': 'Monthly expenses exceed income - you\'re spending more than you earn.',
+            'Break-even': 'Monthly income equals expenses - no surplus or deficit.',
+            'Financial velocity': 'How fast you earn vs spend money per hour.',
+            'Expense breakdown': 'How personal and business expenses split your total spending.',
+            'Strong runway': 'Months of expenses you can cover with current monthly savings.',
+            'Good runway': 'Months of expenses you can cover with current monthly savings.',
+            'Short runway': 'Limited months of expenses covered by current savings.',
+            'No runway': 'You have a monthly deficit, meaning expenses exceed income.',
+            'Excellent financial health': 'Savings rate assessment - 30%+ is outstanding.',
+            'Great financial health': 'Savings rate assessment - 20-30% is very good.',
+            'Good financial health': 'Savings rate assessment - 10-20% is solid.',
+            'Building financial health': 'Savings rate assessment - positive rate is good progress.',
+            'Financial stress': 'You\'re spending more than you earn - needs attention.',
+            'Ultra-efficient spending': 'Expenses use less than 50% of income - excellent.',
+            'Efficient spending': 'Expenses use 50-70% of income - good.',
+            'High expense ratio': 'Expenses use more than 70% of income.',
+            '$50k milestone': 'Time needed to save $50k at your current monthly savings rate.',
+            'Daily savings': 'How much you save per day and per month after all expenses.',
+            'High wealth building potential': 'Large monthly surplus for building wealth.',
+            'Good wealth building potential': 'Moderate monthly surplus for building wealth.',
+            'Building wealth': 'Positive monthly surplus for building wealth.'
+          }
+        };
+        
+        // Find matching tooltip - check most specific matches first
+        const map = tooltipMap[type] || {};
+        // Sort keys by length (longest first) to match more specific phrases first
+        const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length);
+        for (const key of sortedKeys) {
+          if (insightText.includes(key)) {
+            return map[key];
+          }
+        }
+        return 'Financial insight about your spending or income patterns.';
+      }
+      
       // Update Personal Insights Card
       const personalInsights = generatePersonalInsights();
       const personalCard = $('#personalInsightsCard');
       if (personalCard) {
-        personalCard.innerHTML = personalInsights.insights.map(insight => 
-          `<div class="insight-line">${insight}</div>`
-        ).join('');
+        personalCard.innerHTML = personalInsights.insights.map((insight, index) => {
+          const tooltipText = getInsightTooltip(insight, 'personal');
+          return `<div class="insight-line tooltip-trigger">
+            ${insight}
+            <div class="tooltip">${tooltipText}</div>
+          </div>`;
+        }).join('');
       }
       
       // Update Business Insights Card
       const bizInsights = generateBizInsights();
       const bizCard = $('#bizInsightsCard');
       if (bizCard) {
-        bizCard.innerHTML = bizInsights.insights.map(insight => 
-          `<div class="insight-line">${insight}</div>`
-        ).join('');
+        bizCard.innerHTML = bizInsights.insights.map((insight, index) => {
+          const tooltipText = getInsightTooltip(insight, 'business');
+          return `<div class="insight-line tooltip-trigger">
+            ${insight}
+            <div class="tooltip">${tooltipText}</div>
+          </div>`;
+        }).join('');
       }
       
       // Update Income Insights Card
       const incomeInsights = generateIncomeInsights();
       const incomeCard = $('#incomeInsightsCard');
       if (incomeCard) {
-        incomeCard.innerHTML = incomeInsights.insights.map(insight => 
-          `<div class="insight-line">${insight}</div>`
-        ).join('');
+        incomeCard.innerHTML = incomeInsights.insights.map((insight, index) => {
+          const tooltipText = getInsightTooltip(insight, 'income');
+          return `<div class="insight-line tooltip-trigger">
+            ${insight}
+            <div class="tooltip">${tooltipText}</div>
+          </div>`;
+        }).join('');
       }
       
       // Update Overall Financial Health Card
       const overallInsights = generateOverallInsights();
       const overallCard = $('#overallInsightsCard');
       if (overallCard) {
-        overallCard.innerHTML = overallInsights.insights.map(insight => 
-          `<div class="insight-line">${insight}</div>`
-        ).join('');
+        overallCard.innerHTML = overallInsights.insights.map((insight, index) => {
+          const tooltipText = getInsightTooltip(insight, 'overall');
+          return `<div class="insight-line tooltip-trigger">
+            ${insight}
+            <div class="tooltip">${tooltipText}</div>
+          </div>`;
+        }).join('');
       }
+      
+      // Initialize tooltips for insight lines
+      setTimeout(() => {
+        const insightTriggers = document.querySelectorAll('#personalInsightsCard .tooltip-trigger, #bizInsightsCard .tooltip-trigger, #incomeInsightsCard .tooltip-trigger, #overallInsightsCard .tooltip-trigger');
+        insightTriggers.forEach(trigger => {
+          const tooltip = trigger.querySelector('.tooltip');
+          if (tooltip && typeof setupTooltip === 'function') {
+            setupTooltip(trigger, tooltip);
+          }
+        });
+        // Also reinitialize all tooltips to catch any new ones
+        if (typeof initializeTooltips === 'function') {
+          initializeTooltips();
+        }
+      }, 100);
     }
 
     // Analytics functionality
