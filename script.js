@@ -9361,7 +9361,7 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
-    function setupTooltip(trigger, tooltip) {
+    function setupTooltip(trigger, tooltip, isInsightTooltip = false) {
       let tooltipTimeout;
       let autoCloseTimeout;
       let isTooltipVisible = false;
@@ -9370,7 +9370,11 @@ async function saveProfile({ fullName, file }) {
       function showTooltip() {
         if (!isTooltipVisible) {
           // Position tooltip relative to the trigger element, not the event target
-          positionTooltipOnElement(trigger, tooltip);
+          if (isInsightTooltip) {
+            positionInsightTooltip(trigger, tooltip);
+          } else {
+            positionTooltipOnElement(trigger, tooltip);
+          }
           
           tooltip.style.display = 'block';
           
@@ -9500,6 +9504,82 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
+    function positionInsightTooltip(triggerElement, tooltip) {
+      // Ensure tooltip has proper CSS classes and positioning
+      tooltip.style.position = 'fixed';
+      tooltip.style.zIndex = '999999';
+      tooltip.style.pointerEvents = 'none';
+      
+      // Get the exact position of the trigger element
+      const rect = triggerElement.getBoundingClientRect();
+      
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const viewportPadding = 10; // Padding from viewport edges
+      
+      // Get tooltip dimensions (approximate if not yet rendered)
+      tooltip.style.visibility = 'hidden';
+      tooltip.style.display = 'block';
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const tooltipWidth = tooltipRect.width || 200; // fallback width
+      const tooltipHeight = tooltipRect.height || 50; // fallback height
+      
+      // Calculate desired position above the line
+      let centerX = rect.left + (rect.width / 2);
+      let topY = rect.top - tooltipHeight - 8; // 8px gap above the line
+      
+      // Adjust horizontal position to stay within viewport
+      const halfTooltipWidth = tooltipWidth / 2;
+      if (centerX - halfTooltipWidth < viewportPadding) {
+        // Tooltip would go off left edge
+        centerX = halfTooltipWidth + viewportPadding;
+      } else if (centerX + halfTooltipWidth > viewportWidth - viewportPadding) {
+        // Tooltip would go off right edge
+        centerX = viewportWidth - halfTooltipWidth - viewportPadding;
+      }
+      
+      // Adjust vertical position to stay within viewport
+      if (topY < viewportPadding) {
+        // Tooltip would go off top edge - shift down but still above line if possible
+        topY = Math.max(viewportPadding, rect.top - tooltipHeight - 8);
+        // If still not enough space, position below line (but keep it visible)
+        if (topY + tooltipHeight > rect.bottom - 20) {
+          topY = rect.bottom + 8;
+          tooltip.classList.add('tooltip-below');
+        } else {
+          tooltip.classList.remove('tooltip-below');
+        }
+      } else {
+        tooltip.classList.remove('tooltip-below');
+      }
+      
+      // Check if tooltip would go below viewport
+      if (topY + tooltipHeight > viewportHeight - viewportPadding) {
+        // Position above the line at the top of viewport
+        topY = viewportPadding;
+        tooltip.classList.remove('tooltip-below');
+      }
+      
+      // Set the tooltip position
+      tooltip.style.left = centerX + 'px';
+      tooltip.style.top = topY + 'px';
+      // Transform: above uses -100% (centered above), below uses 0% (centered below)
+      tooltip.style.transform = tooltip.classList.contains('tooltip-below') 
+        ? 'translate(-50%, 0%) scale(0.95)' 
+        : 'translate(-50%, -100%) scale(0.95)';
+      
+      // Add class for above positioning
+      if (!tooltip.classList.contains('tooltip-below')) {
+        tooltip.classList.add('tooltip-above');
+      } else {
+        tooltip.classList.remove('tooltip-above');
+      }
+      
+      // Reset visibility for positioning
+      tooltip.style.visibility = 'visible';
+    }
+    
     function positionTooltipOnElement(triggerElement, tooltip) {
       // Ensure tooltip has proper CSS classes and positioning
       tooltip.style.position = 'fixed';
@@ -9539,19 +9619,6 @@ async function saveProfile({ fullName, file }) {
       // Ensure tooltip is visible and properly positioned
       tooltip.style.display = 'block';
       tooltip.style.visibility = 'visible';
-      
-      // Debug logging to help identify the issue
-      console.log('Tooltip positioned at:', {
-        element: triggerElement,
-        elementText: triggerElement.textContent?.trim(),
-        rect: rect,
-        centerX: centerX,
-        topY: topY,
-        headerHeight: headerHeight,
-        tooltipTop: tooltipTop,
-        tooltip: tooltip,
-        tooltipText: tooltip.textContent?.trim()
-      });
     }
 
     // Insight Cards Utility Functions
@@ -10398,19 +10465,16 @@ async function saveProfile({ fullName, file }) {
         }).join('');
       }
       
-      // Initialize tooltips for insight lines
+      // Initialize tooltips for insight lines with custom positioning
       setTimeout(() => {
         const insightTriggers = document.querySelectorAll('#personalInsightsCard .tooltip-trigger, #bizInsightsCard .tooltip-trigger, #incomeInsightsCard .tooltip-trigger, #overallInsightsCard .tooltip-trigger');
         insightTriggers.forEach(trigger => {
           const tooltip = trigger.querySelector('.tooltip');
           if (tooltip && typeof setupTooltip === 'function') {
-            setupTooltip(trigger, tooltip);
+            // Use custom positioning for insight tooltips
+            setupTooltip(trigger, tooltip, true);
           }
         });
-        // Also reinitialize all tooltips to catch any new ones
-        if (typeof initializeTooltips === 'function') {
-          initializeTooltips();
-        }
       }, 100);
     }
 

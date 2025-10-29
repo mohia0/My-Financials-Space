@@ -9626,7 +9626,7 @@ header img:hover {
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Tooltip arrow with modern design */
+/* Tooltip arrow with modern design (default - right side, for non-insight tooltips) */
 .tooltip::before {
   content: '';
   position: absolute;
@@ -9638,6 +9638,12 @@ header img:hover {
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
   transform: translateY(-50%);
+}
+
+/* Hide default arrow for above/below tooltips (insights) */
+.tooltip.tooltip-above::before,
+.tooltip.tooltip-below::before {
+  display: block;
 }
 
 .tooltip.tooltip-left::before {
@@ -9668,12 +9674,36 @@ header img:hover {
   transform: translate(-50%, 0%) scale(1);
 }
 
-/* Arrow adjustment for below tooltips */
+/* Arrow adjustment for above tooltips (points down to the line) */
+.tooltip.tooltip-above::before {
+  top: 100%;
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  margin-left: -6px;
+  border-top: 6px solid rgba(39, 39, 42, 0.8);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: none;
+  transform: translateY(0);
+}
+
+/* Arrow adjustment for below tooltips (points up to the line) */
 .tooltip.tooltip-below::before {
   top: auto;
   bottom: 100%;
+  left: 50%;
+  right: auto;
+  margin-left: -6px;
   border-top: none;
   border-bottom: 6px solid rgba(39, 39, 42, 0.8);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  transform: translateY(0);
+}
+
+.tooltip.tooltip-above.show {
+  transform: translate(-50%, -100%) scale(1);
 }
 
 /* Ensure tooltips are never clipped */
