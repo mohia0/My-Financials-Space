@@ -10924,7 +10924,7 @@ async function saveProfile({ fullName, file }) {
     const iconPickerEl = document.getElementById('iconPicker');
     const iconSearchEl = document.getElementById('iconSearch');
     const iconGridEl = document.getElementById('iconPickerGrid');
-    let iconPickCtx = null; // { arr, idx }
+    let iconPickCtx = null; // { arr, idx, rowElement? }
 
     let FONTAWESOME_ICONS = [];
     let faLoaded = false;
@@ -11819,8 +11819,8 @@ async function saveProfile({ fullName, file }) {
           arr[idx].icon = name;
           }
       
-      // Instant update without full table reload
-      updateRowIcon(arr, idx);
+      // INSTANT update without delay - use updateRowIconImmediately for immediate feedback
+      updateRowIconImmediately(arr, idx);
           
           // Use instant save for income rows, regular save for others
           const isIncomeRow = arr === state.income[currentYear] || 
@@ -11918,55 +11918,124 @@ async function saveProfile({ fullName, file }) {
     function updateRowIconImmediately(arr, idx) {
       const rowData = arr[idx];
       if (!rowData) {
-        console.warn('updateRowIconImmediately: No row data found for index', idx);
+        console.warn('updateRowIconImmediately: No row data at index', idx);
         return;
       }
       
-      console.log('updateRowIconImmediately: Updating icon for row', idx, 'with icon:', rowData.icon);
+      // Try to use the stored row element from iconPickCtx first (fastest path)
+      let rowElement = iconPickCtx?.rowElement || null;
       
-      // Find the row element using the same logic as updateRowIcon
-      let rowElement = null;
-      
-      // Method 1: Look for data-row-index attribute
-      rowElement = document.querySelector(`[data-row-index="${idx}"]`);
-      
-      // Method 2: Look for data-id attribute if available
-      if (!rowElement && rowData.id) {
-        rowElement = document.querySelector(`[data-id="${rowData.id}"]`);
-      }
-      
-      // Method 3: Find by position in the appropriate container
-      if (!rowElement) {
+      // If not found, try to find it using multiple strategies
+      if (!rowElement || !document.contains(rowElement)) {
+        rowElement = null; // Reset if element is no longer in DOM
+        
+        // Method 1: Find by matching the actual row data object reference
+        // This is the most reliable since array items keep their reference
         const containers = document.querySelectorAll('#list-personal, #list-biz, #list-income');
         for (const container of containers) {
           const rows = container.querySelectorAll('.row:not(.row-head):not(.row-sum)');
-          if (rows[idx]) {
-            rowElement = rows[idx];
-            break;
+          for (const row of rows) {
+            // Try to match by name (if available)
+            const nameInput = row.querySelector('input[type="text"]');
+            if (nameInput && rowData.name && nameInput.value === rowData.name) {
+              // Additional verification: check if this row's cost matches
+              const costInput = row.querySelector('.cost-input');
+              if (costInput && Math.abs(parseFloat(costInput.value) - (rowData.cost || 0)) < 0.01) {
+                rowElement = row;
+                break;
+              } else if (!costInput) {
+                // If no cost input found, still use name match (for income rows)
+                rowElement = row;
+                break;
+              }
+            }
           }
+          if (rowElement) break;
+        }
+        
+        // Method 2: Find by row name only (if name matching above didn't work)
+        if (!rowElement && rowData.name) {
+          const containers = document.querySelectorAll('#list-personal, #list-biz, #list-income');
+          for (const container of containers) {
+            const rows = container.querySelectorAll('.row:not(.row-head):not(.row-sum)');
+            for (const row of rows) {
+              const nameInput = row.querySelector('input[type="text"]');
+              if (nameInput && nameInput.value === rowData.name) {
+                rowElement = row;
+                break;
+              }
+            }
+            if (rowElement) break;
+          }
+        }
+        
+        // Method 3: Find by current icon content (match old icon before update)
+        // This works if we can find the row by what icon it currently has
+        // Note: We can't use this effectively since we've already updated rowData.icon
+        
+        // Method 4: Look for data-id attribute if available
+        if (!rowElement && rowData.id) {
+          rowElement = document.querySelector(`[data-id="${rowData.id}"]`);
+        }
+        
+        // Method 5: Try finding by index in all containers (may work if not sorted)
+        if (!rowElement) {
+          const containers = document.querySelectorAll('#list-personal, #list-biz, #list-income');
+          for (const container of containers) {
+            const rows = container.querySelectorAll('.row:not(.row-head):not(.row-sum)');
+            if (rows[idx]) {
+              // Verify it's the right row by checking name or other properties
+              const potentialRow = rows[idx];
+              const nameInput = potentialRow.querySelector('input[type="text"]');
+              if (!rowData.name || (nameInput && nameInput.value === rowData.name)) {
+                rowElement = potentialRow;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Method 6: Try data-row-index attribute (only works if rows aren't sorted)
+        if (!rowElement) {
+          rowElement = document.querySelector(`[data-row-index="${idx}"]`);
+        }
+        
+        // Store found element back in context for next time
+        if (rowElement && iconPickCtx) {
+          iconPickCtx.rowElement = rowElement;
         }
       }
       
       if (rowElement) {
-        console.log('updateRowIconImmediately: Found row element', rowElement);
         const iconCell = rowElement.querySelector('.icon-cell');
         if (iconCell && rowData.icon) {
           // Use centralized renderIcon function
           const iconHTML = renderIcon(rowData);
           
-          // Update the button content with the new icon
+          // Update the button content with the new icon INSTANTLY (no delay, no setTimeout)
           const button = iconCell.querySelector('button[data-choose-icon]');
           if (button) {
-            console.log('updateRowIconImmediately: Updating button with HTML:', iconHTML);
             button.innerHTML = iconHTML;
+            // Force immediate repaint
+            void button.offsetWidth;
           } else {
             console.warn('updateRowIconImmediately: Button not found in icon cell');
           }
         } else {
-          console.warn('updateRowIconImmediately: Icon cell not found or no icon data');
+          console.warn('updateRowIconImmediately: Icon cell or icon data missing', { 
+            hasIconCell: !!iconCell, 
+            hasIcon: !!rowData.icon 
+          });
         }
       } else {
-        console.warn('updateRowIconImmediately: Row element not found for index', idx);
+        console.warn('updateRowIconImmediately: Row element not found', {
+          idx,
+          hasName: !!rowData.name,
+          icon: rowData.icon,
+          arrLength: arr.length
+        });
+        // Fallback to the old update method (has delay, but better than nothing)
+        updateRowIcon(arr, idx);
       }
     }
 
@@ -12055,10 +12124,8 @@ async function saveProfile({ fullName, file }) {
         // Add to custom icons
         addCustomIcon(cleanUnicode, 'glyph', `Glyph ${cleanUnicode}`);
         
-        // Immediately update the icon in the row for instant feedback
-        setTimeout(() => {
-          updateRowIconImmediately(arr, idx);
-        }, 10);
+        // INSTANTLY update the icon in the row (no setTimeout delay!)
+        updateRowIconImmediately(arr, idx);
         
         // Use instant save for income rows, regular save for others
         const isIncomeRow = arr === state.income[currentYear] || 
@@ -12209,8 +12276,32 @@ async function saveProfile({ fullName, file }) {
       }
     });
 
-    async function openIconPicker(arr, idx){
-      iconPickCtx = { arr, idx };
+    async function openIconPicker(arr, idx, rowElement = null){
+      // Try to find the row element if not provided
+      if (!rowElement) {
+        // Method 1: Find by row name
+        const rowData = arr[idx];
+        if (rowData && rowData.name) {
+          const containers = document.querySelectorAll('#list-personal, #list-biz, #list-income');
+          for (const container of containers) {
+            const rows = container.querySelectorAll('.row:not(.row-head):not(.row-sum)');
+            for (const row of rows) {
+              const nameInput = row.querySelector('input[type="text"]');
+              if (nameInput && nameInput.value === rowData.name) {
+                rowElement = row;
+                break;
+              }
+            }
+            if (rowElement) break;
+          }
+        }
+        // Method 2: Try data-row-index (only works if rows aren't sorted)
+        if (!rowElement) {
+          rowElement = document.querySelector(`[data-row-index="${idx}"]`);
+        }
+      }
+      
+      iconPickCtx = { arr, idx, rowElement };
       iconSearchEl.value = '';
       currentTab = 'all';
       currentStyle = 'solid';
@@ -12707,7 +12798,10 @@ async function saveProfile({ fullName, file }) {
         // Note: Event listeners for nameInput and costInput are already bound above in lines 5241-5259
         if(isBiz){ const dateInp=div.querySelector('input[type="date"]'); if(dateInp){ dateInp.addEventListener('change', ()=>{ row.next=dateInp.value; save('date-input'); }); } }
         const iconBtn=iconDiv.querySelector('[data-choose-icon]');
-        iconBtn.addEventListener('click', async ()=> await openIconPicker(arr, idx));
+        iconBtn.addEventListener('click', async (e)=> {
+          const rowElement = e.target.closest('.row');
+          await openIconPicker(arr, idx, rowElement);
+        });
         const delBtn=del.querySelector('[data-del]'); 
         delBtn.addEventListener('click', async ()=>{ 
           if(delBtn.classList.contains('delete-confirm')){
