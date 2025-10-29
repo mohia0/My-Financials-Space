@@ -5088,7 +5088,7 @@ textarea {
  }
 .row-sum{ 
   font-weight:600; 
-  background:var(--glass); 
+  background:var(--card); 
   font-size:.75rem; 
   border-top:1px solid var(--stroke); 
   color:var(--fg);
@@ -5097,7 +5097,7 @@ textarea {
 
 /* Light mode sum row backgrounds */
 [data-theme="light"] .row-sum {
-  background: rgba(241, 245, 249, 0.9);
+  background: rgba(248, 250, 252, 0.8);
 }
 
 /* Mobile sticky name positioning */
@@ -10115,13 +10115,7 @@ body.splash-complete .mobile-bottom-nav {
 }
 
 .heatmap-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: var(--stroke);
+  display: none;
 }
 
 /* Structured tooltip content */
