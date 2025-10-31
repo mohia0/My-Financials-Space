@@ -723,6 +723,22 @@ img, svg, .icon, .avatar, .profile-pic {
   -webkit-filter: none !important;
 }
 
+/* Ensure profile picture in dropdown doesn't get inverted in light mode */
+#userPhoto {
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+[data-theme="light"] #userPhoto {
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+[data-theme="dark"] #userPhoto {
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
 /* Ensure images maintain original colors */
 [data-theme="light"] img,
 [data-theme="light"] svg,
@@ -5936,9 +5952,9 @@ header img:hover {
 }
 
 /* Light mode - invert white SVG to dark for visibility */
-[data-theme="light"] header img { filter: invert(1) !important; }
+[data-theme="light"] header img:not(#userPhoto) { filter: invert(1) !important; }
 /* Ensure dark mode keeps original white */
-[data-theme="dark"] header img { filter: invert(0) !important; }
+[data-theme="dark"] header img:not(#userPhoto) { filter: invert(0) !important; }
 
 /* Mobile logo improvements - SVG logo primary everywhere */
 @media (max-width: 768px) {
