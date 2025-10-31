@@ -8018,7 +8018,9 @@ async function saveProfile({ fullName, file }) {
                         labels.push(`Growth: ∞ (from $0)`);
                       } else if (!isNaN(growth)) {
                         const sign = growth >= 0 ? '+' : '';
-                        const color = growth >= 0 ? '#10b981' : '#ef4444';
+                        // Use light primary color for positive growth in tooltip
+                        const lightPrimaryColor = '#a5b4fc'; // Light version of primary color #6366f1
+                        const color = growth >= 0 ? lightPrimaryColor : '#ef4444';
                         labels.push(`Growth: ${sign}${growth.toFixed(1)}%`);
                       }
                     }
@@ -8285,8 +8287,10 @@ async function saveProfile({ fullName, file }) {
       const lastYearTotal = usdToSelectedCurrency(lastYearTotalUSD);
       
       // Calculate both simple growth and CAGR
+      // Use light primary color for positive growth (instead of green)
+      const lightPrimaryColor = '#a5b4fc'; // Light version of primary color #6366f1
       let displayText = '';
-      let displayColor = '#10b981';
+      let displayColor = lightPrimaryColor;
       
       if (firstYearTotal > 0 && lastYearTotal > 0) {
         // Calculate simple growth percentage
@@ -8295,15 +8299,18 @@ async function saveProfile({ fullName, file }) {
         // Calculate CAGR (Compound Annual Growth Rate)
         const cagr = calculateCAGR(firstYearTotal, lastYearTotal, numberOfYears);
         
+        // Use light primary color for positive growth (instead of green)
+        const lightPrimaryColor = '#a5b4fc'; // Light version of primary color #6366f1
+        
         if (cagr !== null && !isNaN(cagr) && isFinite(cagr)) {
           const cagrSign = cagr >= 0 ? '+' : '';
           displayText = `CAGR: ${cagrSign}${cagr.toFixed(1)}% | Total Growth: ${cagrSign}${simpleGrowth.toFixed(1)}% (${firstYear}→${lastYear})`;
-          displayColor = cagr >= 0 ? '#10b981' : '#ef4444';
+          displayColor = cagr >= 0 ? lightPrimaryColor : '#ef4444';
         } else {
           // Fallback to simple growth if CAGR calculation fails
           const sign = simpleGrowth >= 0 ? '+' : '';
           displayText = `Total Growth: ${sign}${simpleGrowth.toFixed(1)}% (${firstYear}→${lastYear})`;
-          displayColor = simpleGrowth >= 0 ? '#10b981' : '#ef4444';
+          displayColor = simpleGrowth >= 0 ? lightPrimaryColor : '#ef4444';
         }
         
         growthValue.textContent = displayText;
@@ -8311,7 +8318,7 @@ async function saveProfile({ fullName, file }) {
         growthDisplay.style.display = 'flex';
       } else if (lastYearTotal > 0 && firstYearTotal === 0) {
         growthValue.textContent = `∞ (from $0 in ${firstYear})`;
-        growthValue.style.color = '#10b981';
+        growthValue.style.color = lightPrimaryColor;
         growthDisplay.style.display = 'flex';
       } else if (firstYearTotal > 0 && lastYearTotal === 0) {
         growthValue.textContent = `-100% (to $0 in ${lastYear})`;
@@ -8576,8 +8583,8 @@ async function saveProfile({ fullName, file }) {
       }
       
       if (yearTotalCurrency) {
-        // Format currency nicely - extract just the number part
-        const currencyFormatted = nfINT.format(Math.round(currentYearTotalConverted));
+        // Format currency with symbol to match lifetime card style
+        const currencyFormatted = formatCurrency(currentYearTotalConverted);
         yearTotalCurrency.textContent = currencyFormatted;
       }
       
@@ -8599,22 +8606,26 @@ async function saveProfile({ fullName, file }) {
           // Calculate CAGR (1 year period = same as simple growth, but for consistency)
           const cagr = calculateCAGR(previousYearTotalConverted, currentYearTotalConverted, 1);
           
+          // Use light primary color for positive growth (instead of green)
+          const lightPrimaryColor = '#a5b4fc'; // Light version of primary color #6366f1
+          
           if (cagr !== null && !isNaN(cagr) && isFinite(cagr)) {
             const sign = cagr >= 0 ? '+' : '';
-            const color = cagr >= 0 ? '#10b981' : '#ef4444';
+            const color = cagr >= 0 ? lightPrimaryColor : '#ef4444';
             // For 1-year comparison, CAGR equals simple growth, so show simple growth
             growthValue.textContent = `${sign}${simpleGrowth.toFixed(1)}%`;
             growthValue.style.color = color;
           } else {
             const sign = simpleGrowth >= 0 ? '+' : '';
-            const color = simpleGrowth >= 0 ? '#10b981' : '#ef4444';
+            const color = simpleGrowth >= 0 ? lightPrimaryColor : '#ef4444';
             growthValue.textContent = `${sign}${simpleGrowth.toFixed(1)}%`;
             growthValue.style.color = color;
           }
           growthDisplay.style.display = 'flex';
         } else if (currentYearTotalConverted > 0 && previousYearTotalUSD === 0) {
+          const lightPrimaryColor = '#a5b4fc'; // Light version of primary color #6366f1
           growthValue.textContent = '∞ (from $0)';
-          growthValue.style.color = '#10b981';
+          growthValue.style.color = lightPrimaryColor;
           growthDisplay.style.display = 'flex';
         } else {
           growthDisplay.style.display = 'none';
