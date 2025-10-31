@@ -4990,40 +4990,144 @@ async function saveProfile({ fullName, file }) {
       }
     }
     
-    // Display the actual notification
+    // Calculate perfect position between buttons (hack solution)
+    calculateNotificationPosition() {
+      const navContainer = document.getElementById('navButtonsContainer');
+      const iconContainer = document.getElementById('iconButtonsContainer');
+      const notificationCenter = document.getElementById('notificationCenter');
+      const header = document.querySelector('header');
+      const logoContainer = document.querySelector('.logo-container');
+      
+      if (!header || !notificationCenter) return;
+      
+      const isSmallScreen = window.innerWidth <= 768;
+      const isScrolled = header.classList.contains('scrolled');
+      
+      if (isSmallScreen) {
+        // Small screen: position at middle top to avoid overlapping buttons
+        const headerRect = header.getBoundingClientRect();
+        notificationCenter.style.position = 'absolute';
+        notificationCenter.style.left = `${headerRect.width / 2}px`;
+        notificationCenter.style.top = '8px'; // Position at top with small padding
+        notificationCenter.style.transform = 'translate(-50%, 0)'; // Center horizontally, no vertical centering
+      } else {
+        // Desktop positioning - between nav buttons and icon buttons
+        if (!navContainer || !iconContainer) return;
+        
+        const navRect = navContainer.getBoundingClientRect();
+        const iconRect = iconContainer.getBoundingClientRect();
+        const headerRect = header.getBoundingClientRect();
+        
+        // Calculate the perfect position between the two containers
+        const gapStart = navRect.right;
+        const gapEnd = iconRect.left;
+        const gapCenter = gapStart + (gapEnd - gapStart) / 2;
+        
+        // Position relative to header (center the notification at this point)
+        const leftPosition = gapCenter - headerRect.left;
+        
+        // Apply position - center notification at calculated point
+        const isVisible = notificationCenter.style.opacity === '1' || notificationCenter.classList.contains('show');
+        const translateX = isVisible ? '0' : '20px';
+        notificationCenter.style.position = 'absolute';
+        notificationCenter.style.left = `${leftPosition}px`;
+        notificationCenter.style.top = '50%';
+        notificationCenter.style.transform = `translate(-50%, -50%) translateX(${translateX})`;
+      }
+    }
+    
+    // Display the actual notification with typing animation
     async displayNotification(notification) {
       const { message, type, duration } = notification;
-    const notificationCenter = document.getElementById('notificationCenter');
-    const text = notificationCenter.querySelector('.notification-text');
+      const notificationCenter = document.getElementById('notificationCenter');
+      const text = notificationCenter.querySelector('.notification-text');
       
       // Update last message tracking
       this.lastMessage = message;
       this.lastMessageTime = notification.timestamp;
     
-    // Set message
-    text.textContent = message;
-    
-    // Set type class for glow effect
-    notificationCenter.className = `notification-center ${type}`;
-    
-    // Show notification
-    notificationCenter.style.opacity = '1';
-    notificationCenter.style.transform = 'translate(-50%, 0) translateX(0)';
-    notificationCenter.classList.add('show');
-    
-    // Hide after duration
-      await new Promise(resolve => {
-    setTimeout(() => {
+      // Calculate perfect position before showing
+      this.calculateNotificationPosition();
+      
+      // Recalculate on window resize, scroll, and header state changes for perfect positioning
+      const updatePosition = () => {
+        this.calculateNotificationPosition();
+      };
+      
+      // Debounce position updates
+      let positionUpdateTimeout;
+      const debouncedUpdate = () => {
+        clearTimeout(positionUpdateTimeout);
+        positionUpdateTimeout = setTimeout(updatePosition, 50);
+      };
+      
+      window.addEventListener('resize', debouncedUpdate);
+      window.addEventListener('scroll', debouncedUpdate);
+      
+      // Watch for header scroll state changes (sticky class toggle)
+      const header = document.querySelector('header');
+      if (header) {
+        const headerObserver = new MutationObserver(() => {
+          if (notificationCenter.style.opacity === '1') {
+            updatePosition();
+          }
+        });
+        headerObserver.observe(header, { attributes: true, attributeFilter: ['class'] });
+      }
+      
+      // Update position periodically while visible for perfect positioning
+      if (!this.positionUpdateBound) {
+        this.positionUpdateBound = true;
+        setInterval(() => {
+          if (notificationCenter.style.opacity === '1') {
+            this.calculateNotificationPosition();
+          }
+        }, 150); // Update every 150ms while visible
+      }
+      
+      // Set type class for color effect
+      notificationCenter.className = `notification-center ${type}`;
+      
+      // Clear previous text
+      text.textContent = '';
+      
+      // Show notification container first
+      notificationCenter.style.opacity = '1';
+      notificationCenter.classList.add('show');
+      // Update transform for show animation (will be set correctly by calculateNotificationPosition)
+      this.calculateNotificationPosition();
+      
+      // Typing animation - perfect speed (not slow, not fast)
+      const typingSpeed = 30; // milliseconds per character - perfect speed
+      let charIndex = 0;
+      
+      const typeCharacter = () => {
+        if (charIndex < message.length) {
+          text.textContent = message.substring(0, charIndex + 1);
+          charIndex++;
+          setTimeout(typeCharacter, typingSpeed);
+        }
+      };
+      
+      // Start typing animation
+      typeCharacter();
+      
+      // Wait for typing to complete + duration
+      const typingDuration = message.length * typingSpeed;
+      await new Promise(resolve => setTimeout(resolve, typingDuration + duration));
+      
+      // Hide after duration
       notificationCenter.classList.remove('show');
       notificationCenter.classList.add('hide');
+      // Update transform for hide animation (slide out)
+      const leftPos = notificationCenter.style.left;
+      notificationCenter.style.transform = `translate(-50%, -50%) translateX(20px)`;
       setTimeout(() => {
         notificationCenter.style.opacity = '0';
-        notificationCenter.style.transform = 'translate(-50%, 0) translateX(20px)';
         notificationCenter.classList.remove('hide');
-            resolve();
+        text.textContent = ''; // Clear text
+        resolve();
       }, 300);
-    }, duration);
-      });
     }
     
     // Context management

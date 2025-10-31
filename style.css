@@ -5814,12 +5814,9 @@ textarea {
   text-transform:lowercase;
 }
 
-  /* Modern Notification Center */
+  /* Modern Notification Center - Typing Animation */
   .notification-center {
-    position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translate(-50%, 0) translateX(20px);
+    position: absolute;
     z-index: 9999;
     transition: all 0.3s ease;
     pointer-events: none;
@@ -5827,48 +5824,27 @@ textarea {
     margin-top: 0;
     width: auto;
     height: auto;
-    max-width: 220px;
+    white-space: nowrap;
+    /* Position will be calculated dynamically by JavaScript */
   }
   
-  .notification-content {
-    padding: 0.4rem 0.6rem;
-    background: var(--card);
-    border: none;
-    border-radius: 6px;
-    min-width: auto;
-    max-width: 180px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    backdrop-filter: blur(8px);
-    white-space: normal;
-  }
-
-.notification-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border-radius: 12px;
-  pointer-events: none;
-}
-
+  /* No background - just text */
   .notification-text {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    color: var(--fg);
     line-height: 1.2;
     text-align: center;
-    white-space: normal;
-    letter-spacing: 0.01em;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
     margin: 0;
     padding: 0;
     word-wrap: break-word;
-    max-width: 160px;
+    max-width: none;
+    /* Smooth typing effect */
+    overflow: hidden;
   }
 
-/* Simple notification types */
+/* Simple notification types - just text colors */
 .notification-center.success .notification-text {
   color: #6366f1;
 }
@@ -5891,12 +5867,60 @@ textarea {
 
 .notification-center.show {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(-50%) translateX(0);
 }
 
 .notification-center.hide {
   opacity: 0;
-  transform: translateY(-20px);
+  transform: translateX(-50%) translateY(-50%) translateX(20px);
+}
+
+/* Ensure notification doesn't overlap with buttons */
+header {
+  position: relative;
+}
+
+/* Desktop positioning - will be overridden by JavaScript for perfect placement */
+@media (min-width: 769px) {
+  .notification-center {
+    top: 50%;
+    transform: translate(-50%, -50%) translateX(20px);
+  }
+  
+  .notification-center.show {
+    transform: translate(-50%, -50%) translateX(0);
+  }
+  
+  .notification-center.hide {
+    transform: translate(-50%, -50%) translateX(20px);
+  }
+}
+
+/* Responsive positioning for small screens */
+@media (max-width: 768px) {
+  .notification-center {
+    /* Position will be calculated dynamically by JavaScript */
+    position: absolute;
+    z-index: 9999;
+    width: auto;
+    max-width: calc(100vw - 2rem);
+    text-align: center;
+  }
+  
+  .notification-center.show {
+    /* Transform handled by JavaScript for perfect positioning */
+  }
+  
+  .notification-center.hide {
+    /* Transform handled by JavaScript */
+  }
+  
+  .notification-text {
+    font-size: 0.7rem;
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 280px;
+  }
 }
 
 /* Header logo styling */
