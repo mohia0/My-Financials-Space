@@ -9062,8 +9062,8 @@ async function saveProfile({ fullName, file }) {
           { id: 'kpiAllYearlyEGP', value: formatCurrency(all.ySelected) }
         ],
         progressBars: [
-          { containerId: 'sharePersonalBarContainer', targetWidth: Math.round((p.mUSD/all.mUSD)*100) || 0 },
-          { containerId: 'shareBizBarContainer', targetWidth: Math.round((b.mUSD/all.mUSD)*100) || 0 }
+          { containerId: 'sharePersonalBarContainer', targetWidth: all.mUSD > 0 ? Math.round((p.mUSD/all.mUSD)*100) : 0 },
+          { containerId: 'shareBizBarContainer', targetWidth: all.mUSD > 0 ? Math.round((b.mUSD/all.mUSD)*100) : 0 }
         ]
       };
       
@@ -14538,7 +14538,7 @@ function loadNonCriticalResources() {
         row.monthlyUSD = row.billing === 'Monthly' ? row.cost : row.cost / 12;
       }
       if (field !== 'yearlyUSD') {
-        row.yearlyUSD = row.billing === 'Yearly' ? row.cost : row.cost * 12;
+        row.yearlyUSD = row.billing === 'Annually' ? row.cost : row.cost * 12;
       }
       if (field !== 'monthlyEGP') {
         row.monthlyEGP = usdToSelectedCurrency(row.monthlyUSD);
@@ -14656,7 +14656,7 @@ function loadNonCriticalResources() {
         row.monthlyUSD = row.billing === 'Monthly' ? row.cost : row.cost / 12;
       }
       if (field !== 'yearlyUSD') {
-        row.yearlyUSD = row.billing === 'Yearly' ? row.cost : row.cost * 12;
+        row.yearlyUSD = row.billing === 'Annually' ? row.cost : row.cost * 12;
       }
       if (field !== 'monthlyEGP') {
         row.monthlyEGP = usdToSelectedCurrency(row.monthlyUSD);
