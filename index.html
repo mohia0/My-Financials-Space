@@ -914,11 +914,17 @@
       <section class="mb-6">
         <div class="card p-6" style="background:var(--card); border:1px solid var(--stroke); border-radius:1rem;">
           <div class="heatmap-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
               <h2 class="text-lg font-semibold px-1 tooltip-trigger" style="color:var(--fg)">
                 Income Calendar Heatmap
                 <div class="tooltip">Visual calendar showing daily income patterns throughout the year</div>
               </h2>
+              <!-- Year Total Display - Beside Header -->
+              <div class="heatmap-total flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border" style="background:var(--card); border-color:var(--stroke); min-width:fit-content;">
+                <span class="text-xs" style="color:var(--muted)">Total:</span>
+                <span id="heatmapYearTotalUSD" class="text-xs sm:text-sm font-semibold" style="color:var(--fg)">$0.00</span>
+                <span id="heatmapYearTotalCurrency" class="text-xs font-medium" style="color:var(--accent); background:var(--accent-bg); padding:2px 4px; border-radius:4px;">0</span>
+              </div>
               <!-- Growth Percentage Display -->
               <div class="flex items-center gap-2 text-xs tooltip-trigger" id="heatmapGrowth" style="display:none;">
                 <span style="color:var(--muted)">vs Previous Year:</span>
@@ -931,12 +937,6 @@
               </div>
             </div>
             <div class="heatmap-controls flex flex-wrap items-center gap-2 sm:gap-3">
-              <!-- Year Total Display - Prominent -->
-              <div class="heatmap-total flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border" style="background:var(--card); border-color:var(--stroke); min-width:fit-content;">
-                <span class="text-xs" style="color:var(--muted)">Total:</span>
-                <span id="heatmapYearTotalUSD" class="text-xs sm:text-sm font-semibold" style="color:var(--fg)">$0.00</span>
-                <span id="heatmapYearTotalCurrency" class="text-xs font-medium" style="color:var(--accent); background:var(--accent-bg); padding:2px 4px; border-radius:4px;">0</span>
-              </div>
               <!-- Year Filter -->
               <div class="flex items-center gap-1.5 sm:gap-2">
                 <label class="text-xs" style="color:var(--muted)">Year:</label>
