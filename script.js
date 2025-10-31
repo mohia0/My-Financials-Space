@@ -7834,10 +7834,30 @@ async function saveProfile({ fullName, file }) {
         cumulativeData.push(cumulative);
       });
       
+      // Calculate growth percentages
+      const growthPercentages = [];
+      for (let i = 0; i < convertedData.length; i++) {
+        if (i === 0) {
+          growthPercentages.push(null); // No previous period to compare
+        } else {
+          const current = convertedData[i];
+          const previous = convertedData[i - 1];
+          if (previous > 0) {
+            const growth = ((current - previous) / previous) * 100;
+            growthPercentages.push(growth);
+          } else if (current > 0) {
+            growthPercentages.push(Infinity); // Infinite growth from 0
+          } else {
+            growthPercentages.push(0);
+          }
+        }
+      }
+      
       const result = {
         labels,
         data: convertedData,
         cumulativeData,
+        growthPercentages,
         isYearly: hasMultipleYears && !hasMultipleMonths
       };
       
@@ -7898,8 +7918,15 @@ async function saveProfile({ fullName, file }) {
         chartData.labels = ['No Data'];
         chartData.data = [0];
         chartData.cumulativeData = [0];
+        chartData.growthPercentages = [null];
         chartData.isYearly = false;
       }
+      
+      // Calculate and display overall growth
+      updateIncomeFlowGrowth(chartData);
+      
+      // Store chart data for tooltip access
+      const storedChartData = chartData;
       
       // Chart.js configuration with smooth interpolation
       const config = {
@@ -7980,11 +8007,25 @@ async function saveProfile({ fullName, file }) {
                   return context[0].label;
                 },
                 label: function(context) {
+                  const labels = [];
                   if (context.datasetIndex === 0) {
-                    return `Income: ${formatCompact(context.parsed.y)}`;
+                    labels.push(`Income: ${formatCompact(context.parsed.y)}`);
+                    // Add growth percentage if available
+                    const index = context.dataIndex;
+                    const growth = chartData.growthPercentages[index];
+                    if (growth !== null && growth !== undefined) {
+                      if (growth === Infinity) {
+                        labels.push(`Growth: ∞ (from $0)`);
+                      } else if (!isNaN(growth)) {
+                        const sign = growth >= 0 ? '+' : '';
+                        const color = growth >= 0 ? '#10b981' : '#ef4444';
+                        labels.push(`Growth: ${sign}${growth.toFixed(1)}%`);
+                      }
+                    }
                   } else {
-                    return `Cumulative: ${formatCompact(context.parsed.y)}`;
+                    labels.push(`Cumulative: ${formatCompact(context.parsed.y)}`);
                   }
+                  return labels;
                 }
               }
             }
@@ -8032,6 +8073,9 @@ async function saveProfile({ fullName, file }) {
       // Create the chart
       try {
         incomeFlowChart = new Chart(canvas, config);
+        
+        // Store chart data for tooltip access
+        incomeFlowChart.chartData = storedChartData;
         
         // Set up chart view toggle
         setupChartViewToggle();
@@ -8173,8 +8217,108 @@ async function saveProfile({ fullName, file }) {
         incomeFlowChart.data.datasets[0].data = chartData.data;
         incomeFlowChart.data.datasets[1].data = chartData.cumulativeData;
         
+        // Store growth percentages for tooltip access
+        incomeFlowChart.chartData = chartData;
+        
+        // Calculate and display overall growth
+        updateIncomeFlowGrowth(chartData);
+        
         // Apply current view mode
         updateChartView();
+      }
+    }
+    
+    // Calculate Compound Annual Growth Rate (CAGR)
+    // Formula: ((final_value / initial_value) ^ (1 / number_of_years)) - 1) * 100
+    function calculateCAGR(initialValue, finalValue, numberOfYears) {
+      if (!initialValue || initialValue <= 0 || numberOfYears <= 0) {
+        return null; // Cannot calculate CAGR with invalid inputs
+      }
+      
+      if (finalValue < 0) {
+        return null; // Negative final value invalid for CAGR
+      }
+      
+      if (finalValue === 0) {
+        return -100; // Complete loss
+      }
+      
+      // Calculate CAGR: ((final / initial) ^ (1 / years)) - 1
+      const ratio = finalValue / initialValue;
+      const years = numberOfYears;
+      const cagr = (Math.pow(ratio, 1 / years) - 1) * 100;
+      
+      return cagr;
+    }
+    
+    function updateIncomeFlowGrowth(chartData) {
+      const growthDisplay = document.getElementById('incomeFlowGrowth');
+      const growthValue = document.getElementById('incomeFlowGrowthValue');
+      
+      if (!growthDisplay || !growthValue) return;
+      
+      // Calculate ALL TIME growth by comparing earliest year to latest year
+      // Get all years with income data (works for any year including 2025+)
+      const allYears = Object.keys(state.income)
+        .map(year => parseInt(year))
+        .filter(year => !isNaN(year) && state.income[year] && state.income[year].length > 0)
+        .sort((a, b) => a - b);
+      
+      if (allYears.length < 2) {
+        // Need at least 2 years for growth comparison
+        growthDisplay.style.display = 'none';
+        return;
+      }
+      
+      const firstYear = allYears[0];
+      const lastYear = allYears[allYears.length - 1];
+      const numberOfYears = lastYear - firstYear;
+      
+      // Calculate totals for first and last year in selected currency
+      const firstYearData = state.income[firstYear] || [];
+      const lastYearData = state.income[lastYear] || [];
+      
+      const firstYearTotalUSD = firstYearData.reduce((sum, entry) => sum + Number(entry.paidUsd || 0), 0);
+      const lastYearTotalUSD = lastYearData.reduce((sum, entry) => sum + Number(entry.paidUsd || 0), 0);
+      
+      const firstYearTotal = usdToSelectedCurrency(firstYearTotalUSD);
+      const lastYearTotal = usdToSelectedCurrency(lastYearTotalUSD);
+      
+      // Calculate both simple growth and CAGR
+      let displayText = '';
+      let displayColor = '#10b981';
+      
+      if (firstYearTotal > 0 && lastYearTotal > 0) {
+        // Calculate simple growth percentage
+        const simpleGrowth = ((lastYearTotal - firstYearTotal) / firstYearTotal) * 100;
+        
+        // Calculate CAGR (Compound Annual Growth Rate)
+        const cagr = calculateCAGR(firstYearTotal, lastYearTotal, numberOfYears);
+        
+        if (cagr !== null && !isNaN(cagr) && isFinite(cagr)) {
+          const cagrSign = cagr >= 0 ? '+' : '';
+          displayText = `CAGR: ${cagrSign}${cagr.toFixed(1)}% | Total Growth: ${cagrSign}${simpleGrowth.toFixed(1)}% (${firstYear}→${lastYear})`;
+          displayColor = cagr >= 0 ? '#10b981' : '#ef4444';
+        } else {
+          // Fallback to simple growth if CAGR calculation fails
+          const sign = simpleGrowth >= 0 ? '+' : '';
+          displayText = `Total Growth: ${sign}${simpleGrowth.toFixed(1)}% (${firstYear}→${lastYear})`;
+          displayColor = simpleGrowth >= 0 ? '#10b981' : '#ef4444';
+        }
+        
+        growthValue.textContent = displayText;
+        growthValue.style.color = displayColor;
+        growthDisplay.style.display = 'flex';
+      } else if (lastYearTotal > 0 && firstYearTotal === 0) {
+        growthValue.textContent = `∞ (from $0 in ${firstYear})`;
+        growthValue.style.color = '#10b981';
+        growthDisplay.style.display = 'flex';
+      } else if (firstYearTotal > 0 && lastYearTotal === 0) {
+        growthValue.textContent = `-100% (to $0 in ${lastYear})`;
+        growthValue.style.color = '#ef4444';
+        growthDisplay.style.display = 'flex';
+      } else {
+        growthDisplay.style.display = 'none';
       }
     }
 
@@ -8417,6 +8561,66 @@ async function saveProfile({ fullName, file }) {
       const maxAmount = Math.max(...amounts, 0);
       const avgAmount = amounts.length > 0 ? amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length : 0;
       
+      // Calculate year total for growth comparison (in selected currency)
+      const currentYearTotalConverted = amounts.reduce((sum, amount) => sum + amount, 0);
+      
+      // Get year total in USD for display
+      const yearDataUSD = (state.income[year] || []).reduce((sum, entry) => sum + Number(entry.paidUsd || 0), 0);
+      
+      // Update year total display in header
+      const yearTotalUSD = document.getElementById('heatmapYearTotalUSD');
+      const yearTotalCurrency = document.getElementById('heatmapYearTotalCurrency');
+      
+      if (yearTotalUSD) {
+        yearTotalUSD.textContent = nfUSD.format(yearDataUSD);
+      }
+      
+      if (yearTotalCurrency) {
+        // Format currency nicely - extract just the number part
+        const currencyFormatted = nfINT.format(Math.round(currentYearTotalConverted));
+        yearTotalCurrency.textContent = currencyFormatted;
+      }
+      
+      // Calculate growth percentage compared to previous year
+      const previousYear = year - 1;
+      const previousYearData = state.income[previousYear] || [];
+      const previousYearTotalUSD = previousYearData.reduce((sum, entry) => sum + Number(entry.paidUsd || 0), 0);
+      const previousYearTotalConverted = usdToSelectedCurrency(previousYearTotalUSD);
+      
+      // Update growth display with CAGR
+      const growthDisplay = document.getElementById('heatmapGrowth');
+      const growthValue = document.getElementById('heatmapGrowthValue');
+      
+      if (growthDisplay && growthValue) {
+        if (previousYearTotalUSD > 0 && currentYearTotalConverted > 0) {
+          // Calculate simple year-over-year growth
+          const simpleGrowth = ((currentYearTotalConverted - previousYearTotalConverted) / previousYearTotalConverted) * 100;
+          
+          // Calculate CAGR (1 year period = same as simple growth, but for consistency)
+          const cagr = calculateCAGR(previousYearTotalConverted, currentYearTotalConverted, 1);
+          
+          if (cagr !== null && !isNaN(cagr) && isFinite(cagr)) {
+            const sign = cagr >= 0 ? '+' : '';
+            const color = cagr >= 0 ? '#10b981' : '#ef4444';
+            // For 1-year comparison, CAGR equals simple growth, so show simple growth
+            growthValue.textContent = `${sign}${simpleGrowth.toFixed(1)}%`;
+            growthValue.style.color = color;
+          } else {
+            const sign = simpleGrowth >= 0 ? '+' : '';
+            const color = simpleGrowth >= 0 ? '#10b981' : '#ef4444';
+            growthValue.textContent = `${sign}${simpleGrowth.toFixed(1)}%`;
+            growthValue.style.color = color;
+          }
+          growthDisplay.style.display = 'flex';
+        } else if (currentYearTotalConverted > 0 && previousYearTotalUSD === 0) {
+          growthValue.textContent = '∞ (from $0)';
+          growthValue.style.color = '#10b981';
+          growthDisplay.style.display = 'flex';
+        } else {
+          growthDisplay.style.display = 'none';
+        }
+      }
+      
       setText('heatmapTotalDays', totalDays);
       setText('heatmapActiveDays', activeDays);
       setText('heatmapHighestDay', formatCurrency(maxAmount));
@@ -8600,9 +8804,17 @@ async function saveProfile({ fullName, file }) {
         });
       });
 
-      // Refresh handler
+      // Refresh handler with visual feedback
       if (refreshBtn && !refreshBtn._bound) {
         refreshBtn.addEventListener('click', () => {
+          // Add visual feedback - rotate animation
+          refreshBtn.style.transition = 'transform 0.3s ease';
+          refreshBtn.style.transform = 'rotate(360deg)';
+          
+          // Add active state
+          refreshBtn.style.backgroundColor = 'var(--accent-bg)';
+          refreshBtn.style.borderColor = 'var(--accent)';
+          
           // Clear cache and generate fresh data
           try { heatmapCache.clear && heatmapCache.clear(); } catch {}
           try { heatmapData = generateHeatmapData(currentHeatmapYear); } catch { heatmapData = {}; }
@@ -8626,9 +8838,32 @@ async function saveProfile({ fullName, file }) {
             
             updateHeatmapStats(currentHeatmapYear);
             addHeatmapTooltips();
+            
+            // Reset button after animation
+            setTimeout(() => {
+              refreshBtn.style.transform = 'rotate(0deg)';
+              refreshBtn.style.backgroundColor = '';
+              refreshBtn.style.borderColor = '';
+            }, 300);
           });
         });
         refreshBtn._bound = true;
+        
+        // Add hover effect
+        refreshBtn.addEventListener('mouseenter', () => {
+          if (!refreshBtn.style.transform || refreshBtn.style.transform === 'rotate(0deg)') {
+            refreshBtn.style.transition = 'all 0.2s ease';
+            refreshBtn.style.transform = 'scale(1.1)';
+            refreshBtn.style.backgroundColor = 'var(--glass)';
+          }
+        });
+        
+        refreshBtn.addEventListener('mouseleave', () => {
+          if (!refreshBtn.style.transform.includes('360deg')) {
+            refreshBtn.style.transform = 'scale(1)';
+            refreshBtn.style.backgroundColor = '';
+          }
+        });
       }
     }
     

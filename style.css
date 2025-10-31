@@ -10319,6 +10319,112 @@ body.splash-complete .mobile-bottom-nav {
   align-items: start;
 }
 
+/* Heatmap Header Responsive Styles */
+@media (max-width: 768px) {
+  .heatmap-header {
+    gap: 1rem !important;
+  }
+  
+  .heatmap-controls {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  
+  .heatmap-total {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: fit-content;
+  }
+  
+  .heatmap-total #heatmapYearTotalUSD {
+    font-size: 0.7rem !important;
+  }
+  
+  .heatmap-total #heatmapYearTotalCurrency {
+    font-size: 0.65rem !important;
+    padding: 1px 4px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .heatmap-header {
+    gap: 0.75rem !important;
+  }
+  
+  .heatmap-header h2 {
+    font-size: 1rem !important;
+  }
+  
+  .heatmap-controls {
+    gap: 0.75rem !important;
+    flex-wrap: wrap;
+  }
+  
+  .heatmap-total {
+    width: 100%;
+    justify-content: space-between;
+    order: 1;
+  }
+  
+  /* Year selector and controls on same row */
+  .heatmap-controls > div:not(.heatmap-total),
+  .heatmap-controls > button {
+    order: 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .heatmap-header {
+    gap: 0.5rem !important;
+  }
+  
+  .heatmap-header h2 {
+    font-size: 0.9rem !important;
+  }
+  
+  #heatmapGrowth {
+    font-size: 0.65rem !important;
+  }
+  
+  .heatmap-controls {
+    gap: 0.5rem !important;
+  }
+  
+  .heatmap-total {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+  
+  .heatmap-total span:first-child {
+    font-size: 0.65rem !important;
+  }
+  
+  .heatmap-total #heatmapYearTotalUSD {
+    font-size: 0.65rem !important;
+  }
+  
+  .heatmap-total #heatmapYearTotalCurrency {
+    font-size: 0.6rem !important;
+    padding: 1px 3px !important;
+  }
+  
+  /* Make year selector more compact */
+  .heatmap-controls .select-wrap {
+    min-width: 70px !important;
+    max-width: 90px !important;
+  }
+  
+  .heatmap-controls label {
+    font-size: 0.65rem !important;
+  }
+  
+  /* Hide currency indicator on very small screens if needed */
+  .heatmap-controls > div:last-child {
+    font-size: 0.65rem !important;
+  }
+}
+
 /* Tablet Portrait (vertical) - 3 rows (4 columns) */
 @media (max-width: 1200px) and (orientation: portrait) {
   .heatmap-months{ 
