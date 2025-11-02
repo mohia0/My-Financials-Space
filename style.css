@@ -10175,7 +10175,7 @@ body.splash-complete .mobile-bottom-nav {
 .heatmap-container {
   overflow: visible;
   padding: 0;
-  margin: 0;
+  margin: 3rem 0;
   display:flex;
   justify-content:center;
   width: 100%;
@@ -10229,9 +10229,41 @@ body.splash-complete .mobile-bottom-nav {
   justify-content: center;
 }
 
+.heatmap-day.heatmap-today {
+  border: 1px solid rgba(161, 161, 170, 0.4);
+  box-sizing: border-box;
+}
+
 .heatmap-day:hover {
   transform: scale(1.2);
   z-index: 10;
+}
+
+/* Day number display - hidden by default */
+.heatmap-day-number {
+  display: none;
+  font-size: 7px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+/* Show day numbers when hovering over a month */
+.heatmap-day.show-day-number .heatmap-day-number {
+  display: block;
+}
+
+/* Hide day numbers on blank/invisible days */
+.heatmap-day[style*="visibility: hidden"] .heatmap-day-number {
+  display: none !important;
 }
 
 /* Heatmap Day Intensity Levels */

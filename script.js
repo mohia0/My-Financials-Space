@@ -8504,6 +8504,11 @@ async function saveProfile({ fullName, file }) {
         const date = new Date(entry.date);
         if (isNaN(date.getTime())) continue;
         
+        // Verify the date belongs to the correct year (prevent cross-year contamination)
+        if (date.getFullYear() !== year) {
+          continue; // Skip dates from other years
+        }
+        
         const dayKey = `${date.getMonth()}-${date.getDate()}`;
         const amount = Number(entry.paidUsd || 0);
         
@@ -8587,8 +8592,15 @@ async function saveProfile({ fullName, file }) {
       const monthElements = [];
       
       for (let m = 0; m < 12; m++) {
+        // Calculate the first day of the month and its weekday (0=Sunday, 6=Saturday)
         const firstDayOfMonth = new Date(year, m, 1);
         const firstWeekday = firstDayOfMonth.getDay();
+        
+        // Calculate days in month: new Date(year, m + 1, 0) gives the last day of month m
+        // This automatically handles:
+        // - Leap years: February has 29 days in leap years (year divisible by 4, except centuries unless divisible by 400)
+        // - Regular months: 28 (Feb non-leap), 30 (Apr, Jun, Sep, Nov), 31 (Jan, Mar, May, Jul, Aug, Oct, Dec)
+        // - All edge cases correctly
         const daysInMonth = new Date(year, m + 1, 0).getDate();
 
         const monthDiv = document.createElement('div');
@@ -8602,52 +8614,95 @@ async function saveProfile({ fullName, file }) {
         const monthDays = document.createElement('div');
         monthDays.className = 'heatmap-month-days';
 
-        // Create leading blanks
+        // Create leading blanks to align the first day of the month with correct weekday
+        // firstWeekday: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
         for (let i = 0; i < firstWeekday; i++) {
           const blankDay = document.createElement('div');
           blankDay.className = 'heatmap-day';
           blankDay.setAttribute('data-intensity', '0');
+          blankDay.style.visibility = 'hidden'; // Hide but keep for grid alignment
           monthDays.appendChild(blankDay);
         }
 
-        // Create month days with optimized processing
+        // Create month days with correct order (1 to daysInMonth)
+        // daysInMonth correctly handles: 28/29 (Feb), 30, and 31 day months
+        // Also correctly handles leap years (February 29th)
         for (let d = 1; d <= daysInMonth; d++) {
+          // Verify the date is valid for this month/year (handles leap years)
+          const testDate = new Date(year, m, d);
+          if (testDate.getMonth() !== m) {
+            // This shouldn't happen, but skip invalid dates
+            console.warn(`Invalid date: ${year}-${m + 1}-${d}`);
+            continue;
+          }
+          
           const dayKey = `${m}-${d}`;
           const dayObj = yearData[dayKey] || { amount: 0, projects: [], tags: [] };
           const amount = dayObj.amount || 0;
           const intensity = calculateIntensity(amount, maxAmount);
           
+          // Check if this day is today
+          const currentDate = new Date(year, m, d);
+          const today = new Date();
+          const isToday = currentDate.getFullYear() === today.getFullYear() &&
+                          currentDate.getMonth() === today.getMonth() &&
+                          currentDate.getDate() === today.getDate();
+          
           const dayElement = document.createElement('div');
           dayElement.className = 'heatmap-day';
+          if (isToday) {
+            dayElement.classList.add('heatmap-today');
+          }
           dayElement.setAttribute('data-intensity', intensity.toString());
           dayElement.setAttribute('data-amount', amount.toString());
+          dayElement.setAttribute('data-day', d.toString()); // Store day number for hover display
+          // Add day number as text (will be hidden by default via CSS)
+          const dayNumber = document.createElement('span');
+          dayNumber.className = 'heatmap-day-number';
+          dayNumber.textContent = d;
+          dayElement.appendChild(dayNumber);
           
           // Only set data attributes if there's actual data to avoid empty attributes
           if (amount > 0) {
-            const currentDate = new Date(year, m, d);
-            const dateString = dateFormatter.format(currentDate);
-            const formattedAmount = formatCurrency(amount);
-            
-            dayElement.setAttribute('data-date', dateString);
-            dayElement.setAttribute('data-formatted', formattedAmount);
-            
-            // Optimize project and tag data
-            const projects = dayObj.projects || [];
-            const tags = dayObj.tags || [];
-            
-            if (projects.length > 0) {
-              const projectPreview = projects.slice(0, 2).join(', ');
-              const moreCount = Math.max(0, projects.length - 2);
-              const projectsAttr = `${projectPreview}${moreCount ? `, +${moreCount} more` : ''}`;
-              dayElement.setAttribute('data-projects', projectsAttr);
-            }
-            
-            if (tags.length > 0) {
-              dayElement.setAttribute('data-tags', tags.join(', '));
+            // Double-check date is valid (currentDate already defined above)
+            if (!isNaN(currentDate.getTime()) && currentDate.getMonth() === m && currentDate.getDate() === d) {
+              const dateString = dateFormatter.format(currentDate);
+              const formattedAmount = formatCurrency(amount);
+              
+              dayElement.setAttribute('data-date', dateString);
+              dayElement.setAttribute('data-formatted', formattedAmount);
+              
+              // Optimize project and tag data
+              const projects = dayObj.projects || [];
+              const tags = dayObj.tags || [];
+              
+              if (projects.length > 0) {
+                const projectPreview = projects.slice(0, 2).join(', ');
+                const moreCount = Math.max(0, projects.length - 2);
+                const projectsAttr = `${projectPreview}${moreCount ? `, +${moreCount} more` : ''}`;
+                dayElement.setAttribute('data-projects', projectsAttr);
+              }
+              
+              if (tags.length > 0) {
+                dayElement.setAttribute('data-tags', tags.join(', '));
+              }
             }
           }
           
           monthDays.appendChild(dayElement);
+        }
+
+        // Add trailing blanks to complete the last week (ensures proper grid alignment)
+        // Calculate total cells: leading blanks + days in month
+        const totalCells = firstWeekday + daysInMonth;
+        const trailingBlanks = (7 - (totalCells % 7)) % 7; // Complete to next multiple of 7
+        
+        for (let i = 0; i < trailingBlanks; i++) {
+          const blankDay = document.createElement('div');
+          blankDay.className = 'heatmap-day';
+          blankDay.setAttribute('data-intensity', '0');
+          blankDay.style.visibility = 'hidden'; // Hide but keep for grid alignment
+          monthDays.appendChild(blankDay);
         }
 
         monthDiv.appendChild(monthDays);
@@ -9023,6 +9078,23 @@ async function saveProfile({ fullName, file }) {
           tooltip.style.display = 'none';
         }, 150);
       };
+      // Add hover functionality to show day numbers in each month
+      const monthContainers = document.querySelectorAll('.heatmap-month');
+      monthContainers.forEach(monthContainer => {
+        monthContainer.addEventListener('mouseenter', () => {
+          const dayElements = monthContainer.querySelectorAll('.heatmap-day[data-day]');
+          dayElements.forEach(day => {
+            day.classList.add('show-day-number');
+          });
+        });
+        monthContainer.addEventListener('mouseleave', () => {
+          const dayElements = monthContainer.querySelectorAll('.heatmap-day[data-day]');
+          dayElements.forEach(day => {
+            day.classList.remove('show-day-number');
+          });
+        });
+      });
+      
       // Chart-like behavior: show on container enter, update on move across cells, hide on container leave
       const getDayDataAt = (clientX, clientY) => {
         const el = document.elementFromPoint(clientX, clientY);
