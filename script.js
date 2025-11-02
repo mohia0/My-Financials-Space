@@ -13131,6 +13131,11 @@ async function saveProfile({ fullName, file }) {
          nameInput.addEventListener('input', function() {
            row.name = this.value;
            save('name-input');
+           // Update totals and KPIs live (name doesn't affect calculations but keep UI fresh)
+           updateRowCalculations(div, row, isBiz);
+           const containerId = isBiz ? 'list-biz' : 'list-personal';
+           const arr = isBiz ? state.biz : state.personal;
+           updateExpenseSum(containerId, arr, isBiz);
          });
          nameDiv.appendChild(nameInput);
          
@@ -14745,7 +14750,7 @@ function loadNonCriticalResources() {
       // Update KPIs and analytics with live calculation
       // console.log('🔄 Live calculation triggered for row:', row.name);
       animationState.isDataChange = true; // Mark as data change for smart animations
-      renderKPIs();
+      renderKPIsImmediate(); // Instant update for live editing (no debounce)
     }
 
     // Make a calculated value editable
@@ -14944,9 +14949,16 @@ function loadNonCriticalResources() {
       // Save the updated state with instant cloud sync for financial inputs
       instantSaveExpenseRow(row, isBiz);
       
-      // Clear cache and update KPIs only (no full re-render)
+      // Clear cache
       clearCalculationCache();
-      renderKPIs();
+      
+      // Update row calculations for visual consistency (this will also trigger instant KPI update)
+      updateRowCalculations(rowElement, row, isBiz);
+      
+      // Update totals live
+      const containerId = isBiz ? 'list-biz' : 'list-personal';
+      const arr = isBiz ? state.biz : state.personal;
+      updateExpenseSum(containerId, arr, isBiz);
     }
 
     // Update calculated value and recalculate others - full version for final save
@@ -15255,17 +15267,21 @@ function loadNonCriticalResources() {
       try {
         const selectedCurrency = state.selectedCurrency || 'EGP';
         
-        // Create dynamic API endpoints based on selected currency
-        // All APIs fetch USD rates and we extract the selected currency from USD
+        // Enhanced API endpoints with reliable free APIs that support EGP and all currencies
+        // Priority order: Most reliable free APIs first
         const apiEndpoints = [
-          // Primary API with EGP support
-          `https://api.fxapi.com/v1/latest?apikey=free&base=USD&currencies=${selectedCurrency}`,
-          `https://api.exchangerate.host/latest?base=USD&symbols=${selectedCurrency}`,
+          // 1. exchangerate-api.com - Completely free, no API key needed, supports all currencies including EGP
+          `https://open.er-api.com/v6/latest/USD`,
+          // 2. fawazahmed0 currency API - Free, no API key, very reliable, supports all currencies
+          `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json`,
+          // 3. exchangerate-api.com alternative endpoint
           `https://api.exchangerate-api.com/v4/latest/USD`,
+          // 4. exchangerate.host - Free, no API key, good EGP support
+          `https://api.exchangerate.host/latest?base=USD&symbols=${selectedCurrency}`,
+          // 5. fxratesapi.com - Free tier with good currency support
           `https://api.fxratesapi.com/latest?base=USD`,
-          `https://api.exchangerate.host/latest?base=USD`,
-          `https://api.currencyapi.com/v3/latest?apikey=free&currencies=${selectedCurrency}&base_currency=USD`,
-          `https://api.fixer.io/latest?access_key=free&base=USD&symbols=${selectedCurrency}`
+          // 6. Backup: exchangerate.host without symbols filter
+          `https://api.exchangerate.host/latest?base=USD`
         ];
         
         let data = null;
@@ -15293,46 +15309,95 @@ function loadNonCriticalResources() {
             data = await response.json();
             console.log(`📊 API Response from ${endpoint}:`, data);
             
-            // Check if data has the expected structure and extract rate
-            if (data && data.data && data.data[selectedCurrency]) {
-              // fxAPI.com format: { data: { EGP: 48.1843 } }
-              newRate = data.data[selectedCurrency];
-              console.log(`✅ Successfully fetched ${selectedCurrency} rate from fxAPI:`, newRate);
-              break; // Success, exit the loop
-            } else if (data && data.rates && data.rates[selectedCurrency]) {
+            // Enhanced rate extraction for multiple API response formats
+            // Check various response structures to support different APIs
+            
+            // Format 1: exchangerate-api.com / open.er-api.com - { rates: { EGP: 49.2 } }
+            if (data && data.rates && data.rates[selectedCurrency]) {
               newRate = data.rates[selectedCurrency];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
-              break; // Success, exit the loop
-            } else if (data && data.data && data.data[selectedCurrency]) {
-              newRate = data.data[selectedCurrency].value;
+              break;
+            }
+            
+            // Format 2: fawazahmed0 API - { usd: { egp: 49.2 } } (lowercase)
+            if (data && data.usd && data.usd[selectedCurrency.toLowerCase()]) {
+              newRate = data.usd[selectedCurrency.toLowerCase()];
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from fawazahmed0 API:`, newRate);
+              break;
+            }
+            
+            // Format 3: fxratesapi.com / exchangerate.host - { rates: { EGP: 49.2 } }
+            if (data && data.rates && typeof data.rates === 'object' && data.rates[selectedCurrency]) {
+              newRate = data.rates[selectedCurrency];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
-              break; // Success, exit the loop
-            } else if (data && data.result && data.result[selectedCurrency]) {
+              break;
+            }
+            
+            // Format 4: Alternative structure with data wrapper
+            if (data && data.data && data.data[selectedCurrency]) {
+              newRate = typeof data.data[selectedCurrency] === 'object' ? data.data[selectedCurrency].value : data.data[selectedCurrency];
+              console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
+              break;
+            }
+            
+            // Format 5: result wrapper
+            if (data && data.result && data.result[selectedCurrency]) {
               newRate = data.result[selectedCurrency];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
-              break; // Success, exit the loop
-            } else if (data && data.quotes && data.quotes[`USD${selectedCurrency}`]) {
+              break;
+            }
+            
+            // Format 6: quotes format (USDEGP)
+            if (data && data.quotes && data.quotes[`USD${selectedCurrency}`]) {
               newRate = data.quotes[`USD${selectedCurrency}`];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
-              break; // Success, exit the loop
-            } else if (data && data.conversion_rates && data.conversion_rates[selectedCurrency]) {
+              break;
+            }
+            
+            // Format 7: conversion_rates
+            if (data && data.conversion_rates && data.conversion_rates[selectedCurrency]) {
               newRate = data.conversion_rates[selectedCurrency];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
-              break; // Success, exit the loop
-            } else if (data && data.response && data.response.rates && data.response.rates[selectedCurrency]) {
+              break;
+            }
+            
+            // Format 8: response wrapper
+            if (data && data.response && data.response.rates && data.response.rates[selectedCurrency]) {
               newRate = data.response.rates[selectedCurrency];
               console.log(`✅ Successfully fetched ${selectedCurrency} rate from ${endpoint}:`, newRate);
-              break; // Success, exit the loop
-            } else {
-              // Log available currencies for debugging
-              const availableCurrencies = data?.rates ? Object.keys(data.rates) : 
-                                        data?.data ? Object.keys(data.data) : 
-                                        data?.result ? Object.keys(data.result) : 
-                                        data?.quotes ? Object.keys(data.quotes) : 
-                                        data?.conversion_rates ? Object.keys(data.conversion_rates) :
-                                        data?.response?.rates ? Object.keys(data.response.rates) : 'none';
-              console.warn(`❌ Currency ${selectedCurrency} not found in ${endpoint}. Available:`, availableCurrencies);
-              console.warn(`📊 Full response structure:`, Object.keys(data || {}));
+              break;
+            }
+            
+            // If none of the formats match, log available currencies for debugging
+            if (!newRate) {
+              // Log available currencies for debugging - handle various response structures
+              let availableCurrencies = 'none';
+              if (data?.rates) {
+                availableCurrencies = Object.keys(data.rates).slice(0, 20); // Show first 20
+              } else if (data?.usd && typeof data.usd === 'object') {
+                // fawazahmed0 API format - lowercase keys
+                availableCurrencies = Object.keys(data.usd).slice(0, 20);
+              } else if (data?.data) {
+                availableCurrencies = Object.keys(data.data).slice(0, 20);
+              } else if (data?.result) {
+                availableCurrencies = Object.keys(data.result).slice(0, 20);
+              } else if (data?.quotes) {
+                availableCurrencies = Object.keys(data.quotes).slice(0, 20);
+              } else if (data?.conversion_rates) {
+                availableCurrencies = Object.keys(data.conversion_rates).slice(0, 20);
+              } else if (data?.response?.rates) {
+                availableCurrencies = Object.keys(data.response.rates).slice(0, 20);
+              }
+              
+              console.warn(`❌ Currency ${selectedCurrency} not found in ${endpoint}`);
+              console.warn(`📊 Available currencies (first 20):`, availableCurrencies);
+              console.warn(`📊 Full response keys:`, Object.keys(data || {}));
+              
+              // For fawazahmed0 API, also suggest lowercase check
+              if (endpoint.includes('fawazahmed0') || endpoint.includes('jsdelivr')) {
+                console.warn(`💡 Note: fawazahmed0 API uses lowercase currency codes. Tried: ${selectedCurrency.toLowerCase()}`);
+              }
+              
               throw new Error(`Currency ${selectedCurrency} not found in API response`);
             }
           } catch (error) {

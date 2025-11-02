@@ -308,13 +308,13 @@
         </h3>
         <div class="grid grid-cols-2 gap-6 items-end">
           <div class="tooltip-trigger">
-            <div class="text-[11px]" style="color:var(--muted)">Monthly</div>
+            <div class="text-[11px]" style="color:var(--muted)">This Month</div>
             <div class="value" id="kpiAllMonthlyUSD">$0.00</div>
             <div class="sub" id="kpiAllMonthlyEGP">0</div>
             <div class="tooltip">Total monthly spending across all categories</div>
           </div>
           <div class="text-right tooltip-trigger">
-            <div class="text-[11px]" style="color:var(--muted)">Yearly</div>
+            <div class="text-[11px]" style="color:var(--muted)">This Year</div>
             <div class="value" id="kpiAllYearlyUSD">$0.00</div>
             <div class="sub" id="kpiAllYearlyEGP">0</div>
             <div class="tooltip tooltip-left">Total yearly spending across all categories</div>
@@ -360,10 +360,10 @@
           <div class="tooltip">Personal lifestyle expenses (food, rent, etc.)</div>
         </h3>
         <div class="grid grid-cols-2 gap-4">
-          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">Monthly</div><div class="value" id="kpiPersonalMonthly">$0.00</div><div class="sub" id="kpiPersonalMonthlyEGP">0</div>
+          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">This Month</div><div class="value" id="kpiPersonalMonthly">$0.00</div><div class="sub" id="kpiPersonalMonthlyEGP">0</div>
             <div class="tooltip">Monthly personal spending</div>
           </div>
-          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">Yearly</div><div class="value" id="kpiPersonalYearly">$0.00</div><div class="sub" id="kpiPersonalYearlyEGP">0</div>
+          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">This Year</div><div class="value" id="kpiPersonalYearly">$0.00</div><div class="sub" id="kpiPersonalYearlyEGP">0</div>
             <div class="tooltip tooltip-left">Yearly personal spending</div>
           </div>
         </div>
@@ -399,10 +399,10 @@
           <div class="tooltip">Business expenses (tools, software, etc.)</div>
         </h3>
         <div class="grid grid-cols-2 gap-4">
-          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">Monthly</div><div class="value" id="kpiBizMonthly">$0.00</div><div class="sub" id="kpiBizMonthlyEGP">0</div>
+          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">This Month</div><div class="value" id="kpiBizMonthly">$0.00</div><div class="sub" id="kpiBizMonthlyEGP">0</div>
             <div class="tooltip">Monthly business spending</div>
           </div>
-          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">Yearly</div><div class="value" id="kpiBizYearly">$0.00</div><div class="sub" id="kpiBizYearlyEGP">0</div>
+          <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">This Year</div><div class="value" id="kpiBizYearly">$0.00</div><div class="sub" id="kpiBizYearlyEGP">0</div>
             <div class="tooltip tooltip-left">Yearly business spending</div>
           </div>
         </div>
@@ -565,13 +565,13 @@
           <h3>Lifetime Income</h3>
           <div class="grid grid-cols-2 gap-6 items-end">
             <div class="tooltip-trigger">
-              <div class="text-[11px]" style="color:var(--muted)">Per Month</div>
+              <div class="text-[11px]" style="color:var(--muted)">Avg Month</div>
               <div class="value" id="kpiIncomeAllMonthlyUSD">$0.00</div>
               <div class="sub" id="kpiIncomeAllMonthlyEGP">0</div>
               <div class="tooltip">Average monthly earnings across all time</div>
             </div>
             <div class="text-right tooltip-trigger">
-              <div class="text-[11px]" style="color:var(--muted)">Per Year</div>
+              <div class="text-[11px]" style="color:var(--muted)">Avg Year</div>
               <div class="value" id="kpiIncomeAllYearlyUSD">$0.00</div>
               <div class="sub" id="kpiIncomeAllYearlyEGP">0</div>
               <div class="tooltip tooltip-left">Average yearly earnings across all time</div>
@@ -612,17 +612,21 @@
         </div>
         
         <div class="kpi" data-analytics="income-monthly">
-          <h3>Monthly Income</h3>
+          <h3 class="tooltip-trigger">Monthly Income
+            <div class="tooltip">Current month income vs. lifetime average</div>
+          </h3>
           <div class="grid grid-cols-2 gap-6 items-end">
-            <div>
+            <div class="tooltip-trigger">
               <div class="text-[11px]" style="color:var(--muted)">This Month</div>
               <div class="value" id="kpiIncomeMonthlyCurrent">$0.00</div>
               <div class="sub" id="kpiIncomeMonthlyCurrentEGP">0</div>
+              <div class="tooltip">Total income earned this month</div>
             </div>
-            <div class="text-right">
+            <div class="text-right tooltip-trigger">
               <div class="text-[11px]" style="color:var(--muted)">Average</div>
               <div class="value" id="kpiIncomeMonthlyAvg">$0.00</div>
               <div class="sub" id="kpiIncomeMonthlyAvgEGP">0</div>
+              <div class="tooltip tooltip-left">Average monthly income across all tracked periods</div>
             </div>
           </div>
           <!-- Skeleton Loading -->
@@ -735,13 +739,13 @@
           </h3>
           <div class="grid grid-cols-2 gap-6 items-end">
             <div class="tooltip-trigger">
-              <div class="text-[11px]" style="color:var(--muted)">Monthly</div>
+              <div class="text-[11px]" style="color:var(--muted)">This Month</div>
               <div class="value" id="analyticsCashFlowMonthlyUSD">$0.00</div>
               <div class="sub" id="analyticsCashFlowMonthlyEGP">0</div>
               <div class="tooltip">Monthly income minus monthly expenses</div>
             </div>
             <div class="text-right tooltip-trigger">
-              <div class="text-[11px]" style="color:var(--muted)">Yearly</div>
+              <div class="text-[11px]" style="color:var(--muted)">This Year</div>
               <div class="value" id="analyticsCashFlowYearlyUSD">$0.00</div>
               <div class="sub" id="analyticsCashFlowYearlyEGP">0</div>
               <div class="tooltip tooltip-left">Yearly income minus yearly expenses</div>
@@ -772,10 +776,10 @@
             <div class="tooltip">Percentage of income saved after expenses</div>
           </h3>
           <div class="grid grid-cols-2 gap-4">
-            <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">Monthly</div><div class="value" id="analyticsSavingsRateMonthly">0%</div><div class="sub" id="analyticsSavingsRateMonthlyStatus">Status</div>
+            <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">This Month</div><div class="value" id="analyticsSavingsRateMonthly">0%</div><div class="sub" id="analyticsSavingsRateMonthlyStatus">Status</div>
               <div class="tooltip">Monthly savings as % of monthly income</div>
             </div>
-            <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">Yearly</div><div class="value" id="analyticsSavingsRateYearly">0%</div><div class="sub" id="analyticsSavingsRateYearlyStatus">Status</div>
+            <div class="tooltip-trigger"><div class="text-[11px]" style="color:var(--muted)">This Year</div><div class="value" id="analyticsSavingsRateYearly">0%</div><div class="sub" id="analyticsSavingsRateYearlyStatus">Status</div>
               <div class="tooltip tooltip-left">Yearly savings as % of yearly income</div>
             </div>
           </div>
