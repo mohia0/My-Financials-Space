@@ -10239,9 +10239,9 @@ body.splash-complete .mobile-bottom-nav {
   z-index: 10;
 }
 
-/* Day number display - hidden by default */
+/* Day number display - hidden by default with fade animation */
 .heatmap-day-number {
-  display: none;
+  opacity: 0;
   font-size: 7px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.95);
@@ -10254,11 +10254,12 @@ body.splash-complete .mobile-bottom-nav {
   pointer-events: none;
   user-select: none;
   z-index: 1;
+  transition: opacity 0.2s ease-in-out;
 }
 
-/* Show day numbers when hovering over a month */
+/* Show day numbers when hovering over a month with fade in */
 .heatmap-day.show-day-number .heatmap-day-number {
-  display: block;
+  opacity: 1;
 }
 
 /* Hide day numbers on blank/invisible days */
@@ -10288,24 +10289,26 @@ body.splash-complete .mobile-bottom-nav {
 /* Heatmap Tooltip */
 .heatmap-tooltip {
   position: absolute;
-  background: var(--card);
-  border: 1px solid var(--stroke);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  padding: 0.5rem;
+  padding: 8px 10px;
   font-size: 0.75rem;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
   z-index: 1000;
   pointer-events: none;
   white-space: normal;
   opacity: 0;
   transform: translateY(-5px);
   transition: all 0.2s ease;
+  color: #fff;
 }
-/* Force white text for all tooltip content for readability */
-.heatmap-tooltip * { color: #fff !important; }
-/* Use brand purple for project list inside tooltip */
-.heatmap-tooltip .heatmap-tip-projects { color: var(--accent) !important; }
+/* Use accent color for project list inside tooltip */
+.heatmap-tooltip .heatmap-tip-projects-compact { 
+  color: rgba(139, 92, 246, 0.9) !important; 
+}
 /* Tight legend and stats spacing */
 .heatmap-legend{ display:flex; align-items:center; justify-content:center; gap:.5rem; margin:-6px 0 8px 0; }
 .heatmap-legend > span{ line-height:1; }
@@ -10323,35 +10326,100 @@ body.splash-complete .mobile-bottom-nav {
   display: none;
 }
 
-/* Structured tooltip content */
-.heatmap-tip{ display:flex; flex-direction:column; gap:4px; min-width: 180px; }
-.heatmap-tip-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.heatmap-tip-date{ font-weight:600; }
-.heatmap-tip-projects{ color:var(--muted); line-height:1.2; white-space:normal; max-width:240px; }
-.heatmap-tip .muted{ color:#fff; }
-.heatmap-tip .val{ font-weight:600; }
+/* Super compact tooltip layout */
+.heatmap-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  max-width: 240px;
+}
 
-/* Tags in heatmap tooltip - compact design matching income table */
-.heatmap-tip-tags{ 
-  align-items: flex-start !important; 
-  flex-direction: column !important; 
-  gap: 4px !important; 
+.heatmap-tip-row-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  line-height: 1.3;
 }
-.heatmap-tags-container{ 
-  display: flex; 
-  flex-wrap: wrap; 
-  gap: 3px; 
-  max-width: 200px; 
+
+.heatmap-tip-row-secondary {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: flex-start;
 }
-.heatmap-tip .tag-chip{ 
-  font-size: 0.55rem !important; 
-  padding: 1px 4px !important; 
-  border-radius: 8px !important; 
+
+.heatmap-tip-date-compact {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.heatmap-tip-amount-compact {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.heatmap-amount-primary {
+  font-size: 0.8rem;
+  color: #fff;
+  font-weight: 700;
+}
+
+.heatmap-amount-divider {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+}
+
+.heatmap-amount-secondary {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 500;
+}
+
+.heatmap-tip-label-compact {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.heatmap-tip-projects-compact {
+  font-size: 0.7rem;
+  color: rgba(139, 92, 246, 0.95);
+  line-height: 1.3;
+  word-wrap: break-word;
+  text-align: right;
+  flex: 1;
+}
+
+.heatmap-tags-container-compact {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.heatmap-tip .tag-chip {
+  font-size: 0.55rem !important;
+  padding: 1px 5px !important;
+  border-radius: 8px !important;
   line-height: 1.2 !important;
-  /* Ensure tags are visible in tooltip */
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(56, 189, 248, 0.15)) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  color: #fff !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(56, 189, 248, 0.2)) !important;
+  border: 1px solid rgba(99, 102, 241, 0.4) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500 !important;
 }
 
 /* Heatmap Month Labels */

@@ -8545,6 +8545,7 @@ async function saveProfile({ fullName, file }) {
         const d = dailyData[k];
         convertedData[k] = { 
           amount: usdToSelectedCurrency(d.usdTotal), 
+          usdAmount: d.usdTotal, // Store USD amount for tooltip display
           projects: Array.from(d.projects), 
           tags: Array.from(d.tags) 
         };
@@ -8637,8 +8638,9 @@ async function saveProfile({ fullName, file }) {
           }
           
           const dayKey = `${m}-${d}`;
-          const dayObj = yearData[dayKey] || { amount: 0, projects: [], tags: [] };
+          const dayObj = yearData[dayKey] || { amount: 0, usdAmount: 0, projects: [], tags: [] };
           const amount = dayObj.amount || 0;
+          const usdAmount = dayObj.usdAmount || 0;
           const intensity = calculateIntensity(amount, maxAmount);
           
           // Check if this day is today
@@ -8655,6 +8657,7 @@ async function saveProfile({ fullName, file }) {
           }
           dayElement.setAttribute('data-intensity', intensity.toString());
           dayElement.setAttribute('data-amount', amount.toString());
+          dayElement.setAttribute('data-usd-amount', usdAmount.toString());
           dayElement.setAttribute('data-day', d.toString()); // Store day number for hover display
           // Add day number as text (will be hidden by default via CSS)
           const dayNumber = document.createElement('span');
@@ -8668,9 +8671,16 @@ async function saveProfile({ fullName, file }) {
             if (!isNaN(currentDate.getTime()) && currentDate.getMonth() === m && currentDate.getDate() === d) {
               const dateString = dateFormatter.format(currentDate);
               const formattedAmount = formatCurrency(amount);
+              const formattedUsdAmount = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              }).format(usdAmount);
               
               dayElement.setAttribute('data-date', dateString);
               dayElement.setAttribute('data-formatted', formattedAmount);
+              dayElement.setAttribute('data-formatted-usd', formattedUsdAmount);
               
               // Optimize project and tag data
               const projects = dayObj.projects || [];
@@ -9107,18 +9117,19 @@ async function saveProfile({ fullName, file }) {
       const buildHtml = (day) => {
         const date = day.getAttribute('data-date');
         const formatted = day.getAttribute('data-formatted');
+        const formattedUsd = day.getAttribute('data-formatted-usd') || '';
         const projects = day.getAttribute('data-projects') || 'No projects';
         const tags = day.getAttribute('data-tags') || '';
         
-        // Create tags HTML with same styling as income table
+        // Create compact tags HTML
         let tagsHtml = '';
         if (tags) {
           const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
           if (tagList.length > 0) {
             tagsHtml = `
-              <div class="heatmap-tip-row heatmap-tip-tags">
-                <span class="muted">Tags</span>
-                <div class="heatmap-tags-container">
+              <div class="heatmap-tip-row-compact heatmap-tip-row-secondary">
+                <span class="heatmap-tip-label-compact">Tags:</span>
+                <div class="heatmap-tags-container-compact">
                   ${tagList.map(tag => `<span class="tag-chip">${tag}</span>`).join('')}
                 </div>
               </div>
@@ -9126,11 +9137,25 @@ async function saveProfile({ fullName, file }) {
           }
         }
         
+        // Build compact inline amount display
+        let amountDisplay = formatted;
+        if (formattedUsd) {
+          amountDisplay = `<span class="heatmap-amount-primary">${formatted}</span> <span class="heatmap-amount-divider">•</span> <span class="heatmap-amount-secondary">${formattedUsd}</span>`;
+        }
+        
+        // Build compact inline layout
         return `
           <div class="heatmap-tip">
-            <div class="heatmap-tip-row heatmap-tip-date">${date}</div>
-            <div class="heatmap-tip-row"><span class="muted">Amount</span><span class="val">${formatted}</span></div>
-            <div class="heatmap-tip-row heatmap-tip-projects">${projects}</div>
+            <div class="heatmap-tip-row-compact">
+              <span class="heatmap-tip-date-compact">${date}</span>
+            </div>
+            <div class="heatmap-tip-row-compact">
+              <span class="heatmap-tip-amount-compact">${amountDisplay}</span>
+            </div>
+            <div class="heatmap-tip-row-compact heatmap-tip-row-secondary">
+              <span class="heatmap-tip-label-compact">Projects:</span>
+              <span class="heatmap-tip-projects-compact">${projects}</span>
+            </div>
             ${tagsHtml}
           </div>
         `;
