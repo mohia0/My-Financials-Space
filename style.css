@@ -3560,6 +3560,132 @@ input[type="range"]::-moz-range-thumb:hover {
 .row-income > div:nth-child(11) { grid-column: 11; } /* Progress */
 .row-income > div:nth-child(12) { grid-column: 12; } /* Delete */
 
+/* Grouped View Styles */
+.row-project-header {
+  background: var(--glass) !important;
+  border-left: 3px solid var(--accent) !important;
+  border-bottom: 2px solid var(--stroke) !important;
+  border-top: 2px solid var(--stroke) !important;
+  margin-top: 0.75rem !important;
+  padding: 0.65rem 0.4rem !important;
+  font-weight: 600;
+  position: relative;
+}
+
+.row-project-header:first-child {
+  margin-top: 0 !important;
+}
+
+.row-deposit-nested {
+  background: var(--card) !important;
+  border-left: 3px solid transparent !important;
+  position: relative;
+  opacity: 0.95;
+  transition: all 0.2s ease;
+}
+
+/* Add padding only to project name column to maintain grid alignment for other columns */
+.row-deposit-nested > div:nth-child(3) {
+  padding-left: 1rem !important;
+}
+
+.row-deposit-nested:hover {
+  background: var(--hover) !important;
+  opacity: 1;
+  border-left-color: var(--accent) !important;
+}
+
+.row-deposit-nested::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+  background: var(--stroke);
+  opacity: 0.5;
+}
+
+.row-deposit-nested .icon-cell {
+  opacity: 0.7 !important;
+}
+
+.row-deposit-nested .icon-cell button {
+  opacity: 0.8;
+}
+
+/* Add Deposit Row */
+.row-add-deposit {
+  background: transparent !important;
+  border: none !important;
+  padding: 0.15rem 0.4rem !important;
+  margin-bottom: 0.25rem;
+  min-height: 28px !important;
+  height: auto !important;
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.row-add-deposit > div:first-child {
+  grid-column: 1 / -1;
+  padding-left: 1rem;
+  display: flex !important;
+  align-items: center;
+  pointer-events: auto;
+  min-height: 24px;
+}
+
+.row-add-deposit button {
+  pointer-events: auto !important;
+  z-index: 100 !important;
+  position: relative !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Compact Add Row Button for Groups */
+.add-row-group-btn {
+  /* Inherits from .btn class, overridden inline for compact size */
+}
+
+/* Income View Toggle Button */
+.income-view-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+}
+
+.income-view-toggle:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.income-view-toggle.active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.income-view-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* CRITICAL: Preserve empty divs to maintain grid structure */
 .row > div:empty,
 .row-biz > div:empty,

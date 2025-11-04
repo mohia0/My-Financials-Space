@@ -15740,6 +15740,185 @@ function loadNonCriticalResources() {
     // Auto-refresh currency removed to prevent KPI flickering
     // Users can manually refresh currency rates using the refresh button
     
+    // ============================================
+    // CSV Utility Functions
+    // ============================================
+    
+    // Escape CSV value (handles commas, quotes, newlines)
+    function escapeCSVValue(value) {
+      if (value === null || value === undefined) return '';
+      const stringValue = String(value);
+      // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return '"' + stringValue.replace(/"/g, '""') + '"';
+      }
+      return stringValue;
+    }
+    
+    // Convert array of objects to CSV string
+    function arrayToCSV(dataArray, headers) {
+      if (!dataArray || dataArray.length === 0) return '';
+      
+      // Create CSV header row
+      const headerRow = headers.map(h => escapeCSVValue(h)).join(',');
+      
+      // Create CSV data rows
+      const dataRows = dataArray.map(row => {
+        return headers.map(header => {
+          const value = row[header] !== undefined ? row[header] : '';
+          return escapeCSVValue(value);
+        }).join(',');
+      });
+      
+      return [headerRow, ...dataRows].join('\n');
+    }
+    
+    // Parse CSV string to array of objects
+    function parseCSV(csvString) {
+      const lines = [];
+      let currentLine = [];
+      let currentField = '';
+      let insideQuotes = false;
+      
+      for (let i = 0; i < csvString.length; i++) {
+        const char = csvString[i];
+        const nextChar = csvString[i + 1];
+        
+        if (char === '"') {
+          if (insideQuotes && nextChar === '"') {
+            // Escaped quote
+            currentField += '"';
+            i++; // Skip next quote
+          } else {
+            // Toggle quote state
+            insideQuotes = !insideQuotes;
+          }
+        } else if (char === ',' && !insideQuotes) {
+          // End of field
+          currentLine.push(currentField.trim());
+          currentField = '';
+        } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+          // End of line (handle \r\n)
+          if (char === '\r' && nextChar === '\n') {
+            i++; // Skip \n
+          }
+          if (currentField !== '' || currentLine.length > 0) {
+            currentLine.push(currentField.trim());
+            currentField = '';
+          }
+          if (currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = [];
+          }
+        } else {
+          currentField += char;
+        }
+      }
+      
+      // Add last field and line
+      if (currentField !== '' || currentLine.length > 0) {
+        currentLine.push(currentField.trim());
+      }
+      if (currentLine.length > 0) {
+        lines.push(currentLine);
+      }
+      
+      return lines;
+    }
+    
+    // Convert CSV rows to array of objects with headers
+    function csvToArray(csvString) {
+      const lines = parseCSV(csvString);
+      if (lines.length === 0) return { headers: [], data: [] };
+      
+      const headers = lines[0].map(h => h.trim());
+      const data = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const row = [];
+        for (let j = 0; j < headers.length; j++) {
+          const value = (lines[i][j] || '').trim();
+          row.push(value);
+        }
+        data.push(row);
+      }
+      
+      return { headers, data };
+    }
+    
+    // Detect file format (JSON or CSV)
+    function detectFileFormat(file) {
+      const fileName = file.name.toLowerCase();
+      const extension = fileName.split('.').pop();
+      
+      if (extension === 'csv') return 'csv';
+      if (extension === 'json') return 'json';
+      
+      // Try to detect by content (read first few bytes)
+      return 'json'; // Default to JSON
+    }
+    
+    // Get field mapping for different data types
+    function getFieldMappings(dataType) {
+      if (dataType === 'personal' || dataType === 'biz') {
+        return {
+          name: ['name', 'expense', 'title', 'description'],
+          cost: ['cost', 'cost usd', 'price', 'amount'],
+          status: ['status', 'active', 'state'],
+          billing: ['billing', 'cycle', 'frequency', 'period'],
+          monthlyUSD: ['monthly usd', 'monthly', 'monthly amount', 'monthly cost'],
+          yearlyUSD: ['yearly usd', 'yearly', 'yearly amount', 'yearly cost', 'annual', 'annual usd'],
+          monthlyEGP: ['monthly egp', 'monthly_egp', 'monthly egp amount'],
+          yearlyEGP: ['yearly egp', 'yearly_egp', 'yearly egp amount', 'annual egp'],
+          icon: ['icon', 'emoji', 'symbol'],
+          order: ['order', 'sort', 'position', 'index']
+        };
+      } else if (dataType === 'income') {
+        return {
+          name: ['name', 'project', 'client', 'title', 'description'],
+          tags: ['tags', 'tag', 'category', 'categories'],
+          date: ['date', 'payment date', 'received date'],
+          allPayment: ['all payment', 'all_payment', 'total payment', 'total', 'total amount'],
+          paidUsd: ['paid usd', 'paid_usd', 'paid', 'amount paid', 'amount'],
+          paidEgp: ['paid egp', 'paid_egp', 'paid egp amount'],
+          method: ['method', 'payment method', 'payment_type'],
+          icon: ['icon', 'emoji', 'symbol'],
+          order: ['order', 'sort', 'position', 'index'],
+          progress: ['progress', 'percentage', 'complete'],
+          note: ['note', 'notes', 'comment', 'comments'],
+          year: ['year', 'yr']
+        };
+      }
+      return {};
+    }
+    
+    // Auto-map CSV columns to field names
+    function autoMapColumns(csvHeaders, dataType) {
+      const mappings = getFieldMappings(dataType);
+      const fieldMap = {};
+      
+      csvHeaders.forEach((csvHeader, index) => {
+        const headerLower = csvHeader.toLowerCase().trim();
+        let matched = false;
+        
+        // Try to match against field mappings
+        for (const [fieldName, possibleNames] of Object.entries(mappings)) {
+          if (possibleNames.some(name => headerLower === name || headerLower.includes(name))) {
+            fieldMap[fieldName] = index;
+            matched = true;
+            break;
+          }
+        }
+        
+        // If no match found, allow user to map manually
+        if (!matched) {
+          fieldMap[`unmapped_${index}`] = index;
+        }
+      });
+      
+      return fieldMap;
+    }
+    
     // Enhanced Export/Import functionality - moved inside DOMContentLoaded
     setTimeout(() => {
       const exportBtn = $('#btnExportData');
@@ -15770,9 +15949,17 @@ function loadNonCriticalResources() {
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
       modal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 450px;">
           <h3 style="color: var(--fg); margin-bottom: 1rem;">Export Data</h3>
-          <p style="color: var(--muted); margin-bottom: 1rem; font-size: 0.8rem;">Choose which data to export:</p>
+          <p style="color: var(--muted); margin-bottom: 1rem; font-size: 0.8rem;">Choose format and data to export:</p>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--fg); font-size: 0.75rem; margin-bottom: 0.5rem; font-weight: 500;">Export Format</label>
+            <select id="exportFormat" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--stroke); background: var(--card); color: var(--fg); font-size: 0.8rem;">
+              <option value="json">JSON (Complete Backup)</option>
+              <option value="csv">CSV (Spreadsheet Compatible)</option>
+            </select>
+          </div>
           
           <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -15815,35 +16002,293 @@ function loadNonCriticalResources() {
       });
       
       $('#confirmExport').addEventListener('click', () => {
-        const exportData = {};
+        const format = document.getElementById('exportFormat').value;
+        const exportPersonal = document.getElementById('exportPersonal').checked;
+        const exportBiz = document.getElementById('exportBiz').checked;
+        const exportIncome = document.getElementById('exportIncome').checked;
+        const exportSettings = document.getElementById('exportSettings').checked;
         
-        if (document.getElementById('exportPersonal').checked) {
-          exportData.personal = state.personal;
-        }
-        if (document.getElementById('exportBiz').checked) {
-          exportData.biz = state.biz;
-        }
-        if (document.getElementById('exportIncome').checked) {
-          exportData.income = state.income;
-        }
-        if (document.getElementById('exportSettings').checked) {
-          exportData.fx = state.fx;
-          exportData.theme = state.theme;
-          exportData.autosave = state.autosave;
-          exportData.includeAnnualInMonthly = state.includeAnnualInMonthly;
+        if (!exportPersonal && !exportBiz && !exportIncome && !exportSettings) {
+          showNotification('Please select at least one data type to export', 'warning', 3000);
+          return;
         }
         
-        const dataStr = JSON.stringify(exportData, null, 2);
-      const dataBlob = new Blob([dataStr], {type: 'application/json'});
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'financial-data.json';
-      link.click();
-      URL.revokeObjectURL(url);
+        if (format === 'json') {
+          // JSON Export (existing functionality)
+          const exportData = {};
+          
+          if (exportPersonal) exportData.personal = state.personal;
+          if (exportBiz) exportData.biz = state.biz;
+          if (exportIncome) exportData.income = state.income;
+          if (exportSettings) {
+            exportData.fx = state.fx;
+            exportData.theme = state.theme;
+            exportData.autosave = state.autosave;
+            exportData.includeAnnualInMonthly = state.includeAnnualInMonthly;
+          }
+          
+          const dataStr = JSON.stringify(exportData, null, 2);
+          const dataBlob = new Blob([dataStr], {type: 'application/json'});
+          const url = URL.createObjectURL(dataBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'financial-data.json';
+          link.click();
+          URL.revokeObjectURL(url);
+        } else {
+          // CSV Export - create separate files for each data type
+          let filesExported = 0;
+          
+          if (exportPersonal && state.personal && state.personal.length > 0) {
+            const headers = ['name', 'cost', 'status', 'billing', 'monthlyUSD', 'yearlyUSD', 'monthlyEGP', 'yearlyEGP', 'icon', 'order'];
+            const csv = arrayToCSV(state.personal, headers);
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'personal-expenses.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+            filesExported++;
+          }
+          
+          if (exportBiz && state.biz && state.biz.length > 0) {
+            const headers = ['name', 'cost', 'status', 'billing', 'monthlyUSD', 'yearlyUSD', 'monthlyEGP', 'yearlyEGP', 'icon', 'order'];
+            const csv = arrayToCSV(state.biz, headers);
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'business-expenses.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+            filesExported++;
+          }
+          
+          if (exportIncome && state.income) {
+            // Export income data - combine all years with year column
+            const allIncomeData = [];
+            Object.keys(state.income).forEach(year => {
+              state.income[year].forEach(item => {
+                allIncomeData.push({
+                  ...item,
+                  year: parseInt(year)
+                });
+              });
+            });
+            
+            if (allIncomeData.length > 0) {
+              const headers = ['name', 'tags', 'date', 'allPayment', 'paidUsd', 'paidEgp', 'method', 'icon', 'order', 'progress', 'note', 'year'];
+              const csv = arrayToCSV(allIncomeData, headers);
+              const blob = new Blob([csv], {type: 'text/csv'});
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'income-data.csv';
+              link.click();
+              URL.revokeObjectURL(url);
+              filesExported++;
+            }
+          }
+          
+          if (exportSettings) {
+            const settingsData = [{
+              fx: state.fx,
+              theme: state.theme,
+              autosave: state.autosave,
+              includeAnnualInMonthly: state.includeAnnualInMonthly
+            }];
+            const headers = ['fx', 'theme', 'autosave', 'includeAnnualInMonthly'];
+            const csv = arrayToCSV(settingsData, headers);
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'settings.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+            filesExported++;
+          }
+          
+          if (filesExported === 0) {
+            showNotification('No data selected or available to export', 'warning', 3000);
+            return;
+          }
+        }
         
         document.body.removeChild(modal);
-        showNotification('📁 Data exported successfully', 'success', 2000, { force: true });
+        showNotification(`📁 Data exported successfully (${format.toUpperCase()})`, 'success', 2000, { force: true });
+      });
+    }
+    
+    // Show column mapping UI for CSV import
+    function showCSVColumnMapping(csvData, csvHeaders, dataType, replaceExisting, modal) {
+      const mappings = getFieldMappings(dataType);
+      const requiredFields = dataType === 'income' 
+        ? ['name', 'paidUsd'] 
+        : ['name', 'cost'];
+      const fieldMap = autoMapColumns(csvHeaders, dataType);
+      
+      // Create column mapping modal
+      const mappingModal = document.createElement('div');
+      mappingModal.className = 'modal-overlay';
+      mappingModal.style.zIndex = '10001';
+      
+      const fieldOptions = Object.keys(mappings).map(field => ({
+        value: field,
+        label: field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')
+      }));
+      fieldOptions.unshift({ value: '', label: '-- Skip Column --' });
+      
+      let mappingHTML = `
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+          <h3 style="color: var(--fg); margin-bottom: 0.5rem;">Map CSV Columns</h3>
+          <p style="color: var(--muted); margin-bottom: 1rem; font-size: 0.75rem;">
+            Match your CSV columns to application fields. ${csvData.length} rows detected.
+          </p>
+          
+          <div style="background: var(--glass); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--stroke);">
+            <div style="display: grid; grid-template-columns: 1fr 50px 1fr; gap: 0.75rem; align-items: center;">
+              <div style="font-weight: 600; color: var(--fg); font-size: 0.75rem;">CSV Column</div>
+              <div></div>
+              <div style="font-weight: 600; color: var(--fg); font-size: 0.75rem;">Map To Field</div>
+            </div>
+      `;
+      
+      csvHeaders.forEach((csvHeader, index) => {
+        const currentMapping = Object.keys(fieldMap).find(key => fieldMap[key] === index);
+        const fieldName = currentMapping && !currentMapping.startsWith('unmapped') ? currentMapping : '';
+        const isRequired = requiredFields.some(f => fieldOptions.find(o => o.value === f)?.label);
+        
+        mappingHTML += `
+          <div style="display: grid; grid-template-columns: 1fr 50px 1fr; gap: 0.75rem; align-items: center; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--stroke);">
+            <div style="color: var(--fg); font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-weight: 500;">${escapeCSVValue(csvHeader)}</span>
+              ${csvData.length > 0 && csvData[0] && index < csvData[0].length ? '<span style="font-size: 0.65rem; color: var(--muted);">(Sample: ' + escapeCSVValue(String(csvData[0][index] || '').substring(0, 30)) + ')</span>' : ''}
+            </div>
+            <div style="display: flex; justify-content: center; color: var(--muted); font-size: 1.2rem;">→</div>
+            <select id="map_${index}" data-csv-index="${index}" 
+              style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--stroke); background: var(--card); color: var(--fg); font-size: 0.8rem; width: 100%;"
+              ${isRequired && fieldName === '' ? 'data-required="true"' : ''}>
+              ${fieldOptions.map(opt => 
+                `<option value="${opt.value}" ${opt.value === fieldName ? 'selected' : ''}>${opt.label}</option>`
+              ).join('')}
+            </select>
+          </div>
+        `;
+      });
+      
+      mappingHTML += `
+          </div>
+          
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--stroke);">
+            <button id="cancelMapping" class="btn btn-ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Cancel</button>
+            <button id="confirmMapping" class="btn" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Import Data</button>
+          </div>
+        </div>
+      `;
+      
+      mappingModal.innerHTML = mappingHTML;
+      document.body.appendChild(mappingModal);
+      
+      // Event listeners for mapping modal
+      $('#cancelMapping').addEventListener('click', () => {
+        document.body.removeChild(mappingModal);
+        document.body.removeChild(modal);
+      });
+      
+      mappingModal.addEventListener('click', (e) => {
+        if (e.target === mappingModal) {
+          document.body.removeChild(mappingModal);
+          document.body.removeChild(modal);
+        }
+      });
+      
+      $('#confirmMapping').addEventListener('click', () => {
+        // Build field mapping
+        const finalMapping = {};
+        csvHeaders.forEach((header, index) => {
+          const select = document.getElementById(`map_${index}`);
+          const fieldName = select.value;
+          if (fieldName) {
+            finalMapping[fieldName] = index;
+          }
+        });
+        
+        // Convert CSV data to application format
+        const importedItems = csvData.map(row => {
+          const item = {};
+          Object.keys(finalMapping).forEach(fieldName => {
+            const csvIndex = finalMapping[fieldName];
+            let value = row[csvIndex];
+            
+            // Type conversion based on field
+            if (['cost', 'monthlyUSD', 'yearlyUSD', 'monthlyEGP', 'yearlyEGP', 'allPayment', 'paidUsd', 'paidEgp', 'progress', 'order', 'year'].includes(fieldName)) {
+              value = value !== null && value !== undefined ? parseFloat(value) || 0 : 0;
+            } else if (['includeAnnualInMonthly'].includes(fieldName)) {
+              value = value === 'true' || value === true || value === 1;
+            } else {
+              value = value !== null && value !== undefined ? String(value) : '';
+            }
+            
+            item[fieldName] = value;
+          });
+          
+          // Set defaults for missing required fields
+          if (dataType === 'income') {
+            if (!item.status) item.status = 'Active';
+            if (!item.billing) item.billing = 'Monthly';
+            if (!item.icon) item.icon = 'fa:dollar-sign';
+            if (!item.progress) item.progress = 10;
+            if (!item.year) item.year = new Date().getFullYear();
+          } else {
+            if (!item.status) item.status = 'Active';
+            if (!item.billing) item.billing = 'Monthly';
+            if (!item.icon) item.icon = 'fa:tag';
+          }
+          
+          return item;
+        });
+        
+        // Import the data
+        try {
+          if (dataType === 'personal') {
+            if (replaceExisting) state.personal = [];
+            state.personal = [...state.personal, ...importedItems];
+          } else if (dataType === 'biz') {
+            if (replaceExisting) state.biz = [];
+            state.biz = [...state.biz, ...importedItems];
+          } else if (dataType === 'income') {
+            if (replaceExisting) state.income = {};
+            importedItems.forEach(item => {
+              const year = String(item.year || new Date().getFullYear());
+              if (!state.income[year]) state.income[year] = [];
+              state.income[year].push(item);
+            });
+            createYearTabsFromData(state.income);
+          } else if (dataType === 'settings') {
+            const settings = importedItems[0];
+            if (settings.fx) {
+              state.fx = settings.fx;
+              state.currencyRate = settings.fx;
+              currencyRates[state.selectedCurrency] = settings.fx;
+              const fxInput = $('#inputFx');
+              if (fxInput) fxInput.value = settings.fx;
+            }
+            if (settings.theme) state.theme = settings.theme;
+            if (settings.autosave) state.autosave = settings.autosave;
+            if (settings.includeAnnualInMonthly !== undefined) state.includeAnnualInMonthly = settings.includeAnnualInMonthly;
+          }
+          
+          save();
+          renderAll(true);
+          document.body.removeChild(mappingModal);
+          document.body.removeChild(modal);
+          showNotification(`📥 ${importedItems.length} ${dataType} items imported successfully`, 'success', 2000, { force: true });
+        } catch (error) {
+          console.error('❌ Import error:', error);
+          showNotification(`Import failed: ${error.message}`, 'error', 5000);
+        }
       });
     }
     
@@ -15851,9 +16296,9 @@ function loadNonCriticalResources() {
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
       modal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 450px;">
           <h3 style="color: var(--fg); margin-bottom: 1rem;">Import Data</h3>
-          <p style="color: var(--muted); margin-bottom: 1rem; font-size: 0.8rem;">Choose which data to import:</p>
+          <p style="color: var(--muted); margin-bottom: 1rem; font-size: 0.8rem;">Choose which data to import (JSON or CSV):</p>
           
           <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -15905,27 +16350,20 @@ function loadNonCriticalResources() {
       $('#selectFile').addEventListener('click', () => {
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
-        fileInput.accept = '.json';
+        fileInput.accept = '.json,.csv';
         fileInput.style.display = 'none';
         
         fileInput.addEventListener('change', (e) => {
           const file = e.target.files[0];
           if (!file) return;
           
+          const fileFormat = detectFileFormat(file);
           const reader = new FileReader();
+          
           reader.onload = (e) => {
             try {
-              const importedData = JSON.parse(e.target.result);
-              console.log('📥 Importing data:', importedData);
-              
-              // Validate the imported data structure
-              if (!importedData || typeof importedData !== 'object') {
-                throw new Error('Invalid JSON structure - data must be an object');
-              }
-              
+              const fileContent = e.target.result;
               const replaceExisting = document.getElementById('replaceExisting').checked;
-              
-              // Check if at least one import option is selected
               const importPersonal = document.getElementById('importPersonal').checked;
               const importBiz = document.getElementById('importBiz').checked;
               const importIncome = document.getElementById('importIncome').checked;
@@ -15935,130 +16373,110 @@ function loadNonCriticalResources() {
                 throw new Error('Please select at least one data type to import');
               }
               
-              console.log('📥 Import options:', { importPersonal, importBiz, importIncome, importSettings, replaceExisting });
-              
-              // Import selected data
-              if (document.getElementById('importPersonal').checked && importedData.personal) {
-                console.log('📥 Importing personal data:', importedData.personal.length, 'items');
-                if (replaceExisting) {
-                  // Clear existing data first
-                  state.personal = [];
+              if (fileFormat === 'json') {
+                // JSON Import (existing functionality)
+                const importedData = JSON.parse(fileContent);
+                console.log('📥 Importing JSON data:', importedData);
+                
+                if (!importedData || typeof importedData !== 'object') {
+                  throw new Error('Invalid JSON structure - data must be an object');
                 }
-                // Add imported data and clear IDs to prevent duplicates
-                const newPersonalData = importedData.personal.map(item => {
-                  const cleanItem = { ...item };
-                  delete cleanItem.id; // Clear ID to ensure it's treated as new
-                  return cleanItem;
-                });
-                state.personal = [...state.personal, ...newPersonalData];
-                console.log('✅ Personal data imported successfully');
-              }
-              
-              if (document.getElementById('importBiz').checked && importedData.biz) {
-                console.log('📥 Importing business data:', importedData.biz.length, 'items');
-                if (replaceExisting) {
-                  // Clear existing data first
-                  state.biz = [];
-                }
-                // Add imported data and clear IDs to prevent duplicates
-                const newBizData = importedData.biz.map(item => {
-                  const cleanItem = { ...item };
-                  delete cleanItem.id; // Clear ID to ensure it's treated as new
-                  return cleanItem;
-                });
-                state.biz = [...state.biz, ...newBizData];
-                console.log('✅ Business data imported successfully');
-              }
-              
-              if (document.getElementById('importIncome').checked && importedData.income) {
-                console.log('📥 Importing income data:', Object.keys(importedData.income).length, 'years');
-                if (replaceExisting) {
-                  // Clear existing income data first
-                  state.income = {};
-                }
-                // Merge income data by year and clear IDs to prevent duplicates
-                Object.keys(importedData.income).forEach(year => {
-                  console.log(`📥 Importing year ${year}:`, importedData.income[year].length, 'items');
-                  if (!state.income[year]) {
-                    state.income[year] = [];
-                  }
-                  // Clear IDs for new data to ensure they get saved as new records
-                  const newIncomeData = importedData.income[year].map(item => {
+                
+                // Import JSON data (existing code)
+                if (importPersonal && importedData.personal) {
+                  if (replaceExisting) state.personal = [];
+                  const newPersonalData = importedData.personal.map(item => {
                     const cleanItem = { ...item };
-                    delete cleanItem.id; // Clear ID to ensure it's treated as new
+                    delete cleanItem.id;
                     return cleanItem;
                   });
-                  state.income[year] = [...state.income[year], ...newIncomeData];
-                });
+                  state.personal = [...state.personal, ...newPersonalData];
+                }
                 
-                // Update available years to include imported years
-                const importedYears = Object.keys(importedData.income).map(year => parseInt(year));
-                const currentYears = Object.keys(state.income).map(year => parseInt(year));
-                const allYears = [...new Set([...currentYears, ...importedYears])].sort((a, b) => a - b);
-                
-                
-                // Update year tabs UI to show imported years
-                console.log('📅 Creating year tabs for imported data');
-                createYearTabsFromData(state.income);
-                console.log('✅ Year tabs created successfully');
-                
-                // Save imported income rows to Supabase sequentially
-                if (currentUser && supabaseReady) {
-                  // Force all imported rows to be treated as new by clearing their IDs
-                  const cleanedImportData = {};
-                  Object.keys(importedData.income).forEach(year => {
-                    cleanedImportData[year] = (state.income[year] || []).map(row => {
-                      const cleanRow = { ...row };
-                      delete cleanRow.id; // Ensure no ID exists
-                      return cleanRow;
-                    });
+                if (importBiz && importedData.biz) {
+                  if (replaceExisting) state.biz = [];
+                  const newBizData = importedData.biz.map(item => {
+                    const cleanItem = { ...item };
+                    delete cleanItem.id;
+                    return cleanItem;
                   });
-                  
-                  saveImportedIncomeSequentially(cleanedImportData);
+                  state.biz = [...state.biz, ...newBizData];
+                }
+                
+                if (importIncome && importedData.income) {
+                  if (replaceExisting) state.income = {};
+                  Object.keys(importedData.income).forEach(year => {
+                    if (!state.income[year]) state.income[year] = [];
+                    const newIncomeData = importedData.income[year].map(item => {
+                      const cleanItem = { ...item };
+                      delete cleanItem.id;
+                      return cleanItem;
+                    });
+                    state.income[year] = [...state.income[year], ...newIncomeData];
+                  });
+                  createYearTabsFromData(state.income);
+                }
+                
+                if (importSettings && importedData.fx) {
+                  state.fx = importedData.fx;
+                  state.currencyRate = importedData.fx;
+                  currencyRates[state.selectedCurrency] = importedData.fx;
+                  const fxInput = $('#inputFx');
+                  if (fxInput) fxInput.value = importedData.fx;
+                  if (importedData.theme) state.theme = importedData.theme;
+                  if (importedData.autosave) state.autosave = importedData.autosave;
+                  if (importedData.includeAnnualInMonthly !== undefined) state.includeAnnualInMonthly = importedData.includeAnnualInMonthly;
+                }
+                
+                // Run deduplication
+                if (window.deduplicateAllData) window.deduplicateAllData();
+                
+                let importedCount = 0;
+                if (importPersonal && importedData.personal) importedCount += importedData.personal.length;
+                if (importBiz && importedData.biz) importedCount += importedData.biz.length;
+                if (importIncome && importedData.income) {
+                  Object.values(importedData.income).forEach(yearData => {
+                    importedCount += yearData.length;
+                  });
+                }
+                
+                if (importedCount === 0) {
+                  throw new Error('No data found to import. Please check your file format.');
+                }
+                
+                save();
+                renderAll(true);
+                document.body.removeChild(modal);
+                showNotification(`📥 Data imported successfully (${importedCount} items)`, 'success', 2000, { force: true });
+                
+              } else {
+                // CSV Import - show column mapping for each selected data type
+                const csvResult = csvToArray(fileContent);
+                if (!csvResult || !csvResult.headers || csvResult.data.length === 0) {
+                  throw new Error('Invalid CSV file - could not parse data');
+                }
+                
+                // For CSV, we import one data type at a time
+                // Show mapping UI for the first selected data type
+                let dataTypeToImport = null;
+                if (importPersonal) dataTypeToImport = 'personal';
+                else if (importBiz) dataTypeToImport = 'biz';
+                else if (importIncome) dataTypeToImport = 'income';
+                else if (importSettings) dataTypeToImport = 'settings';
+                
+                if (dataTypeToImport) {
+                  showCSVColumnMapping(csvResult.data, csvResult.headers, dataTypeToImport, replaceExisting, modal);
                 } else {
-                  showNotification('Imported data saved locally only - please sign in to sync to cloud', 'warning', 4000);
+                  throw new Error('Please select a data type to import');
                 }
               }
-              
-              if (document.getElementById('importSettings').checked) {
-                if (importedData.fx) state.fx = importedData.fx;
-                if (importedData.theme) state.theme = importedData.theme;
-                if (importedData.autosave) state.autosave = importedData.autosave;
-                if (importedData.includeAnnualInMonthly !== undefined) state.includeAnnualInMonthly = importedData.includeAnnualInMonthly;
-              }
-              
-              // Run deduplication after import to clean up any duplicates
-              if (window.deduplicateAllData) {
-
-                window.deduplicateAllData();
-              }
-              
-              // Final validation - check if any data was actually imported
-              let importedCount = 0;
-              if (importPersonal && importedData.personal) importedCount += importedData.personal.length;
-              if (importBiz && importedData.biz) importedCount += importedData.biz.length;
-              if (importIncome && importedData.income) {
-                Object.values(importedData.income).forEach(yearData => {
-                  importedCount += yearData.length;
-                });
-              }
-              
-              if (importedCount === 0) {
-                throw new Error('No data found to import. Please check your file format.');
-              }
-              
-              console.log(`✅ Import completed: ${importedCount} items imported`);
-              
-              save();
-              renderAll(true); // User action - enable animations
-              document.body.removeChild(modal);
-              showNotification(`📥 Data imported successfully (${importedCount} items)`, 'success', 2000, { force: true });
               
             } catch (error) {
               console.error('❌ Import error:', error);
               showNotification(`Import failed: ${error.message}`, 'error', 5000);
             }
           };
+          
           reader.readAsText(file);
         });
         
@@ -16121,36 +16539,188 @@ function loadNonCriticalResources() {
       reader.readAsText(file);
     });
     
-    async function clearAllData() {
-      // Reset state to default
-      state = structuredClone(defaultState);
+    // Show custom UI confirmation dialog for delete all
+    function showDeleteAllConfirmDialog() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.style.zIndex = '10001';
       
-      if (currentUser && supabaseReady) {
-        try {
-          // Delete backup data from Supabase
-          const { error } = await window.supabaseClient
-            .from('backups')
-            .delete()
-            .eq('user_id', currentUser.id);
-          
-          if (error) throw error;
-          
-          showNotification('All cloud data deleted', 'success', 3000);
-        } catch (error) {
-
-          showNotification('Error clearing cloud data', 'error', 3000);
+      const dialog = document.createElement('div');
+      dialog.className = 'modal-content';
+      dialog.style.maxWidth = '400px';
+      dialog.innerHTML = `
+        <h3 style="color: var(--fg); margin-bottom: 0.75rem; font-size: 1.1rem; font-weight: 600;">⚠️ Delete All Data</h3>
+        <p style="color: var(--muted); margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.5;">
+          Are you absolutely sure? This will permanently delete ALL expenses and income data from all tables. This action cannot be undone!
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button id="cancelDeleteAll" class="btn btn-ghost" style="padding: 0.6rem 1.2rem; font-size: 0.85rem;">No, Cancel</button>
+          <button id="confirmDeleteAll" class="btn" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; background: #ef4444; color: white; border-color: #ef4444;">Yes, Delete All</button>
+        </div>
+      `;
+      
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      
+      // Close on overlay click
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
         }
-      } else {
-        // Clear all localStorage
-        localStorage.clear();
-        showNotification('All local data deleted', 'success', 3000);
+      });
+      
+      // Cancel button
+      document.getElementById('cancelDeleteAll').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+      });
+      
+      // Confirm button
+      document.getElementById('confirmDeleteAll').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        clearAllData();
+      });
+    }
+    
+    async function clearAllData() {
+      // Delete all rows individually exactly like clicking remove button on each row
+      let deletedCount = 0;
+      
+      // Collect all deletion promises first
+      const deletePromises = [];
+      
+      // Delete all personal expenses from Supabase
+      if (state.personal && state.personal.length > 0) {
+        state.personal.forEach(row => {
+          if (row.id && currentUser && supabaseReady) {
+            deletePromises.push(
+              window.supabaseClient
+                .from('personal_expenses')
+                .delete()
+                .eq('id', row.id)
+                .then(() => deletedCount++)
+                .catch(error => {
+                  console.error('Failed to delete personal expense:', error);
+                })
+            );
+          } else {
+            deletedCount++;
+          }
+        });
       }
       
-      // Re-render everything
+      // Delete all business expenses from Supabase
+      if (state.biz && state.biz.length > 0) {
+        state.biz.forEach(row => {
+          if (row.id && currentUser && supabaseReady) {
+            deletePromises.push(
+              window.supabaseClient
+                .from('business_expenses')
+                .delete()
+                .eq('id', row.id)
+                .then(() => deletedCount++)
+                .catch(error => {
+                  console.error('Failed to delete business expense:', error);
+                })
+            );
+          } else {
+            deletedCount++;
+          }
+        });
+      }
+      
+      // Delete all income entries from Supabase
+      if (state.income) {
+        Object.values(state.income).forEach(yearData => {
+          if (yearData && yearData.length > 0) {
+            yearData.forEach(row => {
+              if (row.id && currentUser && supabaseReady) {
+                deletePromises.push(
+                  window.supabaseClient
+                    .from('income')
+                    .delete()
+                    .eq('id', row.id)
+                    .then(() => deletedCount++)
+                    .catch(error => {
+                      console.error('Failed to delete income:', error);
+                    })
+                );
+              } else {
+                deletedCount++;
+              }
+            });
+          }
+        });
+      }
+      
+      // Delete backup data from Supabase
+      if (currentUser && supabaseReady) {
+        deletePromises.push(
+          window.supabaseClient
+            .from('backups')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .catch(error => {
+              console.error('Failed to delete backups:', error);
+            })
+        );
+      }
+      
+      // Wait for all Supabase deletions to complete
+      if (deletePromises.length > 0) {
+        await Promise.allSettled(deletePromises);
+      }
+      
+      // Now clear state arrays completely (all deletions are done)
+      state.personal = [];
+      state.biz = [];
+      state.income = {};
+      
+      // Preserve basic settings
+      const fx = state.fx || defaultState.fx;
+      const theme = state.theme || defaultState.theme;
+      const selectedCurrency = state.selectedCurrency || defaultState.selectedCurrency;
+      const onboardingValue = localStorage.getItem('onboardingCompleted');
+      
+      // Reset state to default
+      state = structuredClone(defaultState);
+      state.fx = fx;
+      state.theme = theme;
+      state.selectedCurrency = selectedCurrency;
+      
+      // Clear all localStorage except onboarding status
+      localStorage.clear();
+      if (onboardingValue) {
+        localStorage.setItem('onboardingCompleted', onboardingValue);
+      }
+      
+      // Save the cleared state immediately
+      save();
+      
+      // Force a small delay to ensure save completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Re-render everything - this will show empty tables
       renderAll(true); // User action - enable animations
       
+      // Show success notification
+      if (currentUser && supabaseReady) {
+        showNotification(`🗑️ All data deleted (${deletedCount} items removed)`, 'success', 3000);
+      } else {
+        showNotification(`🗑️ All local data deleted (${deletedCount} items removed)`, 'success', 3000);
+      }
+      
       // Close settings modal
-      $('#settings').close();
+      if ($('#settings')) {
+        $('#settings').close();
+      }
+      
+      // Reset delete confirm input
+      if ($('#inputDeleteConfirm')) {
+        $('#inputDeleteConfirm').value = '';
+        $('#btnDeleteAll').disabled = true;
+      }
+      
+      // DO NOT show onboarding after deletion - only show it on first visit ever
     }
     
     // Delete all data functionality
@@ -16159,12 +16729,17 @@ function loadNonCriticalResources() {
       btn.disabled = e.target.value !== 'DELETE';
     });
     
+    // Allow Enter key to trigger delete confirmation
+    $('#inputDeleteConfirm').addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' && e.target.value === 'DELETE') {
+        e.preventDefault();
+        $('#btnDeleteAll').click();
+      }
+    });
+    
     $('#btnDeleteAll').addEventListener('click', ()=>{
       if ($('#inputDeleteConfirm').value === 'DELETE') {
-        if (confirm('Are you absolutely sure? This will permanently delete ALL data and cannot be undone!')) {
-          clearAllData();
-          showNotification('All data deleted', 'success', 3000);
-        }
+        showDeleteAllConfirmDialog();
       }
     });
 
