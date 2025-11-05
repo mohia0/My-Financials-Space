@@ -1780,6 +1780,7 @@ async function saveProfile({ fullName, file }) {
       // Force full re-render of income list with year-specific data
       // Use forceFullRender=true to ensure we get fresh data for the new year
       renderIncomeList('list-income', state.income[year], true, true);
+      setupProgressHeaderToggle();
       
       // Update KPIs for the selected year
       console.log('🔄 Calling renderKPIs for year:', year);
@@ -1983,6 +1984,7 @@ async function saveProfile({ fullName, file }) {
         renderIncomeList('list-income', currentYearData, false, true); // true = force full render
         updateInputsLockState();
         addRowButtonListeners();
+        setupProgressHeaderToggle();
         // Add smooth animation only to the new row
         animateNewRow('list-income', currentYearData.length - 1);
         // Re-initialize drag and drop after rendering
@@ -6805,6 +6807,7 @@ async function saveProfile({ fullName, file }) {
       const currentYearData = state.income[currentYear] || [];
       // Force full re-render for income to ensure year switching works properly
       renderIncomeList('list-income', currentYearData, true, true);
+      setupProgressHeaderToggle();
     };
     
     const rowMonthlyUSD = (r)=> {
@@ -13604,7 +13607,62 @@ async function saveProfile({ fullName, file }) {
     // Use the smart hide function instead
     hideSplashScreen();
   }
-
+  
+  // Setup progress header click handler to toggle all rows between 0% and 100%
+  function setupProgressHeaderToggle() {
+    const progressHeader = document.getElementById('headerProgress');
+    if (!progressHeader) return;
+    
+    // Remove existing listener to prevent duplicates
+    const newHeader = progressHeader.cloneNode(true);
+    progressHeader.parentNode.replaceChild(newHeader, progressHeader);
+    
+    newHeader.addEventListener('click', function() {
+      const currentYearData = state.income[currentYear] || [];
+      if (currentYearData.length === 0) return;
+      
+      // Check if all rows are at 100%
+      const allAt100 = currentYearData.every(row => (row.progress || 0) === 100);
+      
+      // Toggle: if all at 100%, set to 0%, otherwise set all to 100%
+      const newProgress = allAt100 ? 0 : 100;
+      
+      // Update all rows
+      currentYearData.forEach(row => {
+        row.progress = newProgress;
+      });
+      
+      // Update all progress buttons in the DOM and save rows
+      const incomeRows = document.querySelectorAll('#list-income .row.row-income');
+      incomeRows.forEach((rowElement, index) => {
+        const progressButton = rowElement.querySelector('.progress-toggle button');
+        if (progressButton) {
+          progressButton.textContent = `${newProgress}%`;
+          progressButton.className = `progress-${newProgress}`;
+          
+          // Add visual feedback
+          progressButton.style.transform = 'scale(0.95)';
+          progressButton.style.transition = 'transform 0.1s ease';
+          
+          setTimeout(() => {
+            progressButton.style.transform = '';
+            progressButton.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          }, 150);
+        }
+        
+        // Update row data reference
+        if (currentYearData[index]) {
+          rowElement.__rowData = currentYearData[index];
+        }
+      });
+      
+      // Save all rows
+      currentYearData.forEach(row => {
+        instantSaveIncomeRow(row, currentYear);
+      });
+    });
+  }
+  
   function renderIncomeList(containerId, arr, enableAnimations = true, forceFullRender = false) {
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
@@ -14195,6 +14253,7 @@ async function saveProfile({ fullName, file }) {
             // Re-render only the income table without animations
             const currentYearData = state.income[currentYear] || [];
             renderIncomeList('list-income', currentYearData, false);
+            setupProgressHeaderToggle();
             updateInputsLockState();
             addRowButtonListeners();
             
@@ -14680,6 +14739,7 @@ function loadNonCriticalResources() {
     renderIncomeList('list-income', currentYearData, false); // false = no animations
     updateInputsLockState();
     addRowButtonListeners();
+    setupProgressHeaderToggle();
   }
   
   // Animate only the new row that was added
