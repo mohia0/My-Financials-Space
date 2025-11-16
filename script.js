@@ -5595,6 +5595,7 @@ async function saveProfile({ fullName, file }) {
       });
       
       // Handle note textarea resize arrows - hide completely when locked
+      // Note: Income rows now use payment buttons instead of textareas, but this handles any remaining textareas
       const allNoteTextareas = document.querySelectorAll('.row-income textarea, textarea.note-input');
       allNoteTextareas.forEach(textarea => {
         // Skip auth modal and settings modal textareas
@@ -5616,6 +5617,8 @@ async function saveProfile({ fullName, file }) {
           textarea.style.overflow = '';
         }
       });
+      
+      // Payment buttons are automatically handled by the general lock mechanism above (allButtons)
       
       // Show notification
       // Set context for user action
@@ -14430,32 +14433,68 @@ async function saveProfile({ fullName, file }) {
       
       progressDiv.appendChild(progressButton);
       
-      // Note input
+      // Payment button (replaces note input)
       const noteDiv = document.createElement('div');
-      const noteInput = document.createElement('textarea');
-      noteInput.className = 'input';
-      noteInput.placeholder = 'Add note...';
-      noteInput.value = row.note || '';
-      noteInput.rows = 1;
+      const paymentButton = document.createElement('button');
+      paymentButton.className = 'input payment-button';
+      paymentButton.type = 'button';
       
-      console.log('📝 Creating note input for row:', {
+      // Payment options in order
+      const paymentOptions = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Full Balance'];
+      
+      // Initialize with existing note value or default to "Full Balance"
+      let currentPaymentIndex = 0;
+      if (row.note) {
+        const existingIndex = paymentOptions.indexOf(row.note);
+        if (existingIndex !== -1) {
+          currentPaymentIndex = existingIndex;
+        } else {
+          // If note exists but doesn't match any option, default to Full Balance
+          currentPaymentIndex = 3;
+          row.note = 'Full Balance';
+        }
+      } else {
+        // Default to Full Balance
+        row.note = 'Full Balance';
+        currentPaymentIndex = 3;
+      }
+      
+      paymentButton.textContent = row.note;
+      
+      console.log('💳 Creating payment button for row:', {
         id: row.id,
         name: row.name,
         note: row.note,
-        noteValue: noteInput.value
+        paymentValue: paymentButton.textContent
       });
-      noteInput.style.fontSize = '0.7rem';
-      noteInput.style.padding = '0.4rem 0.6rem';
-      noteInput.style.borderRadius = '8px';
       
-      // Auto-resize textarea
-      noteInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+      // Apply compact styling
+      paymentButton.style.fontSize = '0.65rem';
+      paymentButton.style.padding = '0.25rem 0.5rem';
+      paymentButton.style.borderRadius = '6px';
+      paymentButton.style.width = '100%';
+      paymentButton.style.textAlign = 'left';
+      paymentButton.style.cursor = 'pointer';
+      paymentButton.style.border = '1px solid var(--stroke)';
+      paymentButton.style.background = 'var(--card)';
+      paymentButton.style.color = 'var(--fg)';
+      paymentButton.style.minHeight = '24px';
+      paymentButton.style.height = '24px';
+      paymentButton.style.lineHeight = '1.2';
+      paymentButton.style.whiteSpace = 'nowrap';
+      paymentButton.style.overflow = 'hidden';
+      paymentButton.style.textOverflow = 'ellipsis';
+      paymentButton.style.transition = 'all 0.2s ease';
+      
+      // Cycle through payment options on click
+      paymentButton.addEventListener('click', function() {
+        currentPaymentIndex = (currentPaymentIndex + 1) % paymentOptions.length;
+        const newPayment = paymentOptions[currentPaymentIndex];
+        paymentButton.textContent = newPayment;
+        row.note = newPayment;
         
-        row.note = this.value;
-        console.log('📝 Note changed to:', this.value, 'for row:', row.id || row.name);
-        console.log('📝 Row data before save:', {
+        console.log('💳 Payment changed to:', newPayment, 'for row:', row.id || row.name);
+        console.log('💳 Row data before save:', {
           id: row.id,
           name: row.name,
           progress: row.progress,
@@ -14464,7 +14503,7 @@ async function saveProfile({ fullName, file }) {
         instantSaveIncomeRow(row, currentYear);
       });
       
-      noteDiv.appendChild(noteInput);
+      noteDiv.appendChild(paymentButton);
       
       div.appendChild(progressDiv);
       div.appendChild(noteDiv);

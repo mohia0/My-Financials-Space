@@ -4058,6 +4058,42 @@ textarea {
   font-size: 0.65rem;
 }
 
+/* Payment button styles (replaces note input) */
+.payment-button {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.65rem;
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--fg);
+  outline: none;
+  transition: all 0.2s ease;
+  min-height: 24px;
+  height: 24px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.payment-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--glass);
+}
+
+.payment-button:focus:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.payment-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* Ensure all grid items maintain their position */
 .row > div,
 .row-biz > div,
