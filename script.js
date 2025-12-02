@@ -6565,7 +6565,7 @@ async function saveProfile({ fullName, file }) {
 
     // Numbers
     const nfUSD = new Intl.NumberFormat('en-US',{style:'currency', currency:'USD', maximumFractionDigits:0});
-    const nfINT = new Intl.NumberFormat('en-US');
+    const nfINT = new Intl.NumberFormat('en-US', {maximumFractionDigits:0});
     const usdToEgp = (usd)=> usd * Number(state.fx || 0);
     
     // Currency conversion system - rates from USD to each currency
