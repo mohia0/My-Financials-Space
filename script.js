@@ -1793,7 +1793,8 @@ async function saveProfile({ fullName, file }) {
     
     // Initialize navigation
     initPageNavigation();
-    initSwipeGestures(); // Add swipe gesture support for mobile/tablet
+    // Swipe gestures disabled - removed for better mobile UX
+    // initSwipeGestures();
     initYearTabs();
     
     // Ensure current year is always the default
@@ -7107,7 +7108,7 @@ async function saveProfile({ fullName, file }) {
       return [...defaultOptions, ...customOptions];
     }
     
-    // Helper function to format date for display (Month Day format)
+    // Helper function to format date for display (Day Month format: "2 Dec")
     function formatDateForDisplay(dateString) {
       if (!dateString) return '';
       const date = new Date(dateString);
@@ -7115,7 +7116,7 @@ async function saveProfile({ fullName, file }) {
       
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return `${months[date.getMonth()]} ${date.getDate()}`;
+      return `${date.getDate()} ${months[date.getMonth()]}`;
     }
     
     // Helper function to check if date is in the future
@@ -13390,63 +13391,44 @@ async function saveProfile({ fullName, file }) {
           // Initial display update
           updateDateDisplay();
           
-          // Click to edit
-          dateDisplay.addEventListener('click', () => {
-            // Check if inputs are locked - don't show picker if locked
+          // Click to open modern date picker
+          dateDisplay.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Check if inputs are locked
             if (state.inputsLocked) {
               return;
             }
             
-            dateInput.style.display = 'block';
-            dateDisplay.style.display = 'none';
-            dateInput.focus();
-            
-            // Don't automatically show custom date picker - let user choose
-            // They can use native input or click calendar icon
+            // Use universal opener that always works
+            if (typeof window.openDatePicker === 'function') {
+              window.openDatePicker(dateInput);
+            } else if (typeof window.showCustomDatePicker === 'function') {
+              window.showCustomDatePicker(dateInput);
+            } else {
+              // Direct fallback
+              const picker = document.getElementById('customDatePicker');
+              if (picker) {
+                picker.style.display = 'block';
+                picker.style.position = 'fixed';
+                picker.style.top = '50%';
+                picker.style.left = '50%';
+                picker.style.transform = 'translate(-50%, -50%)';
+                picker.style.zIndex = '999999';
+                picker.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                window._tempDateInput = dateInput;
+              }
+            }
           });
           
-          // Save date but don't hide input if date picker is open
+          // Save date when changed
           dateInput.addEventListener('change', function() {
             row.next = this.value;
             updateDateDisplay();
             save('date-input');
             renderKPIs(); // Update KPIs for renewal analytics
-            
-            // Only hide if date picker is not open
-            if (!isDatePickerOpen) {
-              this.style.display = 'none';
-              dateDisplay.style.display = 'block';
-            }
-          });
-          
-          // Add input event with delay to allow typing full date
-          let inputTimeout;
-          dateInput.addEventListener('input', function() {
-            // Clear previous timeout
-            if (inputTimeout) {
-              clearTimeout(inputTimeout);
-            }
-            
-            // Set a delay before updating display to allow full typing
-            inputTimeout = setTimeout(() => {
-              if (this.value) {
-                row.next = this.value;
-                updateDateDisplay();
-                save('date-input');
-                renderKPIs(); // Update KPIs for renewal analytics
-              }
-            }, 500); // 500ms delay to allow typing
-          });
-          
-          // Hide input on blur if no change (but don't auto-close date picker)
-          dateInput.addEventListener('blur', function() {
-            // Only hide if date picker is not open
-            setTimeout(() => {
-              if (!isDatePickerOpen) {
-                this.style.display = 'none';
-                dateDisplay.style.display = 'block';
-              }
-            }, 100);
           });
           
           dateContainer.appendChild(dateDisplay);
@@ -13846,10 +13828,21 @@ async function saveProfile({ fullName, file }) {
         instantSaveIncomeRow(row, currentYear); // Instant save when tags are modified
       });
       tagsInput.addEventListener('focus', function() {
+        // On mobile, ensure keyboard doesn't interfere with dropdown
+        const isMobile = 'ontouchstart' in window || window.innerWidth <= 768;
+        if (isMobile) {
+          // Scroll input into view on mobile
+          setTimeout(() => {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 300);
+        }
         showTagSuggestions(this, tagsWrapper);
       });
       tagsInput.addEventListener('blur', function() {
-        setTimeout(() => hideTagSuggestions(tagsWrapper), 150);
+        // Longer delay on mobile to allow for tap events
+        const isMobile = 'ontouchstart' in window || window.innerWidth <= 768;
+        const delay = isMobile ? 300 : 150;
+        setTimeout(() => hideTagSuggestions(tagsWrapper), delay);
       });
       
       // Store row reference for tag system
@@ -13906,83 +13899,47 @@ async function saveProfile({ fullName, file }) {
       // Initial display update
       updateDateDisplay();
       
-      // Click to edit
-      dateDisplay.addEventListener('click', () => {
-        // Check if inputs are locked - don't show picker if locked
+      // Click to open modern date picker
+      dateDisplay.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Check if inputs are locked
         if (state.inputsLocked) {
           return;
         }
         
-        dateInput.style.display = 'block';
-        dateDisplay.style.display = 'none';
-        calendarIcon.style.display = 'flex';
-        dateInput.focus();
-        
-        // Don't automatically show custom date picker - let user choose
-        // They can click the calendar icon or use native input
+        // Use universal opener that always works
+        if (typeof window.openDatePicker === 'function') {
+          window.openDatePicker(dateInput);
+        } else if (typeof window.showCustomDatePicker === 'function') {
+          window.showCustomDatePicker(dateInput);
+        } else {
+          // Direct fallback
+          const picker = document.getElementById('customDatePicker');
+          if (picker) {
+            picker.style.display = 'block';
+            picker.style.position = 'fixed';
+            picker.style.top = '50%';
+            picker.style.left = '50%';
+            picker.style.transform = 'translate(-50%, -50%)';
+            picker.style.zIndex = '999999';
+            picker.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            window._tempDateInput = dateInput;
+          }
+        }
       });
       
-      // Save date but don't hide input if date picker is open
+      // Save date when changed
       dateInput.addEventListener('change', function() {
         row.date = this.value;
         updateDateDisplay();
         instantSaveIncomeRow(row, currentYear);
         updateIncomeKPIsLive();
-        
-        // Only hide if date picker is not open
-        if (!isDatePickerOpen) {
-          this.style.display = 'none';
-          dateDisplay.style.display = 'block';
-          calendarIcon.style.display = 'none';
-        }
       });
       
-      // Add input event with delay to allow typing full date
-      let inputTimeout;
-      dateInput.addEventListener('input', function() {
-        // Clear previous timeout
-        if (inputTimeout) {
-          clearTimeout(inputTimeout);
-        }
-        
-        // Set a delay before updating display to allow full typing
-        inputTimeout = setTimeout(() => {
-          if (this.value) {
-            row.date = this.value;
-            updateDateDisplay();
-            instantSaveIncomeRow(row, currentYear);
-            updateIncomeKPIsLive();
-          }
-        }, 500); // 500ms delay to allow typing
-      });
-      
-      // Hide input on blur if no change (but don't auto-close date picker)
-      dateInput.addEventListener('blur', function() {
-        // Only hide if date picker is not open
-        setTimeout(() => {
-          if (!isDatePickerOpen) {
-            this.style.display = 'none';
-            dateDisplay.style.display = 'block';
-            calendarIcon.style.display = 'none';
-          }
-        }, 100);
-      });
-      
-      // Add click event to calendar icon to open custom date picker
-      calendarIcon.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!state.inputsLocked) {
-          showCustomDatePicker(dateInput);
-        }
-      });
-      
-      // Create display wrapper to hold text and icon
-      const displayWrapper = document.createElement('div');
-      displayWrapper.style.cssText = 'display: flex; align-items: center; gap: 0.25rem;';
-      displayWrapper.appendChild(dateDisplay);
-      displayWrapper.appendChild(calendarIcon);
-      
-      dateContainer.appendChild(displayWrapper);
+      dateContainer.appendChild(dateDisplay);
       dateContainer.appendChild(dateInput);
       dateDiv.appendChild(dateContainer);
       
@@ -14155,17 +14112,32 @@ async function saveProfile({ fullName, file }) {
             item.appendChild(removeBtn);
           }
           
-        item.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
+        const selectMethod = function(e) {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
           
-            rowData.method = option;
+          rowData.method = option;
           methodTrigger.querySelector('.method-text').textContent = option;
           methodMenu.querySelectorAll('.method-item-minimal').forEach(i => i.classList.remove('selected'));
           this.classList.add('selected');
           methodDropdown.classList.remove('open');
           methodMenu.classList.remove('show');
-            instantSaveIncomeRow(rowData, currentYear);
+          
+          // Remove from body if mobile
+          if (methodMenu.parentNode === document.body) {
+            methodMenu.remove();
+          }
+          
+          instantSaveIncomeRow(rowData, currentYear);
+        };
+        
+        // Add click and touch handlers
+        item.addEventListener('click', selectMethod);
+        item.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          selectMethod.call(this, e);
         });
           
           container.appendChild(item);
@@ -14175,9 +14147,11 @@ async function saveProfile({ fullName, file }) {
       // Initial render
       renderMethodOptions(methodMenu, row, methodDropdown);
       
-      methodTrigger.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+      const toggleMethodDropdown = function(e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         
         // Close other dropdowns first
         document.querySelectorAll('.method-dropdown-minimal.open').forEach(dd => {
@@ -14186,7 +14160,10 @@ async function saveProfile({ fullName, file }) {
             const menu = dd.querySelector('.method-menu-minimal');
             if (menu) {
               menu.classList.remove('show');
-              menu.remove(); // Remove from document.body
+              // Remove from body if it's there (mobile case)
+              if (menu.parentNode === document.body) {
+                menu.remove();
+              }
             }
           }
         });
@@ -14195,11 +14172,30 @@ async function saveProfile({ fullName, file }) {
         
         if (methodMenu.classList.contains('show')) {
           methodMenu.classList.remove('show');
+          // Remove from body if mobile
+          if (methodMenu.parentNode === document.body) {
+            methodMenu.remove();
+          }
         } else {
+          // On mobile, append to body for better positioning and z-index
+          const isMobile = window.innerWidth <= 768;
+          if (isMobile && methodMenu.parentNode !== document.body) {
+            document.body.appendChild(methodMenu);
+          }
+          
           // Position dropdown based on available space
           positionDropdown(methodTrigger, methodMenu);
           methodMenu.classList.add('show');
         }
+      };
+      
+      // Add click handler
+      methodTrigger.addEventListener('click', toggleMethodDropdown);
+      
+      // Add touch handler for mobile
+      methodTrigger.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        toggleMethodDropdown(e);
       });
       
       methodDropdown.appendChild(methodTrigger);
@@ -14207,11 +14203,23 @@ async function saveProfile({ fullName, file }) {
       methodDiv.appendChild(methodDropdown);
       
       // Close dropdown when clicking outside
-      document.addEventListener('click', function(e) {
-        if (!methodDropdown.contains(e.target)) {
+      const closeMethodDropdown = function(e) {
+        if (!methodDropdown.contains(e.target) && !methodMenu.contains(e.target)) {
           methodDropdown.classList.remove('open');
           methodMenu.classList.remove('show');
+          
+          // Remove from body if mobile
+          if (methodMenu.parentNode === document.body) {
+            methodMenu.remove();
+          }
         }
+      };
+      
+      document.addEventListener('click', closeMethodDropdown);
+      
+      // Also handle touch outside on mobile
+      document.addEventListener('touchend', function(e) {
+        closeMethodDropdown(e);
       });
       
       
@@ -17518,7 +17526,8 @@ function loadNonCriticalResources() {
           <span>${tag}</span>
           <span class="tag-suggestion-count">${getTagCount(tag)}</span>
         `;
-        suggestion.addEventListener('click', () => {
+        // Handle both click and touch events for mobile compatibility
+        const selectTag = () => {
           if (!isTagAlreadyAdded(wrapper, tag)) {
             const chip = createTagChip(tag);
             wrapper.insertBefore(chip, input);
@@ -17536,8 +17545,16 @@ function loadNonCriticalResources() {
               updateRowTags(wrapper, rowData);
             }
             input.value = '';
+            input.blur(); // Blur input on mobile after selection
           }
           hideTagSuggestions(wrapper);
+        };
+        
+        suggestion.addEventListener('click', selectTag);
+        suggestion.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          selectTag();
         });
         dropdown.appendChild(suggestion);
       });
@@ -17545,19 +17562,37 @@ function loadNonCriticalResources() {
       // Position dropdown based on available space
       positionDropdown(input, dropdown);
       
-      // Append dropdown to the wrapper (relative positioning)
-      wrapper.appendChild(dropdown);
+      // On mobile, append to body for better positioning and z-index control
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        document.body.appendChild(dropdown);
+      } else {
+        // Append dropdown to the wrapper (relative positioning)
+        wrapper.appendChild(dropdown);
+      }
       
-      // Show dropdown
+      // Show dropdown with slight delay for smooth animation
       setTimeout(() => {
         dropdown.classList.add('show');
       }, 10);
     }
     
     function hideTagSuggestions(wrapper) {
-      const dropdown = wrapper.querySelector('.tag-dropdown');
+      // Try to find dropdown in wrapper first (desktop)
+      let dropdown = wrapper ? wrapper.querySelector('.tag-dropdown') : null;
+      
+      // If not found in wrapper, try to find any open dropdown in body (mobile case)
+      if (!dropdown) {
+        dropdown = document.querySelector('.tag-dropdown.show');
+      }
+      
       if (dropdown) {
-        dropdown.remove();
+        dropdown.classList.remove('show');
+        setTimeout(() => {
+          if (dropdown && dropdown.parentNode) {
+            dropdown.remove();
+          }
+        }, 200);
       }
     }
     
@@ -17647,6 +17682,66 @@ function loadNonCriticalResources() {
   let currentDatePickerDate = new Date();
   let isDatePickerOpen = false;
   let datePickerTimeout = null;
+
+  // Universal date picker opener - always available
+  window.openDatePicker = function(inputElement) {
+    const picker = document.getElementById('customDatePicker');
+    if (!picker) {
+      console.error('Date picker element not found');
+      return;
+    }
+    
+    // Initialize picker if needed
+    if (!customDatePicker) {
+      customDatePicker = picker;
+      if (typeof initCustomDatePicker === 'function') {
+        initCustomDatePicker();
+      }
+    }
+    
+    // Try the main function
+    if (typeof showCustomDatePicker === 'function' && !isDatePickerOpen) {
+      showCustomDatePicker(inputElement);
+      return;
+    }
+    
+    // Direct fallback
+    const currentValue = inputElement ? inputElement.value : '';
+    let pickerDate = currentValue ? new Date(currentValue) : new Date();
+    if (isNaN(pickerDate.getTime())) pickerDate = new Date();
+    
+    currentDatePickerInput = inputElement;
+    currentDatePickerDate = pickerDate;
+    
+    // Update selects
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    if (monthSelect && yearSelect) {
+      monthSelect.value = pickerDate.getMonth();
+      yearSelect.value = pickerDate.getFullYear();
+    }
+    
+    // Render days if function exists
+    if (typeof renderDatePickerDays === 'function') {
+      renderDatePickerDays();
+    } else if (typeof updateDatePickerHeader === 'function') {
+      updateDatePickerHeader();
+      if (typeof renderDatePickerDays === 'function') {
+        renderDatePickerDays();
+      }
+    }
+    
+    // Show picker
+    picker.style.display = 'block';
+    picker.style.position = 'fixed';
+    picker.style.top = '50%';
+    picker.style.left = '50%';
+    picker.style.transform = 'translate(-50%, -50%)';
+    picker.style.zIndex = '999999';
+    picker.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    isDatePickerOpen = true;
+  };
 
   function initCustomDatePicker() {
 
@@ -17752,7 +17847,22 @@ function loadNonCriticalResources() {
       return;
     }
     
+    // Ensure date picker is initialized
     if (!customDatePicker) {
+      customDatePicker = document.getElementById('customDatePicker');
+    }
+    
+    // If still not found, try to initialize
+    if (!customDatePicker) {
+      console.warn('Date picker not found, attempting to initialize...');
+      if (typeof initCustomDatePicker === 'function') {
+        initCustomDatePicker();
+        customDatePicker = document.getElementById('customDatePicker');
+      }
+    }
+    
+    if (!customDatePicker) {
+      console.error('Date picker could not be found or initialized!');
       return;
     }
     
@@ -17763,20 +17873,20 @@ function loadNonCriticalResources() {
     
     // Add small delay to prevent rapid clicks
     datePickerTimeout = setTimeout(() => {
-    currentDatePickerInput = inputElement;
-    const currentValue = inputElement.value;
-    
-    if (currentValue) {
-      const date = new Date(currentValue);
-      if (!isNaN(date.getTime())) {
-        currentDatePickerDate = date;
+      currentDatePickerInput = inputElement;
+      const currentValue = inputElement ? inputElement.value : '';
+      
+      if (currentValue) {
+        const date = new Date(currentValue);
+        if (!isNaN(date.getTime())) {
+          currentDatePickerDate = date;
+        }
+      } else {
+        currentDatePickerDate = new Date();
       }
-    } else {
-      currentDatePickerDate = new Date();
-    }
 
-    updateDatePickerHeader();
-    renderDatePickerDays();
+      updateDatePickerHeader();
+      renderDatePickerDays();
       
       // Simple positioning - just show it
       const datePickerModal = customDatePicker;
@@ -17787,7 +17897,7 @@ function loadNonCriticalResources() {
       datePickerModal.style.left = '50%';
       datePickerModal.style.transform = 'translate(-50%, -50%)';
       datePickerModal.style.zIndex = '999999';
-      datePickerModal.style.width = '240px';
+      datePickerModal.style.width = '280px';
       datePickerModal.style.display = 'block';
       
       // Make sure it's in the body
@@ -17813,8 +17923,11 @@ function loadNonCriticalResources() {
       // Remove any existing handler first
       datePickerModal.removeEventListener('click', backdropClickHandler);
       datePickerModal.addEventListener('click', backdropClickHandler);
-    }, 100); // 100ms delay
+    }, 50); // Reduced delay for faster response
   }
+  
+  // Make function globally accessible immediately
+  window.showCustomDatePicker = showCustomDatePicker;
 
   function hideCustomDatePicker() {
     if (!isDatePickerOpen) {
@@ -18105,8 +18218,15 @@ function loadNonCriticalResources() {
     const triggerRect = trigger.getBoundingClientRect();
     const menuHeight = 200; // Approximate menu height
     const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
     const spaceBelow = viewportHeight - triggerRect.bottom;
     const spaceAbove = triggerRect.top;
+    const isMobile = viewportWidth <= 768;
+    
+    // Get sticky header height (approximate)
+    const header = document.querySelector('header');
+    const headerHeight = header ? (header.getBoundingClientRect().height || 60) : 60;
+    const stickyHeaderOffset = isMobile ? headerHeight + 5 : 0; // Add offset for sticky header on mobile
     
     // Check if this is in the last two rows of any table
     const isLastTwoRows = isInLastTwoRows(trigger);
@@ -18115,18 +18235,64 @@ function loadNonCriticalResources() {
     menu.style.top = '';
     menu.style.bottom = '';
     menu.style.transform = '';
+    menu.style.left = '';
+    menu.style.right = '';
+    menu.style.position = '';
     
-    // Always position above for last two rows, or if there's not enough space below
-    if (isLastTwoRows || (spaceBelow < menuHeight && spaceAbove > spaceBelow)) {
-      // Position above the trigger
-      menu.style.bottom = '100%';
-      menu.style.top = 'auto';
-      menu.style.transform = 'translateY(-4px)';
+    if (isMobile) {
+      // On mobile, use fixed positioning for better control
+      const scrollY = window.scrollY || window.pageYOffset;
+      const scrollX = window.scrollX || window.pageXOffset;
+      
+      // Calculate position relative to viewport, ensuring it's below sticky header
+      let topPos = triggerRect.bottom + scrollY + 4;
+      let leftPos = triggerRect.left + scrollX;
+      
+      // Ensure dropdown is below sticky header
+      if (topPos - scrollY < stickyHeaderOffset) {
+        topPos = scrollY + stickyHeaderOffset + 4;
+      }
+      
+      // Check if dropdown fits below
+      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        // Position above, but still below header
+        topPos = triggerRect.top + scrollY - menuHeight - 4;
+        if (topPos - scrollY < stickyHeaderOffset) {
+          topPos = scrollY + stickyHeaderOffset + 4;
+        }
+      }
+      
+      // Ensure dropdown doesn't go off screen
+      if (leftPos + 200 > viewportWidth) {
+        leftPos = viewportWidth - 200 - 10;
+      }
+      if (leftPos < 10) {
+        leftPos = 10;
+      }
+      
+      menu.style.position = 'fixed';
+      menu.style.top = `${Math.max(topPos - scrollY, stickyHeaderOffset + 4)}px`;
+      menu.style.left = `${leftPos - scrollX}px`;
+      menu.style.right = 'auto';
+      menu.style.width = '200px';
+      menu.style.maxWidth = `${viewportWidth - 20}px`;
+      menu.style.zIndex = '10001'; // Above sticky header (1000) and method menu base (10000)
     } else {
-      // Position below the trigger (default)
-      menu.style.top = '100%';
-      menu.style.bottom = 'auto';
-      menu.style.transform = 'translateY(4px)';
+      // Desktop: use relative positioning
+      menu.style.position = 'absolute';
+      
+      // Always position above for last two rows, or if there's not enough space below
+      if (isLastTwoRows || (spaceBelow < menuHeight && spaceAbove > spaceBelow)) {
+        // Position above the trigger
+        menu.style.bottom = '100%';
+        menu.style.top = 'auto';
+        menu.style.transform = 'translateY(-4px)';
+      } else {
+        // Position below the trigger (default)
+        menu.style.top = '100%';
+        menu.style.bottom = 'auto';
+        menu.style.transform = 'translateY(4px)';
+      }
     }
   }
   

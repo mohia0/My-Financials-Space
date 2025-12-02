@@ -1785,9 +1785,7 @@ header.scrolled .icon-btn:hover {
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; }
 input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
-/* date input indicator & color matching */
-input[type=date]::-webkit-calendar-picker-indicator{ filter:opacity(.65); cursor:pointer; }
-input[type=date]:hover::-webkit-calendar-picker-indicator{ filter:opacity(.9); }
+/* Date inputs - minimal styling only */
 input[type=date]{ color-scheme:dark; }
 [data-theme="light"] .input,[data-theme="light"] .select{ color-scheme:light; }
 .input:focus,.select:focus{ 
@@ -2106,7 +2104,7 @@ input[type=date]{ color-scheme:dark; }
   border-radius: 8px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
-  z-index: 9999;
+  z-index: 99999;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
@@ -2114,6 +2112,7 @@ input[type=date]{ color-scheme:dark; }
   max-height: 200px;
   overflow-y: auto;
   min-width: 180px;
+  width: 100%;
   pointer-events: none;
   top: calc(100% + 4px);
   left: 0;
@@ -2130,6 +2129,35 @@ input[type=date]{ color-scheme:dark; }
   visibility: visible;
   transform: translateY(0);
   pointer-events: auto;
+}
+
+/* Mobile-specific tag dropdown improvements */
+@media (max-width: 768px) {
+  .tag-dropdown {
+    z-index: 999999 !important;
+    max-height: 180px;
+    min-width: 160px;
+    width: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+  }
+  
+  .tag-suggestion {
+    padding: 12px 14px;
+    font-size: 0.75rem;
+    min-height: 44px; /* Better touch target on mobile */
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2);
+  }
+  
+  .tag-input-wrapper {
+    overflow: visible !important;
+    z-index: 100 !important;
+  }
+  
+  /* Ensure dropdown stays within viewport on mobile */
+  .tag-dropdown {
+    max-width: calc(100vw - 20px);
+  }
 }
 
 .tag-suggestion {
@@ -2481,24 +2509,41 @@ input[type=date]{
   height: 1.8rem;
 }
 
-/* Enhanced Date Input */
-input[type="date"].input-enhanced {
-  color-scheme: dark;
-  background: transparent !important;
-  border: none !important;
-}
+/* ============================================
+   MODERN MINIMAL DATE INPUT STYLES
+   ============================================ */
 
-input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
+/* ============================================
+   MODERN DATE DISPLAY - Shows "2 Dec" format
+   ============================================ */
+.next-date-display {
+  font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: inline-block;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  background: transparent;
 }
 
-[data-theme="light"] input[type="date"].input-enhanced {
-  color-scheme: light;
+.next-date-display:hover {
+  background: var(--hover);
+  border-color: var(--stroke);
+  transform: translateY(-1px);
 }
 
-[data-theme="light"] input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
-  filter: invert(0.3);
+/* Hidden date input - only used for functionality */
+input[type="date"].date-input-minimal {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
 }
 
 /* Date column alignment for income table */
@@ -2514,66 +2559,6 @@ input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-}
-
-/* Minimal Date Input for Income Rows */
-.date-input-minimal {
-  font-size: 0.65rem;
-  padding: 0.25rem 0.8rem 0.25rem 0.3rem !important;
-  min-width: 80px;
-  max-width: 85px;
-  width: 82px;
-  height: 1.5rem;
-  text-align: left;
-  border-radius: 4px;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.date-input-minimal::-webkit-calendar-picker-indicator {
-  filter: invert(0.6) !important;
-  cursor: pointer;
-  width: 9px !important;
-  height: 9px !important;
-  position: absolute !important;
-  right: 0.2rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  margin-right: 0 !important;
-}
-
-.date-input-minimal:hover::-webkit-calendar-picker-indicator {
-  filter: invert(0.8);
-}
-
-/* Compact Date Input for Business Expenses */
-.row-biz input[type="date"] {
-  font-size: 0.65rem;
-  padding: 0.25rem 0.7rem 0.25rem 0.3rem !important;
-  min-width: 85px;
-  max-width: 95px;
-  width: 90px;
-  height: 1.5rem;
-  text-align: left;
-  border-radius: 4px;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.row-biz input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.6) !important;
-  cursor: pointer;
-  width: 9px !important;
-  height: 9px !important;
-  position: absolute !important;
-  right: 0.2rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  margin-right: 0 !important;
-}
-
-.row-biz input[type="date"]:hover::-webkit-calendar-picker-indicator {
-  filter: invert(0.8);
 }
 
 /* Editable PAID EGP Field */
@@ -2606,210 +2591,197 @@ input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
 }
 
  /* Custom Date Picker Dropdown */
- .custom-date-picker-modal {
-   position: fixed !important;
-   top: 50% !important;
-   left: 50% !important;
-   transform: translate(-50%, -50%) !important;
-   background: transparent;
-   display: none;
-   z-index: 999999 !important;
-   pointer-events: none;
-   max-height: 80vh;
-   overflow-y: auto;
-   will-change: transform;
- }
- 
- .custom-date-picker-modal.show {
-   display: block !important;
-   pointer-events: auto;
-   z-index: 999999 !important;
- }
- 
- .custom-date-picker-modal.show::before {
-   content: '';
-   position: fixed;
-   top: 0;
-   left: 0;
-   right: 0;
-   bottom: 0;
-   background: rgba(0, 0, 0, 0.3);
-   z-index: -1;
-   pointer-events: auto;
- }
- 
- /* Ensure date picker is always on top */
- .custom-date-picker-modal,
- .custom-date-picker-modal * {
-   z-index: 999999 !important;
- }
- 
- .custom-date-picker {
-   background: rgba(var(--card-rgb), 0.95) !important;
-   backdrop-filter: blur(20px);
-   border: 1px solid var(--stroke);
-   border-radius: 8px;
-   padding: 0.5rem;
-   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-   width: 240px;
-   position: relative;
-   z-index: 999999 !important;
-   animation: slideDown 0.15s ease-out;
- }
- 
- @keyframes slideDown {
-   from {
-     opacity: 0;
-     transform: translateY(-10px);
-   }
-   to {
-     opacity: 1;
-     transform: translateY(0);
-   }
- }
+/* ============================================
+   MODERN MINIMAL DATE PICKER MODAL
+   ============================================ */
+.custom-date-picker-modal {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: transparent;
+  display: none;
+  z-index: 999999 !important;
+  pointer-events: none;
+  max-height: 80vh;
+  overflow-y: auto;
+  will-change: transform;
+}
+
+.custom-date-picker-modal.show {
+  display: block !important;
+  pointer-events: auto;
+  z-index: 999999 !important;
+}
+
+.custom-date-picker-modal.show::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+}
+
+.custom-date-picker-modal,
+.custom-date-picker-modal * {
+  z-index: 999999 !important;
+}
+
+.custom-date-picker {
+  background: var(--card) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  width: 280px;
+  position: relative;
+  z-index: 999999 !important;
+  animation: datePickerSlide 0.15s ease-out;
+}
+
+@keyframes datePickerSlide {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
 /* Light mode adjustments */
-[data-theme="light"] .custom-date-picker-modal {
-  background: rgba(0, 0, 0, 0.4);
+[data-theme="light"] .custom-date-picker-modal::before {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 [data-theme="light"] .custom-date-picker {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
- .date-picker-header {
-   display: flex;
-   align-items: center;
-   justify-content: space-between;
-   margin-bottom: 0.5rem;
- }
- 
- .date-picker-nav {
-   background: var(--hover);
-   border: 1px solid var(--stroke);
-   color: var(--fg);
-   width: 24px;
-   height: 24px;
-   border-radius: 6px;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   cursor: pointer;
-   transition: all 0.2s ease;
-   font-size: 0.9rem;
-   font-weight: bold;
- }
- 
- .date-picker-nav:hover {
-   background: var(--accent);
-   color: white;
-   border-color: var(--accent);
- }
- 
- .date-picker-month-year {
-   display: flex;
-   gap: 0.5rem;
-   align-items: center;
- }
- 
- .date-picker-month-year select {
-   background: var(--hover) !important;
-   border: 1px solid var(--stroke) !important;
-   color: var(--fg) !important;
-   padding: 0.3rem 0.5rem;
-   border-radius: 6px;
-   font-size: 0.75rem;
-   font-weight: 600;
-   cursor: pointer;
-   transition: all 0.2s ease;
-   appearance: none;
-   -webkit-appearance: none;
-   -moz-appearance: none;
-   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-   background-repeat: no-repeat;
-   background-position: right 0.3rem center;
-   background-size: 0.7rem;
-   padding-right: 1.2rem;
-   min-width: 70px;
- }
- 
- .date-picker-month-year select:hover {
-   border-color: var(--accent) !important;
-   background-color: var(--accent) !important;
-   color: white !important;
- }
- 
- .date-picker-month-year select:focus {
-   outline: none;
-   border-color: var(--accent) !important;
-   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-   background-color: var(--accent) !important;
-   color: white !important;
- }
- 
- .date-picker-month-year select option {
-   background: var(--card) !important;
-   color: var(--fg) !important;
-   padding: 0.4rem;
- }
- 
- /* Light mode select styling */
- [data-theme="light"] .date-picker-month-year select {
-   background: var(--hover) !important;
-   color: var(--fg) !important;
- }
- 
- [data-theme="light"] .date-picker-month-year select option {
-   background: var(--card) !important;
-   color: var(--fg) !important;
- }
+/* Minimal Date Picker Header */
+.date-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--stroke);
+}
 
- .date-picker-weekdays {
-   display: grid;
-   grid-template-columns: repeat(7, 1fr);
-   gap: 2px;
-   margin-bottom: 0.5rem;
- }
- 
- .weekday {
-   text-align: center;
-   font-size: 0.7rem;
-   font-weight: 600;
-   color: var(--muted);
-   padding: 0.25rem 0;
- }
- 
- .date-picker-days {
-   display: grid;
-   grid-template-columns: repeat(7, 1fr);
-   gap: 2px;
-   margin-bottom: 0.75rem;
- }
+.date-picker-nav {
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 1.2rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
 
- .date-day {
-   aspect-ratio: 1;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   border-radius: 4px;
-   cursor: pointer;
-   transition: all 0.2s ease;
-   font-size: 0.75rem;
-   font-weight: 500;
-   color: var(--fg);
-   background: transparent;
-   border: 1px solid transparent;
-   min-height: 24px;
- }
+.date-picker-nav:hover {
+  background: var(--hover);
+  opacity: 1;
+  transform: scale(1.1);
+}
+ 
+/* Minimal Month/Year Selectors */
+.date-picker-month-year {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.date-picker-month-year select {
+  background: transparent !important;
+  border: none !important;
+  color: var(--fg) !important;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.date-picker-month-year select:hover {
+  background: var(--hover) !important;
+}
+
+.date-picker-month-year select:focus {
+  outline: none;
+  background: var(--hover) !important;
+}
+
+.date-picker-month-year select option {
+  background: var(--card) !important;
+  color: var(--fg) !important;
+  padding: 0.4rem;
+}
+
+/* Minimal Weekday Headers */
+.date-picker-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 0.75rem;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Minimal Day Grid */
+.date-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 1rem;
+}
+
+.date-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  min-height: 32px;
+}
 
 .date-day:hover {
   background: var(--hover);
-  border-color: var(--stroke);
 }
 
 .date-day.other-month {
   color: var(--muted);
-  opacity: 0.5;
+  opacity: 0.3;
 }
 
 .date-day.today {
@@ -2822,43 +2794,44 @@ input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
   background: var(--accent);
   color: white;
   font-weight: 600;
-  border-color: var(--accent);
+  transform: scale(1.1);
 }
 
- .date-picker-footer {
-   display: flex;
-   gap: 0.4rem;
-   justify-content: flex-end;
- }
- 
- .date-picker-btn {
-   padding: 0.3rem 0.6rem;
-   border-radius: 6px;
-   font-size: 0.75rem;
-   font-weight: 500;
-   cursor: pointer;
-   transition: all 0.2s ease;
-   border: 1px solid var(--stroke);
-   background: var(--hover);
-   color: var(--fg);
- }
- 
- .date-picker-btn:hover {
-   background: var(--accent);
-   color: white;
-   border-color: var(--accent);
- }
- 
- .date-picker-btn.primary {
-   background: var(--accent);
-   color: white;
-   border-color: var(--accent);
- }
- 
- .date-picker-btn.primary:hover {
-   background: var(--accent-hover);
-   border-color: var(--accent-hover);
- }
+/* Minimal Footer Buttons */
+.date-picker-footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--stroke);
+}
+
+.date-picker-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+}
+
+.date-picker-btn:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.date-picker-btn.primary {
+  background: var(--accent);
+  color: white;
+}
+
+.date-picker-btn.primary:hover {
+  background: var(--accent-hover);
+  opacity: 0.9;
+}
 
 /* Minimal Method Dropdown for Income Rows */
 .method-dropdown-minimal {
@@ -2924,7 +2897,7 @@ input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
   border-radius: 8px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
-  z-index: 1000;
+  z-index: 10001;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
@@ -2941,6 +2914,34 @@ input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
   visibility: visible;
   transform: translateY(0);
   pointer-events: auto;
+}
+
+/* Mobile-specific method dropdown improvements */
+@media (max-width: 768px) {
+  .method-menu-minimal {
+    z-index: 10001 !important;
+    max-height: 180px;
+    min-width: 160px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+  }
+  
+  .method-item-minimal {
+    padding: 12px 14px;
+    font-size: 0.75rem;
+    min-height: 44px; /* Better touch target on mobile */
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2);
+  }
+  
+  .method-trigger-minimal {
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2);
+    min-height: 44px; /* Better touch target */
+  }
+  
+  /* Ensure dropdown stays within viewport on mobile */
+  .method-menu-minimal {
+    max-width: calc(100vw - 20px);
+  }
 }
 
 .method-item-minimal {
@@ -5509,18 +5510,7 @@ textarea {
 }
 
 /* Ensure date input starts exactly where DATE header starts */
-.table-container .row-income > div:nth-child(5) .date-input-minimal {
-  margin-left: 0;
-  padding-left: 0;
-  text-indent: 0;
-}
-
-/* Remove date input icon completely for perfect alignment */
-.table-container .row-income input[type="date"]::-webkit-calendar-picker-indicator {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-}
+/* Date input styling is handled by the minimal date display above */
 
 /* Ensure tag wrapper is properly aligned */
 .table-container .row-income .tag-input-wrapper {
@@ -7020,12 +7010,7 @@ header img:hover {
 }
 
 /* Hide date calendar icon when locked */
-.row-income input[type="date"]:disabled::-webkit-calendar-picker-indicator,
-.row-income input[type="date"].locked::-webkit-calendar-picker-indicator {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-}
+/* Date input styling is handled by the minimal date display */
 
 .section-title {
   font-size: 0.7rem;
