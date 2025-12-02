@@ -7416,6 +7416,8 @@ async function saveProfile({ fullName, file }) {
     setText('kpiIncomeMonthlyAvgEGP', formatCurrency(lifetimeIncome.monthlySelected));
     setText('kpiIncomeYearlyCurrent', nfUSD.format(i.yUSD));
     setText('kpiIncomeYearlyCurrentEGP', formatCurrency(i.ySelected));
+    setText('kpiIncomeYearlyAvg', nfUSD.format(lifetimeIncome.yearlyUSD));
+    setText('kpiIncomeYearlyAvgEGP', formatCurrency(lifetimeIncome.yearlySelected));
     setText('kpiIncomeYearlyTarget', nfUSD.format(lifetimeIncome.yearlyUSD * 1.2));
     setText('kpiIncomeYearlyTargetEGP', formatCurrency(lifetimeIncome.yearlySelected * 1.2));
     
@@ -9591,6 +9593,8 @@ async function saveProfile({ fullName, file }) {
         numbers: [
           { id: 'kpiIncomeYearlyCurrent', value: nfUSD.format(i.yUSD) },
           { id: 'kpiIncomeYearlyCurrentEGP', value: formatCurrency(i.ySelected) },
+          { id: 'kpiIncomeYearlyAvg', value: nfUSD.format(lifetimeIncome.yearlyUSD) },
+          { id: 'kpiIncomeYearlyAvgEGP', value: formatCurrency(lifetimeIncome.yearlySelected) },
           { id: 'kpiIncomeYearlyTarget', value: nfUSD.format(lifetimeIncome.yearlyUSD * 1.2) },
           { id: 'kpiIncomeYearlyTargetEGP', value: formatCurrency(lifetimeIncome.yearlySelected * 1.2) }
         ],
@@ -14628,6 +14632,8 @@ async function saveProfile({ fullName, file }) {
     console.log('🔄 Updating average KPIs...');
     setText('kpiIncomeMonthlyAvg', nfUSD.format(lifetimeIncome.monthlyUSD));
     setText('kpiIncomeMonthlyAvgEGP', formatCurrency(lifetimeIncome.monthlySelected));
+    setText('kpiIncomeYearlyAvg', nfUSD.format(lifetimeIncome.yearlyUSD));
+    setText('kpiIncomeYearlyAvgEGP', formatCurrency(lifetimeIncome.yearlySelected));
     
     // Update yearly target (20% above lifetime)
     console.log('🔄 Updating target KPIs...');
