@@ -8,7 +8,6 @@ class FinancialChat {
     // Use API config if available, otherwise use DeepSeek directly
     this.messages = [];
     this.isOpen = false;
-    this.isMinimized = false;
     this.init();
     
     // Test API connection on initialization
@@ -78,7 +77,7 @@ class FinancialChat {
 
   init() {
     // CHAT DISABLED - Set to false to enable
-    const CHAT_ENABLED = false;
+    const CHAT_ENABLED = true;
     
     if (!CHAT_ENABLED) {
       console.log('Chat is currently disabled');
@@ -141,16 +140,18 @@ class FinancialChat {
       console.warn('Chat toggle button not found!');
     }
 
+    // Clear button
+    const clearBtn = document.getElementById('chatClearBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this.showClearChatConfirm();
+      });
+    }
+
     // Close button
     const closeBtn = document.getElementById('chatCloseBtn');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.closeChat());
-    }
-
-    // Minimize button
-    const minimizeBtn = document.getElementById('chatMinimizeBtn');
-    if (minimizeBtn) {
-      minimizeBtn.addEventListener('click', () => this.minimizeChat());
     }
 
     // Send button
@@ -159,9 +160,17 @@ class FinancialChat {
       sendBtn.addEventListener('click', () => this.sendMessage());
     }
 
-    // Input field
+    // Input field - NEVER lock this input, even if main tool is locked
     const input = document.getElementById('chatInput');
     if (input) {
+      // Ensure input is never locked
+      input.disabled = false;
+      input.readOnly = false;
+      
+      // Remove any lock-related attributes
+      input.removeAttribute('disabled');
+      input.removeAttribute('readonly');
+      
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
@@ -173,14 +182,26 @@ class FinancialChat {
       input.addEventListener('input', () => {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+        // Ensure it stays unlocked
+        input.disabled = false;
+        input.readOnly = false;
+      });
+
+      // Monitor and prevent any lock attempts
+      const observer = new MutationObserver(() => {
+        if (input.disabled || input.readOnly) {
+          input.disabled = false;
+          input.readOnly = false;
+        }
+      });
+      
+      observer.observe(input, {
+        attributes: true,
+        attributeFilter: ['disabled', 'readonly']
       });
     }
 
-    // Header drag functionality (optional)
-    const header = document.getElementById('chatHeader');
-    if (header) {
-      this.setupDrag(header);
-    }
+    // Drag functionality disabled - chat is fixed
 
     // Suggestion clicks
     document.addEventListener('click', (e) => {
@@ -192,47 +213,6 @@ class FinancialChat {
     });
   }
 
-  setupDrag(header) {
-    let isDragging = false;
-    let currentX, currentY, initialX, initialY;
-    const chatWidget = document.getElementById('chatWidget');
-
-    header.addEventListener('mousedown', (e) => {
-      if (window.innerWidth <= 768) return; // Disable drag on mobile
-      
-      isDragging = true;
-      initialX = e.clientX - chatWidget.offsetLeft;
-      initialY = e.clientY - chatWidget.offsetTop;
-      chatWidget.style.transition = 'none';
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-
-      currentX = e.clientX - initialX;
-      currentY = e.clientY - initialY;
-
-      // Constrain to viewport
-      const maxX = window.innerWidth - chatWidget.offsetWidth;
-      const maxY = window.innerHeight - chatWidget.offsetHeight;
-
-      currentX = Math.max(0, Math.min(currentX, maxX));
-      currentY = Math.max(0, Math.min(currentY, maxY));
-
-      chatWidget.style.left = currentX + 'px';
-      chatWidget.style.top = currentY + 'px';
-      chatWidget.style.right = 'auto';
-      chatWidget.style.bottom = 'auto';
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        chatWidget.style.transition = '';
-      }
-    });
-  }
 
   toggleChat() {
     if (this.isOpen) {
@@ -256,21 +236,23 @@ class FinancialChat {
       // Add opening class for smooth animation
       widget.classList.add('opening');
       
-      // Remove minimized state if it exists
-      widget.classList.remove('minimized');
-      
       this.isOpen = true;
-      this.isMinimized = false;
       
       // After animation completes, remove opening class
       setTimeout(() => {
         widget.classList.remove('opening');
       }, 400);
       
-      // Focus input after a short delay
+      // Focus input after a short delay - ensure it's unlocked
       const input = document.getElementById('chatInput');
       if (input) {
-        setTimeout(() => input.focus(), 450);
+        input.disabled = false;
+        input.readOnly = false;
+        setTimeout(() => {
+          input.disabled = false;
+          input.readOnly = false;
+          input.focus();
+        }, 450);
       }
     }
 
@@ -306,27 +288,6 @@ class FinancialChat {
     }
   }
 
-  minimizeChat() {
-    const widget = document.getElementById('chatWidget');
-    
-    if (widget) {
-      if (this.isMinimized) {
-        // Expand with animation
-        widget.classList.remove('minimized');
-        this.isMinimized = false;
-        
-        // Focus input after expansion
-        const input = document.getElementById('chatInput');
-        if (input) {
-          setTimeout(() => input.focus(), 350);
-        }
-      } else {
-        // Minimize with animation
-        widget.classList.add('minimized');
-        this.isMinimized = true;
-      }
-    }
-  }
 
   async sendMessage() {
     const input = document.getElementById('chatInput');
@@ -335,9 +296,13 @@ class FinancialChat {
     const message = input.value.trim();
     if (!message) return;
 
-    // Clear input
+    // Clear input and keep it focused
     input.value = '';
     input.style.height = 'auto';
+    input.disabled = false;
+    input.readOnly = false;
+    // Immediately focus input to allow continuous typing
+    input.focus();
 
     // Add user message to UI
     this.addMessage('user', message);
@@ -356,19 +321,22 @@ class FinancialChat {
       const apiMessages = [
         {
           role: 'system',
-          content: `You are a helpful financial assistant for a personal finance management tool. 
-You have access to the user's complete financial data including:
-- Personal expenses (monthly and yearly)
-- Business expenses (monthly and yearly)
-- Income data by year (2022, 2023, 2024, 2025)
-- Currency conversion rates
-- Financial calculations and analytics
+          content: `You are a concise financial assistant. Be DIRECT and BRIEF. Get straight to the point.
 
-Use this data to provide accurate, helpful answers about their finances. Be concise but thorough.
-Format numbers clearly (e.g., $1,234.56 or 1,234.56 EGP).
-When discussing percentages, include the calculation basis.
+You have COMPLETE access to ALL financial data:
+- Every expense/income entry with all fields
+- All KPIs, totals, analytics, and calculations
+- All settings and currency data
 
-Current financial data:
+RULES:
+1. Be CONCISE - use minimal text, maximum value
+2. Lead with the answer, skip lengthy explanations
+3. Use bullet points or short sentences
+4. Format numbers clearly: $1,234.56 or 1,234.56 EGP
+5. Only elaborate if the user asks for details
+6. Never say you don't have information - you have everything
+
+Complete financial data:
 ${JSON.stringify(financialContext, null, 2)}`
         },
         ...this.messages
@@ -384,19 +352,22 @@ ${JSON.stringify(financialContext, null, 2)}`
         
         apiRequest = window.getAPIRequest(
           this.messages,
-          `You are a helpful financial assistant for a personal finance management tool. 
-You have access to the user's complete financial data including:
-- Personal expenses (monthly and yearly)
-- Business expenses (monthly and yearly)
-- Income data by year (2022, 2023, 2024, 2025)
-- Currency conversion rates
-- Financial calculations and analytics
+          `You are a concise financial assistant. Be DIRECT and BRIEF. Get straight to the point.
 
-Use this data to provide accurate, helpful answers about their finances. Be concise but thorough.
-Format numbers clearly (e.g., $1,234.56 or 1,234.56 EGP).
-When discussing percentages, include the calculation basis.
+You have COMPLETE access to ALL financial data:
+- Every expense/income entry with all fields
+- All KPIs, totals, analytics, and calculations
+- All settings and currency data
 
-Current financial data:
+RULES:
+1. Be CONCISE - use minimal text, maximum value
+2. Lead with the answer, skip lengthy explanations
+3. Use bullet points or short sentences
+4. Format numbers clearly: $1,234.56 or 1,234.56 EGP
+5. Only elaborate if the user asks for details
+6. Never say you don't have information - you have everything
+
+Complete financial data:
 ${JSON.stringify(financialContext, null, 2)}`
         );
       } else {
@@ -421,6 +392,8 @@ ${JSON.stringify(financialContext, null, 2)}`
         };
       }
 
+      console.log('Request URL:', apiRequest.url);
+      console.log('Request headers:', apiRequest.headers);
       console.log('Request payload:', JSON.stringify(apiRequest.body, null, 2));
 
       const response = await fetch(apiRequest.url, {
@@ -440,8 +413,23 @@ ${JSON.stringify(financialContext, null, 2)}`
         let errorDetail = errorText;
         try {
           const errorData = JSON.parse(errorText);
+          // Handle OpenAI/DeepSeek format
           if (errorData.error && errorData.error.message) {
             errorDetail = errorData.error.message;
+          }
+          // Handle Gemini error format
+          else if (errorData.error) {
+            if (typeof errorData.error === 'string') {
+              errorDetail = errorData.error;
+            } else if (errorData.error.message) {
+              errorDetail = errorData.error.message;
+            } else if (errorData.error.status) {
+              errorDetail = errorData.error.status;
+            }
+          }
+          // Handle direct error message
+          else if (errorData.message) {
+            errorDetail = errorData.message;
           }
         } catch (e) {
           // Use raw error text if parsing fails
@@ -474,18 +462,49 @@ ${JSON.stringify(financialContext, null, 2)}`
       // Scroll to bottom
       this.scrollToBottom();
 
+      // Re-focus input to allow continuous conversation - NEVER lock it
+      const input = document.getElementById('chatInput');
+      if (input) {
+        // Force unlock - chat input should NEVER be locked
+        input.disabled = false;
+        input.readOnly = false;
+        input.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        setTimeout(() => {
+          input.disabled = false;
+          input.readOnly = false;
+          input.focus();
+        }, 100);
+      }
+
     } catch (error) {
       console.error('Chat error:', error);
       this.removeLoadingMessage(loadingId);
+      
+      // Re-enable input on error - NEVER lock it
+      const input = document.getElementById('chatInput');
+      if (input) {
+        // Force unlock - chat input should NEVER be locked
+        input.disabled = false;
+        input.readOnly = false;
+        input.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        setTimeout(() => {
+          input.disabled = false;
+          input.readOnly = false;
+          input.focus();
+        }, 100);
+      }
       
       let errorMessage = 'Sorry, I encountered an error. ';
       
       if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
         errorMessage += 'Network error: Please check your internet connection.';
       } else if (error.message.includes('401') || error.message.includes('403')) {
-        errorMessage += 'Authentication error: Please check the API key.';
+        errorMessage = '🔐 **Authentication Error**\n\nYour Gemini API key authentication failed. Please:\n\n1. Verify your API key is correct: `AIzaSyDSCsCSg_kAJnkVmkFtAC0MUWhp6fawLf4`\n2. Check that the Gemini API is enabled in Google Cloud Console\n3. Ensure your API key has no IP or referrer restrictions\n4. Verify the API key has permission to use the Gemini API\n\nYou can manage your API key at: https://console.cloud.google.com/apis/credentials';
       } else if (error.message.includes('402') || error.message.includes('Insufficient Balance')) {
-        errorMessage = '💳 **Account Balance Issue**\n\nYour DeepSeek API account has insufficient balance. Please:\n\n1. Log in to your DeepSeek account\n2. Add credits to your API account\n3. Check your account balance\n4. Try again after adding credits\n\nYou can manage your account at: https://platform.deepseek.com';
+        const provider = window.getActiveProvider ? window.getActiveProvider().name : 'API';
+        errorMessage = `💳 **Account Balance Issue**\n\nYour ${provider} API account has insufficient balance. Please:\n\n1. Log in to your ${provider} account\n2. Add credits to your API account\n3. Check your account balance\n4. Try again after adding credits`;
       } else if (error.message.includes('429')) {
         errorMessage += 'Rate limit exceeded: Please try again later.';
       } else if (error.message.includes('500')) {
@@ -498,73 +517,247 @@ ${JSON.stringify(financialContext, null, 2)}`
     }
   }
 
+  getAllKPIsFromDOM() {
+    // Extract all KPI values from DOM elements
+    const kpis = {};
+    
+    // Helper to get element text or value
+    const getElementValue = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const text = el.textContent || el.innerText || '';
+      return text.trim() || null;
+    };
+    
+    // Helper to get numeric value
+    const getNumericValue = (id) => {
+      const text = getElementValue(id);
+      if (!text) return null;
+      const match = text.match(/[\d,]+\.?\d*/);
+      return match ? parseFloat(match[0].replace(/,/g, '')) : null;
+    };
+    
+    // Expense KPIs
+    kpis.expenses = {
+      all: {
+        monthlyUSD: getNumericValue('kpiAllMonthlyUSD'),
+        monthlyEGP: getNumericValue('kpiAllMonthlyEGP'),
+        yearlyUSD: getNumericValue('kpiAllYearlyUSD'),
+        yearlyEGP: getNumericValue('kpiAllYearlyEGP'),
+        monthlyUSDText: getElementValue('kpiAllMonthlyUSD'),
+        monthlyEGPText: getElementValue('kpiAllMonthlyEGP'),
+        yearlyUSDText: getElementValue('kpiAllYearlyUSD'),
+        yearlyEGPText: getElementValue('kpiAllYearlyEGP')
+      },
+      personal: {
+        monthlyUSD: getNumericValue('kpiPersonalMonthly'),
+        monthlyEGP: getNumericValue('kpiPersonalMonthlyEGP'),
+        yearlyUSD: getNumericValue('kpiPersonalYearly'),
+        yearlyEGP: getNumericValue('kpiPersonalYearlyEGP'),
+        monthlyUSDText: getElementValue('kpiPersonalMonthly'),
+        monthlyEGPText: getElementValue('kpiPersonalMonthlyEGP'),
+        yearlyUSDText: getElementValue('kpiPersonalYearly'),
+        yearlyEGPText: getElementValue('kpiPersonalYearlyEGP')
+      },
+      business: {
+        monthlyUSD: getNumericValue('kpiBizMonthly'),
+        monthlyEGP: getNumericValue('kpiBizMonthlyEGP'),
+        yearlyUSD: getNumericValue('kpiBizYearly'),
+        yearlyEGP: getNumericValue('kpiBizYearlyEGP'),
+        monthlyUSDText: getElementValue('kpiBizMonthly'),
+        monthlyEGPText: getElementValue('kpiBizMonthlyEGP'),
+        yearlyUSDText: getElementValue('kpiBizYearly'),
+        yearlyEGPText: getElementValue('kpiBizYearlyEGP')
+      },
+      shares: {
+        personal: getElementValue('sharePersonalVal'),
+        business: getElementValue('shareBizVal'),
+        personalNumeric: getNumericValue('sharePersonalVal'),
+        businessNumeric: getNumericValue('shareBizVal')
+      },
+      fx: {
+        label: getElementValue('kpiFxLabel'),
+        small: getElementValue('kpiFxSmall')
+      }
+    };
+    
+    // Income KPIs
+    kpis.income = {
+      all: {
+        monthlyUSD: getNumericValue('kpiIncomeAllMonthlyUSD'),
+        monthlyEGP: getNumericValue('kpiIncomeAllMonthlyEGP'),
+        yearlyUSD: getNumericValue('kpiIncomeAllYearlyUSD'),
+        yearlyEGP: getNumericValue('kpiIncomeAllYearlyEGP'),
+        monthlyUSDText: getElementValue('kpiIncomeAllMonthlyUSD'),
+        monthlyEGPText: getElementValue('kpiIncomeAllMonthlyEGP'),
+        yearlyUSDText: getElementValue('kpiIncomeAllYearlyUSD'),
+        yearlyEGPText: getElementValue('kpiIncomeAllYearlyEGP')
+      },
+      monthly: {
+        currentUSD: getNumericValue('kpiIncomeMonthlyCurrent'),
+        currentEGP: getNumericValue('kpiIncomeMonthlyCurrentEGP'),
+        avgUSD: getNumericValue('kpiIncomeMonthlyAvg'),
+        avgEGP: getNumericValue('kpiIncomeMonthlyAvgEGP'),
+        currentUSDText: getElementValue('kpiIncomeMonthlyCurrent'),
+        currentEGPText: getElementValue('kpiIncomeMonthlyCurrentEGP'),
+        avgUSDText: getElementValue('kpiIncomeMonthlyAvg'),
+        avgEGPText: getElementValue('kpiIncomeMonthlyAvgEGP')
+      },
+      yearly: {
+        currentUSD: getNumericValue('kpiIncomeYearlyCurrent'),
+        currentEGP: getNumericValue('kpiIncomeYearlyCurrentEGP'),
+        avgUSD: getNumericValue('kpiIncomeYearlyAvg'),
+        avgEGP: getNumericValue('kpiIncomeYearlyAvgEGP'),
+        targetUSD: getNumericValue('kpiIncomeYearlyTarget'),
+        targetEGP: getNumericValue('kpiIncomeYearlyTargetEGP'),
+        currentUSDText: getElementValue('kpiIncomeYearlyCurrent'),
+        currentEGPText: getElementValue('kpiIncomeYearlyCurrentEGP'),
+        avgUSDText: getElementValue('kpiIncomeYearlyAvg'),
+        avgEGPText: getElementValue('kpiIncomeYearlyAvgEGP'),
+        targetUSDText: getElementValue('kpiIncomeYearlyTarget'),
+        targetEGPText: getElementValue('kpiIncomeYearlyTargetEGP')
+      },
+      fx: {
+        label: getElementValue('kpiIncomeFxLabel'),
+        small: getElementValue('kpiIncomeFxSmall')
+      },
+      completed: {
+        value: getElementValue('shareIncomeCompletedVal'),
+        currency: getElementValue('shareIncomeCompletedValCurrency')
+      }
+    };
+    
+    // Analytics KPIs
+    kpis.analytics = {
+      cashFlow: {
+        monthlyUSD: getNumericValue('analyticsCashFlowMonthlyUSD'),
+        monthlyEGP: getNumericValue('analyticsCashFlowMonthlyEGP'),
+        yearlyUSD: getNumericValue('analyticsCashFlowYearlyUSD'),
+        yearlyEGP: getNumericValue('analyticsCashFlowYearlyEGP'),
+        monthlyUSDText: getElementValue('analyticsCashFlowMonthlyUSD'),
+        monthlyEGPText: getElementValue('analyticsCashFlowMonthlyEGP'),
+        yearlyUSDText: getElementValue('analyticsCashFlowYearlyUSD'),
+        yearlyEGPText: getElementValue('analyticsCashFlowYearlyEGP'),
+        status: getElementValue('analyticsCashFlowStatus'),
+        incomeVal: getElementValue('analyticsIncomeVal'),
+        expensesVal: getElementValue('analyticsExpensesVal')
+      },
+      savings: {
+        monthlyRate: getElementValue('analyticsSavingsRateMonthly'),
+        yearlyRate: getElementValue('analyticsSavingsRateYearly'),
+        monthlyStatus: getElementValue('analyticsSavingsRateMonthlyStatus'),
+        yearlyStatus: getElementValue('analyticsSavingsRateYearlyStatus'),
+        target: getElementValue('analyticsSavingsTarget'),
+        monthlyRateNumeric: getNumericValue('analyticsSavingsRateMonthly'),
+        yearlyRateNumeric: getNumericValue('analyticsSavingsRateYearly'),
+        targetNumeric: getNumericValue('analyticsSavingsTarget')
+      },
+      efficiency: {
+        personal: getElementValue('analyticsPersonalEfficiency'),
+        business: getElementValue('analyticsBusinessEfficiency'),
+        total: getElementValue('analyticsTotalEfficiency'),
+        personalStatus: getElementValue('analyticsPersonalEfficiencyStatus'),
+        businessStatus: getElementValue('analyticsBusinessEfficiencyStatus'),
+        personalNumeric: getNumericValue('analyticsPersonalEfficiency'),
+        businessNumeric: getNumericValue('analyticsBusinessEfficiency'),
+        totalNumeric: getNumericValue('analyticsTotalEfficiency')
+      },
+      health: {
+        score: getNumericValue('analyticsHealthScore'),
+        scoreText: getElementValue('analyticsHealthScore'),
+        grade: getElementValue('analyticsHealthGrade'),
+        gradeStatus: getElementValue('analyticsHealthGradeStatus'),
+        progress: getElementValue('analyticsHealthProgress'),
+        progressNumeric: getNumericValue('analyticsHealthProgress')
+      }
+    };
+    
+    return kpis;
+  }
+
   getFinancialContext() {
-    // Use the data access helper if available, otherwise fallback to direct access
+    // Get complete raw state object
+    const state = window.state || {};
+    
+    // Get all KPI values from DOM
+    const allKPIs = this.getAllKPIsFromDOM();
+    
+    // Get structured data from helper if available
+    let structuredData = {};
     if (window.FinancialDataAccess) {
-      const allData = window.FinancialDataAccess.getAllData();
-      const summary = window.FinancialDataAccess.getSummary();
-      const topExpenses = window.FinancialDataAccess.getTopExpenses('all', 10);
-      const breakdown = window.FinancialDataAccess.getExpenseBreakdown();
-      
-      return {
-        ...allData,
-        summary,
-        topExpenses,
-        breakdown,
-        timestamp: new Date().toISOString()
+      structuredData = {
+        ...window.FinancialDataAccess.getAllData(),
+        summary: window.FinancialDataAccess.getSummary(),
+        topExpenses: window.FinancialDataAccess.getTopExpenses('all', 10),
+        breakdown: window.FinancialDataAccess.getExpenseBreakdown()
       };
     }
     
-    // Fallback to direct access
-    const state = window.state || {};
-    
+    // Build comprehensive context with EVERYTHING
     const context = {
-      currency: {
-        selected: state.selectedCurrency || 'EGP',
-        symbol: state.currencySymbol || 'EGP',
-        rate: state.currencyRate || null
+      // Complete raw state - every single field
+      rawState: {
+        personal: state.personal || [],
+        biz: state.biz || [],
+        income: state.income || {},
+        fx: state.fx,
+        autosave: state.autosave,
+        autosaveInterval: state.autosaveInterval,
+        theme: state.theme,
+        includeAnnualInMonthly: state.includeAnnualInMonthly,
+        inputsLocked: state.inputsLocked,
+        selectedCurrency: state.selectedCurrency,
+        currencySymbol: state.currencySymbol,
+        currencyRate: state.currencyRate,
+        currencyLoadedFromCloud: state.currencyLoadedFromCloud
       },
-      personal: {
-        expenses: state.personal || [],
-        monthlyTotal: this.getKPIValue('kpiPersonalMonthly'),
-        yearlyTotal: this.getKPIValue('kpiPersonalYearly'),
-        monthlyEGP: this.getKPIValue('kpiPersonalMonthlyEGP'),
-        yearlyEGP: this.getKPIValue('kpiPersonalYearlyEGP')
+      
+      // All expenses with complete fields (no filtering)
+      expenses: {
+        personal: {
+          all: state.personal || [],
+          active: (state.personal || []).filter(e => e.status !== 'inactive'),
+          inactive: (state.personal || []).filter(e => e.status === 'inactive')
+        },
+        business: {
+          all: state.biz || [],
+          active: (state.biz || []).filter(e => e.status !== 'inactive'),
+          inactive: (state.biz || []).filter(e => e.status === 'inactive')
+        }
       },
-      business: {
-        expenses: state.biz || [],
-        monthlyTotal: this.getKPIValue('kpiBizMonthly'),
-        yearlyTotal: this.getKPIValue('kpiBizYearly'),
-        monthlyEGP: this.getKPIValue('kpiBizMonthlyEGP'),
-        yearlyEGP: this.getKPIValue('kpiBizYearlyEGP')
-      },
-      all: {
-        monthlyTotal: this.getKPIValue('kpiAllMonthlyUSD'),
-        yearlyTotal: this.getKPIValue('kpiAllYearlyUSD'),
-        monthlyEGP: this.getKPIValue('kpiAllMonthlyEGP'),
-        yearlyEGP: this.getKPIValue('kpiAllYearlyEGP'),
-        personalShare: this.getKPIValue('sharePersonalVal'),
-        businessShare: this.getKPIValue('shareBizVal')
-      },
+      
+      // All income with complete fields
       income: state.income || {},
+      
+      // All settings
       settings: {
-        theme: state.theme || 'dark',
-        autosave: state.autosave || 'on',
-        inputsLocked: state.inputsLocked || false
-      }
+        fx: state.fx,
+        autosave: state.autosave,
+        autosaveInterval: state.autosaveInterval,
+        theme: state.theme,
+        includeAnnualInMonthly: state.includeAnnualInMonthly,
+        inputsLocked: state.inputsLocked,
+        selectedCurrency: state.selectedCurrency,
+        currencySymbol: state.currencySymbol,
+        currencyRate: state.currencyRate,
+        currencyLoadedFromCloud: state.currencyLoadedFromCloud,
+        columnOrder: typeof columnOrder !== 'undefined' ? columnOrder : null
+      },
+      
+      // All KPI values from DOM (calculated and displayed values)
+      kpis: allKPIs,
+      
+      // All table data from DOM - every row, every column, every cell
+      tables: window.FinancialDataAccess ? window.FinancialDataAccess.getAllTableData() : {},
+      
+      // Structured data for convenience (existing format)
+      ...structuredData,
+      
+      // Metadata
+      timestamp: new Date().toISOString(),
+      dataSource: 'complete'
     };
-
-    // Calculate active expenses only
-    if (context.personal.expenses) {
-      context.personal.activeExpenses = context.personal.expenses.filter(e => e.status === 'active' || !e.status);
-      context.personal.inactiveExpenses = context.personal.expenses.filter(e => e.status === 'inactive');
-    }
-
-    if (context.business.expenses) {
-      context.business.activeExpenses = context.business.expenses.filter(e => e.status === 'active' || !e.status);
-      context.business.inactiveExpenses = context.business.expenses.filter(e => e.status === 'inactive');
-    }
-
+    
     return context;
   }
 
@@ -709,6 +902,47 @@ ${JSON.stringify(financialContext, null, 2)}`
     }
   }
 
+  showClearChatConfirm() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.zIndex = '10001';
+    
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-content';
+    dialog.style.maxWidth = '360px';
+    dialog.innerHTML = `
+      <h3 style="color: var(--fg); margin-bottom: 0.75rem; font-size: 1rem; font-weight: 600;">Clear Chat History</h3>
+      <p style="color: var(--muted); margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.5;">
+        Are you sure you want to clear all chat messages? This action cannot be undone.
+      </p>
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+        <button id="chatCancelClear" class="btn btn-ghost" style="padding: 0.5rem 1rem; font-size: 0.85rem; border: 1px solid var(--stroke); background: transparent; color: var(--muted);">Cancel</button>
+        <button id="chatConfirmClear" class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: var(--primary, #6366f1); color: white; border: none;">Clear Chat</button>
+      </div>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    });
+    
+    // Cancel button
+    document.getElementById('chatCancelClear').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+    
+    // Confirm button
+    document.getElementById('chatConfirmClear').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      this.clearChatHistory();
+    });
+  }
+
   clearChatHistory() {
     this.messages = [];
     const messagesContainer = document.getElementById('chatMessages');
@@ -717,13 +951,23 @@ ${JSON.stringify(financialContext, null, 2)}`
         <div class="chat-message chat-message-assistant">
           <div class="chat-message-content">
             <div class="chat-message-text">
-              <p>👋 Hello! I'm your financial assistant. How can I help you today?</p>
+              <p>👋 Hello! I'm your financial assistant. I can help you understand your expenses, income, savings, and answer questions about your financial data.</p>
+              <p class="mt-2">Try asking me:</p>
+              <ul class="chat-suggestions">
+                <li>"What's my total monthly expenses?"</li>
+                <li>"Show me my biggest expenses"</li>
+                <li>"What's my savings rate?"</li>
+                <li>"Compare personal vs business expenses"</li>
+              </ul>
             </div>
           </div>
         </div>
       `;
     }
     localStorage.removeItem('financialChatHistory');
+    
+    // Scroll to top after clearing
+    this.scrollToBottom();
   }
 }
 

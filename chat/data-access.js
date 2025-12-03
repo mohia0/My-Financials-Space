@@ -255,6 +255,202 @@ window.FinancialDataAccess = {
       },
       currency: this.getCurrencyData()
     };
+  },
+
+  /**
+   * Extract all table data from DOM - every row, every column, every cell
+   */
+  getAllTableData() {
+    const tables = {
+      personal: this.getTableData('list-personal', 'row-head', 'sum-personal', 'personal'),
+      business: this.getTableData('list-biz', 'row-head.row-biz', 'sum-biz', 'business'),
+      income: this.getIncomeTableData('list-income', 'row-head.row-income', 'sum-income')
+    };
+
+    return tables;
+  },
+
+  /**
+   * Extract expense table data (personal or business)
+   */
+  getTableData(listId, headerSelector, sumSelector, type) {
+    const listContainer = document.getElementById(listId);
+    // Handle selector - if it has spaces, use querySelector with class selector
+    const headerRow = headerSelector.includes(' ') 
+      ? document.querySelector(`.${headerSelector.replace(/\s+/g, '.')}`)
+      : document.querySelector(`.${headerSelector}`);
+    const sumRow = document.getElementById(sumSelector);
+    
+    if (!listContainer) return { headers: [], rows: [], sum: null };
+
+    // Extract headers
+    const headers = [];
+    if (headerRow) {
+      const headerCells = headerRow.querySelectorAll('div');
+      headerCells.forEach((cell, index) => {
+        const text = cell.textContent?.trim() || '';
+        if (text) {
+          headers.push({
+            index,
+            text,
+            column: cell.getAttribute('data-column') || null
+          });
+        }
+      });
+    }
+
+    // Extract all rows
+    const rows = [];
+    const rowElements = listContainer.querySelectorAll('.row:not(.row-head):not(.row-sum)');
+    
+    rowElements.forEach((rowEl, rowIndex) => {
+      const rowData = {
+        index: rowIndex,
+        cells: [],
+        rawData: rowEl.__rowData || null // Stored row data if available
+      };
+
+      // Extract all cells
+      const cells = rowEl.querySelectorAll('div');
+      cells.forEach((cell, cellIndex) => {
+        const cellText = cell.textContent?.trim() || '';
+        const cellData = {
+          index: cellIndex,
+          text: cellText,
+          html: cell.innerHTML || null,
+          classes: Array.from(cell.classList) || []
+        };
+
+        // Try to extract specific data based on cell content
+        if (cellIndex === 2) cellData.field = 'name';
+        else if (cellIndex === 3) cellData.field = 'cost';
+        else if (cellIndex === 4) cellData.field = 'status';
+        else if (cellIndex === 5) cellData.field = 'billing';
+        else if (cellIndex === 6 && type === 'business') cellData.field = 'next';
+        else if (cellIndex === 6 && type === 'personal') cellData.field = 'monthlyUSD';
+        else if (cellIndex === 7 && type === 'personal') cellData.field = 'yearlyUSD';
+        else if (cellIndex === 7 && type === 'business') cellData.field = 'monthlyUSD';
+        else if (cellIndex === 8 && type === 'business') cellData.field = 'yearlyUSD';
+        else if (cellIndex === 8 && type === 'personal') cellData.field = 'monthlyEGP';
+        else if (cellIndex === 9 && type === 'personal') cellData.field = 'yearlyEGP';
+        else if (cellIndex === 9 && type === 'business') cellData.field = 'monthlyEGP';
+        else if (cellIndex === 10 && type === 'business') cellData.field = 'yearlyEGP';
+
+        rowData.cells.push(cellData);
+      });
+
+      rows.push(rowData);
+    });
+
+    // Extract sum row
+    let sumData = null;
+    if (sumRow) {
+      const sumCells = sumRow.querySelectorAll('div');
+      sumData = {
+        cells: Array.from(sumCells).map((cell, index) => ({
+          index,
+          text: cell.textContent?.trim() || '',
+          html: cell.innerHTML || null
+        }))
+      };
+    }
+
+    return {
+      headers,
+      rows,
+      sum: sumData,
+      rowCount: rows.length
+    };
+  },
+
+  /**
+   * Extract income table data
+   */
+  getIncomeTableData(listId, headerSelector, sumSelector) {
+    const listContainer = document.getElementById(listId);
+    // Handle selector - if it has spaces, use querySelector with class selector
+    const headerRow = headerSelector.includes(' ')
+      ? document.querySelector(`.${headerSelector.replace(/\s+/g, '.')}`)
+      : document.querySelector(`.${headerSelector}`);
+    const sumRow = document.getElementById(sumSelector);
+    
+    if (!listContainer) return { headers: [], rows: [], sum: null };
+
+    // Extract headers
+    const headers = [];
+    if (headerRow) {
+      const headerCells = headerRow.querySelectorAll('div');
+      headerCells.forEach((cell, index) => {
+        const text = cell.textContent?.trim() || '';
+        if (text) {
+          headers.push({
+            index,
+            text,
+            id: cell.id || null
+          });
+        }
+      });
+    }
+
+    // Extract all rows
+    const rows = [];
+    const rowElements = listContainer.querySelectorAll('.row-income:not(.row-head):not(.row-sum)');
+    
+    rowElements.forEach((rowEl, rowIndex) => {
+      const rowData = {
+        index: rowIndex,
+        cells: [],
+        rawData: rowEl.__rowData || null // Stored row data if available
+      };
+
+      // Extract all cells
+      const cells = rowEl.querySelectorAll('div');
+      cells.forEach((cell, cellIndex) => {
+        const cellText = cell.textContent?.trim() || '';
+        const cellData = {
+          index: cellIndex,
+          text: cellText,
+          html: cell.innerHTML || null,
+          classes: Array.from(cell.classList) || []
+        };
+
+        // Map income table columns
+        if (cellIndex === 2) cellData.field = 'projectName';
+        else if (cellIndex === 3) cellData.field = 'tags';
+        else if (cellIndex === 4) cellData.field = 'date';
+        else if (cellIndex === 5) cellData.field = 'allPayment';
+        else if (cellIndex === 6) cellData.field = 'paidUSD';
+        else if (cellIndex === 7) cellData.field = 'paidEGP';
+        else if (cellIndex === 8) cellData.field = 'method';
+        else if (cellIndex === 9) cellData.field = 'note';
+        else if (cellIndex === 10) cellData.field = 'progress';
+
+        rowData.cells.push(cellData);
+      });
+
+      rows.push(rowData);
+    });
+
+    // Extract sum row
+    let sumData = null;
+    if (sumRow) {
+      const sumCells = sumRow.querySelectorAll('div');
+      sumData = {
+        cells: Array.from(sumCells).map((cell, index) => ({
+          index,
+          text: cell.textContent?.trim() || '',
+          html: cell.innerHTML || null
+        }))
+      };
+    }
+
+    return {
+      headers,
+      rows,
+      sum: sumData,
+      rowCount: rows.length
+    };
   }
 };
+
 

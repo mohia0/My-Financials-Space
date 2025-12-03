@@ -54,3 +54,4 @@ On mobile devices (< 768px):
 - Floating button positioned above mobile navigation
 - Minimize functionality disabled (full-screen only)
 
+

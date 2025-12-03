@@ -18,32 +18,45 @@ const AI_PROVIDERS = {
   
   GEMINI: {
     name: 'Google Gemini',
-    apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-    model: 'gemini-pro',
-    apiKey: '', // Add your Gemini API key here
+    apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+    model: 'gemini-2.0-flash',
+    apiKey: 'AIzaSyDSCsCSg_kAJnkVmkFtAC0MUWhp6fawLf4',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-goog-api-key': '{API_KEY}'
     },
     formatRequest: (messages, systemPrompt) => {
       // Convert OpenAI format to Gemini format
-      const lastMessage = messages[messages.length - 1];
-      const contents = messages
+      let contents = messages
         .filter(msg => msg.role !== 'system')
         .map(msg => ({
           role: msg.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: msg.content }]
         }));
       
-      return {
+      // Build request body
+      const requestBody = {
         contents: contents,
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 2000
         }
       };
+      
+      // Gemini 1.5 supports system instructions
+      if (systemPrompt) {
+        requestBody.systemInstruction = {
+          parts: [{ text: systemPrompt }]
+        };
+      }
+      
+      return requestBody;
     },
     formatResponse: (data) => {
-      return data.candidates[0].content.parts[0].text;
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+        return data.candidates[0].content.parts[0].text;
+      }
+      throw new Error('Unexpected response format from Gemini API');
     }
   },
   
@@ -94,7 +107,7 @@ const AI_PROVIDERS = {
 };
 
 // Current active provider
-let activeProvider = 'DEEPSEEK'; // Change this to switch providers
+let activeProvider = 'GEMINI'; // Change this to switch providers
 
 /**
  * Get the active provider configuration
@@ -128,7 +141,12 @@ function getAPIRequest(messages, systemPrompt) {
   // Prepare headers
   const headers = {};
   Object.keys(provider.headers).forEach(key => {
-    headers[key] = provider.headers[key].replace('{API_KEY}', provider.apiKey);
+    let headerValue = provider.headers[key];
+    // Replace API_KEY placeholder in headers
+    if (headerValue.includes('{API_KEY}')) {
+      headerValue = headerValue.replace('{API_KEY}', provider.apiKey);
+    }
+    headers[key] = headerValue;
   });
   
   // Prepare request body
@@ -146,8 +164,11 @@ function getAPIRequest(messages, systemPrompt) {
     };
   }
   
+  // Build URL - Gemini uses header for API key, not query parameter
+  let url = provider.apiUrl;
+  
   return {
-    url: provider.apiUrl + (provider.name === 'GEMINI' ? `?key=${provider.apiKey}` : ''),
+    url: url,
     headers: headers,
     body: body,
     formatResponse: provider.formatResponse || ((data) => data.choices[0].message.content)
@@ -161,4 +182,5 @@ if (typeof window !== 'undefined') {
   window.setActiveProvider = setActiveProvider;
   window.getAPIRequest = getAPIRequest;
 }
+
 
