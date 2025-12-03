@@ -20,6 +20,110 @@ window.FinancialDataAccess = {
   },
 
   /**
+   * Get COMPLETE financial context - everything the chat needs
+   * This is the single source of truth for all financial data
+   */
+  getCompleteFinancialContext() {
+    const state = window.state || {};
+    
+    // Get all base data
+    const baseData = this.getAllData();
+    
+    // Get all income-related data
+    const allIncomeEntries = this.getAllIncomeEntries();
+    const incomeTotalsByYear = this.getIncomeTotalsByYear();
+    const bestIncomeYear = this.getBestIncomeYear();
+    
+    // Get years info
+    const allYears = Object.keys(state.income || {}).sort((a, b) => parseInt(a) - parseInt(b));
+    const yearsWithData = allYears.filter(year => {
+      const yearData = state.income[year] || [];
+      return yearData.length > 0;
+    });
+    
+    // Get expenses breakdown
+    const expenses = {
+      personal: {
+        all: state.personal || [],
+        active: (state.personal || []).filter(e => e.status !== 'inactive'),
+        inactive: (state.personal || []).filter(e => e.status === 'inactive')
+      },
+      business: {
+        all: state.biz || [],
+        active: (state.biz || []).filter(e => e.status !== 'inactive'),
+        inactive: (state.biz || []).filter(e => e.status === 'inactive')
+      }
+    };
+    
+    // Build complete context
+    // Note: Spread baseData first, then override with more complete versions
+    return {
+      // Raw state - direct access to everything
+      rawState: {
+        personal: state.personal || [],
+        biz: state.biz || [],
+        income: state.income || {},
+        fx: state.fx,
+        autosave: state.autosave,
+        autosaveInterval: state.autosaveInterval,
+        theme: state.theme,
+        includeAnnualInMonthly: state.includeAnnualInMonthly,
+        inputsLocked: state.inputsLocked,
+        selectedCurrency: state.selectedCurrency,
+        currencySymbol: state.currencySymbol,
+        currencyRate: state.currencyRate,
+        currencyLoadedFromCloud: state.currencyLoadedFromCloud
+      },
+      
+      // Structured data from base methods (spread first)
+      ...baseData,
+      
+      // Expenses - organized and filtered (override baseData.expenses with complete version)
+      expenses: expenses,
+      
+      // Income - organized by year (override baseData.income with raw state)
+      income: state.income || {},
+      
+      // Income data in multiple formats for easy access
+      incomeData: {
+        allEntries: allIncomeEntries,
+        totalsByYear: incomeTotalsByYear,
+        bestYear: bestIncomeYear,
+        yearsWithData: yearsWithData,
+        allYears: allYears
+      },
+      
+      // Settings
+      settings: {
+        fx: state.fx,
+        autosave: state.autosave,
+        autosaveInterval: state.autosaveInterval,
+        theme: state.theme,
+        includeAnnualInMonthly: state.includeAnnualInMonthly,
+        inputsLocked: state.inputsLocked,
+        selectedCurrency: state.selectedCurrency,
+        currencySymbol: state.currencySymbol,
+        currencyRate: state.currencyRate,
+        currencyLoadedFromCloud: state.currencyLoadedFromCloud,
+        columnOrder: typeof columnOrder !== 'undefined' ? columnOrder : null
+      },
+      
+      // Pre-calculated helpful data
+      topExpenses: this.getTopExpenses('all', 10),
+      topProjects: this.getTopProjects(10),
+      breakdown: this.getExpenseBreakdown(),
+      summary: this.getSummary(),
+      
+      // All table data from DOM
+      tables: this.getAllTableData(),
+      
+      // Metadata
+      timestamp: new Date().toISOString(),
+      dataSource: 'complete'
+    };
+  },
+
+  /**
    * Get expenses data (personal + business)
    */
   getExpensesData() {
@@ -65,30 +169,74 @@ window.FinancialDataAccess = {
     const result = {};
     Object.keys(income).forEach(year => {
       const yearData = income[year] || [];
+      // Calculate totals using correct field names: paidUsd and allPayment
+      const totalPaidUsd = yearData.reduce((sum, entry) => {
+        return sum + (parseFloat(entry.paidUsd || entry.paid_usd || 0) || 0);
+      }, 0);
+      const totalAllPayment = yearData.reduce((sum, entry) => {
+        return sum + (parseFloat(entry.allPayment || entry.all_payment || 0) || 0);
+      }, 0);
+      
       result[year] = {
         entries: yearData,
-        total: yearData.reduce((sum, entry) => {
-          const amount = parseFloat(entry.amount || entry.monthly || 0) || 0;
-          return sum + amount;
-        }, 0),
-        monthlyAverage: yearData.length > 0 
-          ? yearData.reduce((sum, entry) => {
-              const amount = parseFloat(entry.amount || entry.monthly || 0) || 0;
-              return sum + amount;
-            }, 0) / yearData.length 
-          : 0
+        entryCount: yearData.length,
+        totalPaidUsd: totalPaidUsd,
+        totalAllPayment: totalAllPayment,
+        totalPaidEgp: yearData.reduce((sum, entry) => {
+          return sum + (parseFloat(entry.paidEgp || entry.paid_egp || 0) || 0);
+        }, 0)
       };
     });
 
-    // Get current year totals from KPIs if available
-    const currentYear = new Date().getFullYear();
-    if (document.getElementById(`kpiIncome${currentYear}`)) {
-      result.currentYear = {
-        total: this.getKPIValue(`kpiIncome${currentYear}`)
-      };
-    }
-
     return result;
+  },
+
+  /**
+   * Get ALL income entries from ALL years as a flat array
+   */
+  getAllIncomeEntries() {
+    const state = window.state || {};
+    const income = state.income || {};
+    
+    const allEntries = [];
+    Object.keys(income).forEach(year => {
+      const yearData = income[year] || [];
+      yearData.forEach(entry => {
+        allEntries.push({
+          ...entry,
+          year: year
+        });
+      });
+    });
+    
+    return allEntries;
+  },
+
+  /**
+   * Get income totals by year (summary)
+   */
+  getIncomeTotalsByYear() {
+    const state = window.state || {};
+    const income = state.income || {};
+    
+    const totals = {};
+    Object.keys(income).forEach(year => {
+      const yearData = income[year] || [];
+      totals[year] = {
+        entryCount: yearData.length,
+        totalPaidUsd: yearData.reduce((sum, entry) => {
+          return sum + (parseFloat(entry.paidUsd || entry.paid_usd || 0) || 0);
+        }, 0),
+        totalAllPayment: yearData.reduce((sum, entry) => {
+          return sum + (parseFloat(entry.allPayment || entry.all_payment || 0) || 0);
+        }, 0),
+        totalPaidEgp: yearData.reduce((sum, entry) => {
+          return sum + (parseFloat(entry.paidEgp || entry.paid_egp || 0) || 0);
+        }, 0)
+      };
+    });
+    
+    return totals;
   },
 
   /**
@@ -205,6 +353,52 @@ window.FinancialDataAccess = {
     });
 
     return { monthly, yearly };
+  },
+
+  /**
+   * Get top income/projects by payment amount
+   */
+  getTopProjects(limit = 10) {
+    const allProjects = this.getAllIncomeEntries();
+
+    // Sort by paidUsd (descending), then by allPayment if paidUsd is same
+    allProjects.sort((a, b) => {
+      const aPaid = parseFloat(a.paidUsd || a.paid_usd || 0) || 0;
+      const bPaid = parseFloat(b.paidUsd || b.paid_usd || 0) || 0;
+      if (bPaid !== aPaid) {
+        return bPaid - aPaid;
+      }
+      const aTotal = parseFloat(a.allPayment || a.all_payment || 0) || 0;
+      const bTotal = parseFloat(b.allPayment || b.all_payment || 0) || 0;
+      return bTotal - aTotal;
+    });
+
+    return allProjects.slice(0, limit);
+  },
+
+  /**
+   * Get best income year (year with highest total income)
+   */
+  getBestIncomeYear() {
+    const totals = this.getIncomeTotalsByYear();
+    let bestYear = null;
+    let highestTotal = 0;
+    
+    Object.keys(totals).forEach(year => {
+      const total = totals[year].totalPaidUsd || 0;
+      if (total > highestTotal) {
+        highestTotal = total;
+        bestYear = year;
+      }
+    });
+    
+    return bestYear ? {
+      year: bestYear,
+      totalPaidUsd: highestTotal,
+      totalAllPayment: totals[bestYear].totalAllPayment,
+      entryCount: totals[bestYear].entryCount,
+      ...totals[bestYear]
+    } : null;
   },
 
   /**

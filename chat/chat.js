@@ -79,6 +79,24 @@ class FinancialChat {
     // CHAT DISABLED - Set to false to enable
     const CHAT_ENABLED = true;
     
+    // Disable chat on mobile devices
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      console.log('Chat is disabled on mobile devices');
+      // Hide chat elements on mobile
+      const widget = document.getElementById('chatWidget');
+      const toggleBtn = document.getElementById('chatToggleBtn');
+      if (widget) {
+        widget.style.display = 'none';
+        widget.classList.add('hidden');
+      }
+      if (toggleBtn) {
+        toggleBtn.style.display = 'none';
+        toggleBtn.classList.add('hidden');
+      }
+      return;
+    }
+    
     if (!CHAT_ENABLED) {
       console.log('Chat is currently disabled');
       // Hide chat elements
@@ -321,20 +339,89 @@ class FinancialChat {
       const apiMessages = [
         {
           role: 'system',
-          content: `You are a concise financial assistant. Be DIRECT and BRIEF. Get straight to the point.
+          content: `You are a concise financial assistant. Be DIRECT and BRIEF.
 
-You have COMPLETE access to ALL financial data:
-- Every expense/income entry with all fields
-- All KPIs, totals, analytics, and calculations
-- All settings and currency data
+=== COMPLETE DATA ACCESS ===
+You have access to EVERYTHING. Never say "I don't have information" or "I cannot" - you have complete access.
 
-RULES:
-1. Be CONCISE - use minimal text, maximum value
-2. Lead with the answer, skip lengthy explanations
-3. Use bullet points or short sentences
-4. Format numbers clearly: $1,234.56 or 1,234.56 EGP
-5. Only elaborate if the user asks for details
-6. Never say you don't have information - you have everything
+=== DATA STRUCTURE EXPLAINED ===
+
+EXPENSE ENTRIES (in rawState.personal, rawState.biz, expenses.personal.all, expenses.business.all):
+Each expense has these fields:
+- name: Expense name (e.g., "Netflix", "Office Rent")
+- cost: Original cost in USD
+- monthlyUSD: Monthly cost in USD (use this for monthly comparisons)
+- monthlyEGP: Monthly cost in EGP
+- yearlyUSD: Yearly cost in USD
+- yearlyEGP: Yearly cost in EGP
+- billing: "Monthly" or "Annually" or "Yearly"
+- status: "Active" or "inactive"
+- next: Next payment date (for business expenses)
+- icon: Icon identifier
+
+TO FIND BIGGEST EXPENSES:
+1. Look at rawState.personal and rawState.biz arrays
+2. Sort by monthlyUSD field (highest first)
+3. Or use topExpenses array which is already sorted
+4. Compare monthlyUSD values to find biggest
+
+INCOME ENTRIES - MULTIPLE WAYS TO ACCESS:
+1. rawState.income - Object with year keys: income["2020"], income["2021"], income["2022"], etc.
+   Each year contains an array of income entries.
+2. incomeData.allEntries - ALL income entries from ALL years as a flat array (easiest to search)
+3. incomeData.totalsByYear - Summary totals for each year
+4. incomeData.bestYear - The year with highest income (already calculated)
+5. incomeData.yearsWithData - List of years that have income entries
+6. incomeData.allYears - List of all years (including empty ones)
+7. topProjects - Top 10 projects sorted by paidUsd (highest first)
+
+Each income entry has these fields:
+- name: Project/client name (e.g., "Website Redesign", "Mobile App")
+- paidUsd: Amount paid in USD (use this to compare projects and years)
+- paidEgp: Amount paid in EGP
+- allPayment: Total project payment amount
+- tags: Project categories/tags (array or string)
+- date: Payment date
+- method: Payment method
+- progress: Completion percentage (0-100)
+- note: Additional notes
+- year: Year of income (included in allEntries and topProjects)
+
+TO FIND BEST PROJECT:
+1. Use topProjects array (first item is the best, already sorted by paidUsd)
+2. Or search incomeData.allEntries and sort by paidUsd (highest first)
+3. Compare paidUsd or allPayment values (highest = best financially)
+4. Include project name, amount, tags, and year in your answer
+
+TO FIND BEST INCOME YEAR:
+1. Use incomeData.bestYear (already calculated - has year, totalPaidUsd, entryCount)
+2. Or use incomeData.totalsByYear and find year with highest totalPaidUsd
+3. Compare totalPaidUsd values across years
+
+=== HOW TO ANSWER COMMON QUESTIONS ===
+
+"Show me my biggest expenses":
+- Sort expenses.personal.all and expenses.business.all by monthlyUSD (descending)
+- Or use topExpenses array
+- List top 5-10 with amounts
+
+"What is the best project?" or "best project":
+- Use topProjects array (first item is the best, already sorted)
+- Or search incomeData.allEntries and find highest paidUsd
+- Include: project name, paidUsd amount, tags, year
+
+"What is the best income year?" or "best income year":
+- Use incomeData.bestYear (already calculated)
+- Or check incomeData.totalsByYear and find highest totalPaidUsd
+- Include: year, total amount, number of projects
+
+=== RULES ===
+1. Be CONCISE - minimal text, maximum value
+2. Lead with answer, skip explanations
+3. Use bullet points
+4. Format: $1,234.56 or 1,234.56 EGP
+5. NEVER say "I cannot" or "I don't have information"
+6. Use the data provided - it's all there
 
 Complete financial data:
 ${JSON.stringify(financialContext, null, 2)}`
@@ -352,20 +439,89 @@ ${JSON.stringify(financialContext, null, 2)}`
         
         apiRequest = window.getAPIRequest(
           this.messages,
-          `You are a concise financial assistant. Be DIRECT and BRIEF. Get straight to the point.
+          `You are a concise financial assistant. Be DIRECT and BRIEF.
 
-You have COMPLETE access to ALL financial data:
-- Every expense/income entry with all fields
-- All KPIs, totals, analytics, and calculations
-- All settings and currency data
+=== COMPLETE DATA ACCESS ===
+You have access to EVERYTHING. Never say "I don't have information" or "I cannot" - you have complete access.
 
-RULES:
-1. Be CONCISE - use minimal text, maximum value
-2. Lead with the answer, skip lengthy explanations
-3. Use bullet points or short sentences
-4. Format numbers clearly: $1,234.56 or 1,234.56 EGP
-5. Only elaborate if the user asks for details
-6. Never say you don't have information - you have everything
+=== DATA STRUCTURE EXPLAINED ===
+
+EXPENSE ENTRIES (in rawState.personal, rawState.biz, expenses.personal.all, expenses.business.all):
+Each expense has these fields:
+- name: Expense name (e.g., "Netflix", "Office Rent")
+- cost: Original cost in USD
+- monthlyUSD: Monthly cost in USD (use this for monthly comparisons)
+- monthlyEGP: Monthly cost in EGP
+- yearlyUSD: Yearly cost in USD
+- yearlyEGP: Yearly cost in EGP
+- billing: "Monthly" or "Annually" or "Yearly"
+- status: "Active" or "inactive"
+- next: Next payment date (for business expenses)
+- icon: Icon identifier
+
+TO FIND BIGGEST EXPENSES:
+1. Look at rawState.personal and rawState.biz arrays
+2. Sort by monthlyUSD field (highest first)
+3. Or use topExpenses array which is already sorted
+4. Compare monthlyUSD values to find biggest
+
+INCOME ENTRIES - MULTIPLE WAYS TO ACCESS:
+1. rawState.income - Object with year keys: income["2020"], income["2021"], income["2022"], etc.
+   Each year contains an array of income entries.
+2. incomeData.allEntries - ALL income entries from ALL years as a flat array (easiest to search)
+3. incomeData.totalsByYear - Summary totals for each year
+4. incomeData.bestYear - The year with highest income (already calculated)
+5. incomeData.yearsWithData - List of years that have income entries
+6. incomeData.allYears - List of all years (including empty ones)
+7. topProjects - Top 10 projects sorted by paidUsd (highest first)
+
+Each income entry has these fields:
+- name: Project/client name (e.g., "Website Redesign", "Mobile App")
+- paidUsd: Amount paid in USD (use this to compare projects and years)
+- paidEgp: Amount paid in EGP
+- allPayment: Total project payment amount
+- tags: Project categories/tags (array or string)
+- date: Payment date
+- method: Payment method
+- progress: Completion percentage (0-100)
+- note: Additional notes
+- year: Year of income (included in allEntries and topProjects)
+
+TO FIND BEST PROJECT:
+1. Use topProjects array (first item is the best, already sorted by paidUsd)
+2. Or search incomeData.allEntries and sort by paidUsd (highest first)
+3. Compare paidUsd or allPayment values (highest = best financially)
+4. Include project name, amount, tags, and year in your answer
+
+TO FIND BEST INCOME YEAR:
+1. Use incomeData.bestYear (already calculated - has year, totalPaidUsd, entryCount)
+2. Or use incomeData.totalsByYear and find year with highest totalPaidUsd
+3. Compare totalPaidUsd values across years
+
+=== HOW TO ANSWER COMMON QUESTIONS ===
+
+"Show me my biggest expenses":
+- Sort expenses.personal.all and expenses.business.all by monthlyUSD (descending)
+- Or use topExpenses array
+- List top 5-10 with amounts
+
+"What is the best project?" or "best project":
+- Use topProjects array (first item is the best, already sorted)
+- Or search incomeData.allEntries and find highest paidUsd
+- Include: project name, paidUsd amount, tags, year
+
+"What is the best income year?" or "best income year":
+- Use incomeData.bestYear (already calculated)
+- Or check incomeData.totalsByYear and find highest totalPaidUsd
+- Include: year, total amount, number of projects
+
+=== RULES ===
+1. Be CONCISE - minimal text, maximum value
+2. Lead with answer, skip explanations
+3. Use bullet points
+4. Format: $1,234.56 or 1,234.56 EGP
+5. NEVER say "I cannot" or "I don't have information"
+6. Use the data provided - it's all there
 
 Complete financial data:
 ${JSON.stringify(financialContext, null, 2)}`
@@ -676,89 +832,45 @@ ${JSON.stringify(financialContext, null, 2)}`
   }
 
   getFinancialContext() {
-    // Get complete raw state object
-    const state = window.state || {};
-    
-    // Get all KPI values from DOM
+    // Get all KPI values from DOM (calculated and displayed values)
     const allKPIs = this.getAllKPIsFromDOM();
     
-    // Get structured data from helper if available
-    let structuredData = {};
-    if (window.FinancialDataAccess) {
-      structuredData = {
-        ...window.FinancialDataAccess.getAllData(),
-        summary: window.FinancialDataAccess.getSummary(),
-        topExpenses: window.FinancialDataAccess.getTopExpenses('all', 10),
-        breakdown: window.FinancialDataAccess.getExpenseBreakdown()
+    // Get complete financial context from FinancialDataAccess (single source of truth)
+    let financialContext = {};
+    if (window.FinancialDataAccess && typeof window.FinancialDataAccess.getCompleteFinancialContext === 'function') {
+      financialContext = window.FinancialDataAccess.getCompleteFinancialContext();
+    } else {
+      // Fallback if FinancialDataAccess is not available
+      const state = window.state || {};
+      financialContext = {
+        rawState: {
+          personal: state.personal || [],
+          biz: state.biz || [],
+          income: state.income || {}
+        },
+        expenses: {
+          personal: { all: state.personal || [] },
+          business: { all: state.biz || [] }
+        },
+        income: state.income || {},
+        incomeData: {
+          allEntries: [],
+          totalsByYear: {},
+          bestYear: null,
+          yearsWithData: [],
+          allYears: []
+        }
       };
     }
     
-    // Build comprehensive context with EVERYTHING
-    const context = {
-      // Complete raw state - every single field
-      rawState: {
-        personal: state.personal || [],
-        biz: state.biz || [],
-        income: state.income || {},
-        fx: state.fx,
-        autosave: state.autosave,
-        autosaveInterval: state.autosaveInterval,
-        theme: state.theme,
-        includeAnnualInMonthly: state.includeAnnualInMonthly,
-        inputsLocked: state.inputsLocked,
-        selectedCurrency: state.selectedCurrency,
-        currencySymbol: state.currencySymbol,
-        currencyRate: state.currencyRate,
-        currencyLoadedFromCloud: state.currencyLoadedFromCloud
-      },
-      
-      // All expenses with complete fields (no filtering)
-      expenses: {
-        personal: {
-          all: state.personal || [],
-          active: (state.personal || []).filter(e => e.status !== 'inactive'),
-          inactive: (state.personal || []).filter(e => e.status === 'inactive')
-        },
-        business: {
-          all: state.biz || [],
-          active: (state.biz || []).filter(e => e.status !== 'inactive'),
-          inactive: (state.biz || []).filter(e => e.status === 'inactive')
-        }
-      },
-      
-      // All income with complete fields
-      income: state.income || {},
-      
-      // All settings
-      settings: {
-        fx: state.fx,
-        autosave: state.autosave,
-        autosaveInterval: state.autosaveInterval,
-        theme: state.theme,
-        includeAnnualInMonthly: state.includeAnnualInMonthly,
-        inputsLocked: state.inputsLocked,
-        selectedCurrency: state.selectedCurrency,
-        currencySymbol: state.currencySymbol,
-        currencyRate: state.currencyRate,
-        currencyLoadedFromCloud: state.currencyLoadedFromCloud,
-        columnOrder: typeof columnOrder !== 'undefined' ? columnOrder : null
-      },
-      
-      // All KPI values from DOM (calculated and displayed values)
-      kpis: allKPIs,
-      
-      // All table data from DOM - every row, every column, every cell
-      tables: window.FinancialDataAccess ? window.FinancialDataAccess.getAllTableData() : {},
-      
-      // Structured data for convenience (existing format)
-      ...structuredData,
-      
-      // Metadata
-      timestamp: new Date().toISOString(),
-      dataSource: 'complete'
-    };
+    // Add KPI values from DOM (these are calculated/displayed values that may differ from raw state)
+    financialContext.kpis = allKPIs;
     
-    return context;
+    // Add metadata
+    financialContext.timestamp = new Date().toISOString();
+    financialContext.dataSource = 'complete';
+    
+    return financialContext;
   }
 
   getKPIValue(elementId) {
