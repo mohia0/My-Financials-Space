@@ -63,8 +63,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <!-- Chat Assistant Styles -->
-  <link rel="stylesheet" href="chat/chat.css">
 </head>
 <body class="h-full splash-active">
 
@@ -1889,84 +1887,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Chat Assistant Widget -->
-  <div id="chatWidget" class="chat-widget hidden">
-    <!-- Chat Header -->
-    <div class="chat-header" id="chatHeader">
-      <div class="chat-header-content">
-        <div class="chat-header-info">
-          <svg class="chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <span class="chat-title">Financial Assistant</span>
-        </div>
-        <div class="chat-header-actions">
-          <button class="chat-action-btn" id="chatClearBtn" title="Clear Chat">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-          <button class="chat-action-btn" id="chatCloseBtn" title="Close">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6L6 18M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Chat Body (Messages Area) -->
-    <div class="chat-body" id="chatBody">
-      <div class="chat-messages" id="chatMessages">
-        <!-- Welcome Message -->
-        <div class="chat-message chat-message-assistant">
-          <div class="chat-message-content">
-            <div class="chat-message-text">
-              <p>👋 Hello! I'm your financial assistant. I can help you understand your expenses, income, savings, and answer questions about your financial data.</p>
-              <p class="mt-2">Try asking me:</p>
-              <ul class="chat-suggestions">
-                <li>"What's my total monthly expenses?"</li>
-                <li>"Show me my biggest expenses"</li>
-                <li>"What's my savings rate?"</li>
-                <li>"Compare personal vs business expenses"</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Chat Input Area -->
-    <div class="chat-input-area">
-      <div class="chat-input-container">
-        <textarea 
-          id="chatInput" 
-          class="chat-input" 
-          placeholder="Ask about your finances..."
-          rows="1"
-        ></textarea>
-        <button id="chatSendBtn" class="chat-send-btn" title="Send message">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Chat Toggle Button (Floating) -->
-  <button id="chatToggleBtn" class="chat-toggle-btn">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-    </svg>
-    <span class="chat-toggle-badge" id="chatBadge"></span>
-  </button>
-
-  <!-- Chat Assistant Scripts -->
-  <script src="chat/data-access.js"></script>
-  <script src="chat/api-config.js"></script>
-  <script src="chat/chat.js"></script>
 
 </body>
 
