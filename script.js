@@ -26,6 +26,78 @@ let columnOrder = ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
 let lastScrollY = 0;
 let ticking = false;
 
+// Function to handle horizontal scroll detection for sticky name columns
+function initTableScrollDetection() {
+  const tableContainers = document.querySelectorAll('.table-container');
+  
+  tableContainers.forEach(container => {
+    let scrollTimeout;
+    
+    const handleScroll = () => {
+      const scrollLeft = container.scrollLeft;
+      
+      // Add 'scrolled' class when scrolled horizontally (more than 5px)
+      if (scrollLeft > 5) {
+        container.classList.add('scrolled');
+      } else {
+        container.classList.remove('scrolled');
+      }
+      
+      // Clear timeout
+      clearTimeout(scrollTimeout);
+      
+      // Remove class after scrolling stops (for smooth fade out)
+      scrollTimeout = setTimeout(() => {
+        if (container.scrollLeft <= 5) {
+          container.classList.remove('scrolled');
+        }
+      }, 150);
+    };
+    
+    // Listen for scroll events
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Check initial scroll position
+    handleScroll();
+  });
+  
+  // Re-initialize when new tables are added
+  const observer = new MutationObserver(() => {
+    const newContainers = document.querySelectorAll('.table-container:not([data-scroll-detected])');
+    newContainers.forEach(container => {
+      container.setAttribute('data-scroll-detected', 'true');
+      let scrollTimeout;
+      
+      const handleScroll = () => {
+        const scrollLeft = container.scrollLeft;
+        if (scrollLeft > 5) {
+          container.classList.add('scrolled');
+        } else {
+          container.classList.remove('scrolled');
+        }
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          if (container.scrollLeft <= 5) {
+            container.classList.remove('scrolled');
+          }
+        }, 150);
+      };
+      
+      container.addEventListener('scroll', handleScroll, { passive: true });
+      handleScroll();
+    });
+  });
+  
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+  
+  // Mark existing containers
+  tableContainers.forEach(container => {
+    container.setAttribute('data-scroll-detected', 'true');
+  });
+}
+
 function updateHeader() {
   const header = document.querySelector('header');
   const scrollY = window.scrollY;
@@ -89,6 +161,8 @@ function initializeProgressBars() {
 document.addEventListener('DOMContentLoaded', () => {
   updateHeader();
   initializeProgressBars();
+  // Initialize table scroll detection for sticky name column shadows
+  initTableScrollDetection();
   // Initialize tooltips after a short delay to ensure DOM is fully loaded
   setTimeout(() => {
     initializeTooltips();

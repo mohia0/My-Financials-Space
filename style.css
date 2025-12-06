@@ -3436,7 +3436,8 @@ input[type="range"]::-moz-range-thumb:hover {
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
   width: fit-content; /* Make background hug the content */
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow to separate from scrolling content */
+  box-shadow: none; /* No shadow initially - will appear on scroll */
+  transition: box-shadow 0.2s ease;
 }
 .row > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -3485,7 +3486,8 @@ input[type="range"]::-moz-range-thumb:hover {
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
   width: fit-content; /* Make background hug the content */
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow to separate from scrolling content */
+  box-shadow: none; /* No shadow initially - will appear on scroll */
+  transition: box-shadow 0.2s ease;
 }
 .row-biz > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-biz > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -3584,7 +3586,8 @@ input[type="range"]::-moz-range-thumb:hover {
   min-width: 108px; /* Minimum width to prevent shrinking */
   width: fit-content; /* Make background hug the content */
   max-width: 100%; /* Ensure it doesn't exceed grid column width */
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow to separate from scrolling content */
+  box-shadow: none; /* No shadow initially - will appear on scroll */
+  transition: box-shadow 0.2s ease;
 }
 .row-income > div:nth-child(4) { grid-column: 4; z-index: 1 !important; position: relative; } /* Tags */
 .row-income > div:nth-child(5) { grid-column: 5; z-index: 1 !important; position: relative; } /* Date */
@@ -5263,7 +5266,8 @@ textarea {
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
   width: fit-content; /* Make background hug the content */
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+  box-shadow: none; /* No shadow initially - will appear on scroll */
+  transition: box-shadow 0.2s ease;
 }
 .row-head > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-head > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -5304,7 +5308,8 @@ textarea {
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
   width: fit-content; /* Make background hug the content */
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+  box-shadow: none; /* No shadow initially - will appear on scroll */
+  transition: box-shadow 0.2s ease;
 }
 .row-head.row-biz > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-head.row-biz > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -5335,7 +5340,8 @@ textarea {
   justify-content: flex-start;
   width: fit-content; /* Make background hug the content */
   max-width: 100%; /* Ensure it doesn't exceed grid column width */
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+  box-shadow: none; /* No shadow initially - will appear on scroll */
+  transition: box-shadow 0.2s ease;
 }
 .row-head.row-income > div:nth-child(4) { grid-column: 4; } /* Tags */
 .row-head.row-income > div:nth-child(5) { grid-column: 5; } /* Date */
@@ -5429,7 +5435,8 @@ textarea {
     max-width: 120px; /* Maximum width to prevent excessive expansion */
     z-index: 30 !important; /* Ensure it stays above everything on mobile */
     width: fit-content; /* Make background hug the content */
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    box-shadow: none; /* No shadow initially - will appear on scroll */
+    transition: box-shadow 0.2s ease;
   }
   
   .row-income > div:nth-child(3) {
@@ -5442,7 +5449,8 @@ textarea {
     z-index: 30 !important; /* Ensure it stays above everything on mobile */
     width: fit-content; /* Make background hug the content */
     max-width: 100%; /* Ensure it doesn't exceed grid column width */
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    box-shadow: none; /* No shadow initially - will appear on scroll */
+    transition: box-shadow 0.2s ease;
   }
   
   .row-head > div:nth-child(3),
@@ -5457,7 +5465,8 @@ textarea {
     max-width: 120px; /* Maximum width to prevent excessive expansion */
     z-index: 31 !important; /* Even higher for header to stay above row names */
     width: fit-content; /* Make background hug the content */
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    box-shadow: none; /* No shadow initially - will appear on scroll */
+    transition: box-shadow 0.2s ease;
   }
   
   .row-head.row-income > div:nth-child(3) {
@@ -5470,33 +5479,30 @@ textarea {
     z-index: 31 !important; /* Even higher for header to stay above row names */
     width: fit-content; /* Make background hug the content */
     max-width: 100%; /* Ensure it doesn't exceed grid column width */
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    box-shadow: none; /* No shadow initially - will appear on scroll */
+    transition: box-shadow 0.2s ease;
   }
-  
-  /* Ensure all columns after sticky name have lower z-index */
-  .row-income > div:nth-child(4),
-  .row-income > div:nth-child(5),
-  .row-income > div:nth-child(6),
-  .row-income > div:nth-child(7),
-  .row-income > div:nth-child(8),
-  .row-income > div:nth-child(9),
-  .row-income > div:nth-child(10),
-  .row-income > div:nth-child(11),
-  .row-income > div:nth-child(12) {
-    z-index: 1 !important; /* Lower than sticky name */
-    position: relative;
-  }
-  
-  /* Specifically ensure payment column stays below sticky name */
-  .row-income > div:nth-child(10) {
-    z-index: 1 !important; /* Lower than sticky name */
-    position: relative;
-  }
-  
-  /* Ensure payment button also has low z-index on mobile */
-  .payment-button {
-    z-index: 1 !important;
-  }
+}
+
+/* Show shadow on sticky name columns ONLY when table is scrolled horizontally */
+/* Modern, subtle shadow - appears only when scrolling */
+.table-container.scrolled .row > div:nth-child(3),
+.table-container.scrolled .row-biz > div:nth-child(3),
+.table-container.scrolled .row-income > div:nth-child(3),
+.table-container.scrolled .row-head > div:nth-child(3),
+.table-container.scrolled .row-head.row-biz > div:nth-child(3),
+.table-container.scrolled .row-head.row-income > div:nth-child(3) {
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Light mode - even more subtle shadow */
+[data-theme="light"] .table-container.scrolled .row > div:nth-child(3),
+[data-theme="light"] .table-container.scrolled .row-biz > div:nth-child(3),
+[data-theme="light"] .table-container.scrolled .row-income > div:nth-child(3),
+[data-theme="light"] .table-container.scrolled .row-head > div:nth-child(3),
+[data-theme="light"] .table-container.scrolled .row-head.row-biz > div:nth-child(3),
+[data-theme="light"] .table-container.scrolled .row-head.row-income > div:nth-child(3) {
+  box-shadow: 1px 0 2px rgba(0, 0, 0, 0.03);
 }
 
 /* Minimal drag and drop styles */
