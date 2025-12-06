@@ -2347,7 +2347,8 @@ async function saveProfile({ fullName, file }) {
       
       if (signInBtn) {
         signInBtn.addEventListener('click', openAuthModal);
-
+        // Remove any tooltips from sign in button
+        removeTooltipsFromAuthButtons();
       }
       
       if (logoutBtn) {
@@ -2379,7 +2380,8 @@ async function saveProfile({ fullName, file }) {
       
       if (emailSignUpBtn) {
         emailSignUpBtn.addEventListener('click', openSignupModal);
-
+        // Remove any tooltips from sign up button
+        removeTooltipsFromAuthButtons();
       }
       
       if (forgotPasswordBtn) {
@@ -2641,6 +2643,11 @@ async function saveProfile({ fullName, file }) {
         if (accountMenuBtn) accountMenuBtn.style.display = 'none';
         userInfo.style.display = 'none';
 
+      }
+      
+      // Remove tooltips from all auth buttons
+      if (typeof removeTooltipsFromAuthButtons === 'function') {
+        removeTooltipsFromAuthButtons();
       }
     }
     
@@ -10169,6 +10176,37 @@ async function saveProfile({ fullName, file }) {
         element.classList.remove('tooltip-trigger');
       });
       
+      // Specifically remove tooltips from sign in/sign up buttons
+      const signInButtons = [
+        document.getElementById('btnSignIn'),
+        document.getElementById('btnLogin'),
+        document.getElementById('emailSignInBtn'),
+        document.getElementById('emailSignUpBtn'),
+        document.getElementById('signupBtn'),
+        document.getElementById('backToSignInBtn'),
+        document.getElementById('backToSignInFromSignupBtn')
+      ];
+      
+      signInButtons.forEach((button) => {
+        if (button) {
+          // Remove title attribute
+          button.removeAttribute('title');
+          
+          // Remove existing tooltip elements
+          const existingTooltip = button.querySelector('.tooltip');
+          if (existingTooltip) {
+            existingTooltip.remove();
+          }
+          
+          // Remove tooltip-trigger class
+          button.classList.remove('tooltip-trigger');
+          
+          // Ensure button is still clickable
+          button.style.pointerEvents = 'auto';
+          button.style.cursor = 'pointer';
+        }
+      });
+      
       // Specifically ensure lock button works properly
       const lockButton = document.getElementById('btnLock');
       if (lockButton) {
@@ -10176,6 +10214,39 @@ async function saveProfile({ fullName, file }) {
         lockButton.style.pointerEvents = 'auto';
         lockButton.style.cursor = 'pointer';
       }
+    }
+    
+    // Function to remove tooltips from sign in/sign up buttons (can be called from anywhere)
+    function removeTooltipsFromAuthButtons() {
+      const signInButtons = [
+        document.getElementById('btnSignIn'),
+        document.getElementById('btnLogin'),
+        document.getElementById('emailSignInBtn'),
+        document.getElementById('emailSignUpBtn'),
+        document.getElementById('signupBtn'),
+        document.getElementById('backToSignInBtn'),
+        document.getElementById('backToSignInFromSignupBtn')
+      ];
+      
+      signInButtons.forEach((button) => {
+        if (button) {
+          // Remove title attribute
+          button.removeAttribute('title');
+          
+          // Remove existing tooltip elements
+          const existingTooltip = button.querySelector('.tooltip');
+          if (existingTooltip) {
+            existingTooltip.remove();
+          }
+          
+          // Remove tooltip-trigger class
+          button.classList.remove('tooltip-trigger');
+          
+          // Ensure button is still clickable
+          button.style.pointerEvents = 'auto';
+          button.style.cursor = 'pointer';
+        }
+      });
     }
     
     function setupTooltip(trigger, tooltip, isInsightTooltip = false) {

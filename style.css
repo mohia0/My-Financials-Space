@@ -1003,6 +1003,49 @@ header #btnSettings {
   pointer-events: auto !important;
 }
 
+/* Remove all tooltips from sign in/sign up buttons */
+#btnSignIn,
+#btnLogin,
+#emailSignInBtn,
+#emailSignUpBtn,
+#signupBtn,
+#backToSignInBtn,
+#backToSignInFromSignupBtn {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+#btnSignIn .tooltip,
+#btnLogin .tooltip,
+#emailSignInBtn .tooltip,
+#emailSignUpBtn .tooltip,
+#signupBtn .tooltip,
+#backToSignInBtn .tooltip,
+#backToSignInFromSignupBtn .tooltip,
+#btnSignIn.tooltip-trigger .tooltip,
+#btnLogin.tooltip-trigger .tooltip,
+#emailSignInBtn.tooltip-trigger .tooltip,
+#emailSignUpBtn.tooltip-trigger .tooltip,
+#signupBtn.tooltip-trigger .tooltip,
+#backToSignInBtn.tooltip-trigger .tooltip,
+#backToSignInFromSignupBtn.tooltip-trigger .tooltip {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#btnSignIn[title]:hover::after,
+#btnLogin[title]:hover::after,
+#emailSignInBtn[title]:hover::after,
+#emailSignUpBtn[title]:hover::after,
+#signupBtn[title]:hover::after,
+#backToSignInBtn[title]:hover::after,
+#backToSignInFromSignupBtn[title]:hover::after {
+  display: none !important;
+  content: none !important;
+}
+
 /* Title attributes are removed via JavaScript in initializeTooltips() function */
 
 /* ===== NEW ROW ANIMATION ===== */
