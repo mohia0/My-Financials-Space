@@ -8761,6 +8761,7 @@ async function saveProfile({ fullName, file }) {
           dayElement.setAttribute('data-amount', amount.toString());
           dayElement.setAttribute('data-usd-amount', usdAmount.toString());
           dayElement.setAttribute('data-day', d.toString()); // Store day number for hover display
+          dayElement.setAttribute('data-day-key', dayKey); // Store day key for gap day identification
           // Add day number as text (will be hidden by default via CSS)
           const dayNumber = document.createElement('span');
           dayNumber.className = 'heatmap-day-number';
@@ -8945,6 +8946,8 @@ async function saveProfile({ fullName, file }) {
         let longestStart = null;
         let longestEnd = null;
         let currentStart = null;
+        let longestGapDays = []; // Store gap day keys for highlighting
+        
         for (let i = 0; i < daysInYear; i++) {
           const date = new Date(yearStart);
           date.setDate(yearStart.getDate() + i);
@@ -8959,6 +8962,13 @@ async function saveProfile({ fullName, file }) {
               longestStart = currentStart;
               longestEnd = new Date(date);
               longestEnd.setDate(longestEnd.getDate() - 1);
+              // Store gap day keys for the longest gap
+              longestGapDays = [];
+              for (let j = 0; j < current; j++) {
+                const gapDate = new Date(currentStart);
+                gapDate.setDate(currentStart.getDate() + j);
+                longestGapDays.push(`${gapDate.getMonth()}-${gapDate.getDate()}`);
+              }
             }
             current = 0;
             currentStart = null;
@@ -8970,12 +8980,23 @@ async function saveProfile({ fullName, file }) {
           longestStart = currentStart;
           const end = new Date(year, 11, 31);
           longestEnd = end;
+          // Store gap day keys for the longest gap
+          longestGapDays = [];
+          for (let j = 0; j < current; j++) {
+            const gapDate = new Date(currentStart);
+            gapDate.setDate(currentStart.getDate() + j);
+            longestGapDays.push(`${gapDate.getMonth()}-${gapDate.getDate()}`);
+          }
         }
         const fmt = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const gapText = longest > 0 ? `${longest} days · ${fmt(longestStart)}–${fmt(longestEnd)}` : '—';
         setText('heatmapLongestGap', gapText);
+        
+        // Store gap days globally for hover highlighting
+        window.heatmapLongestGapDays = longestGapDays;
       } catch (e) {
         setText('heatmapLongestGap', '—');
+        window.heatmapLongestGapDays = [];
       }
     }
     
@@ -9052,6 +9073,8 @@ async function saveProfile({ fullName, file }) {
         updateHeatmapStats(currentHeatmapYear);
         // Add tooltip functionality
         addHeatmapTooltips();
+        // Add hover functionality for Longest Gap highlighting
+        setupGapDayHighlighting();
       });
       // Add event listeners
       yearSelect.addEventListener('change', (e) => {
@@ -9083,6 +9106,8 @@ async function saveProfile({ fullName, file }) {
           
           updateHeatmapStats(currentHeatmapYear);
           addHeatmapTooltips();
+          // Add hover functionality for Longest Gap highlighting
+          setupGapDayHighlighting();
         });
       });
 
@@ -9120,6 +9145,8 @@ async function saveProfile({ fullName, file }) {
             
             updateHeatmapStats(currentHeatmapYear);
             addHeatmapTooltips();
+            // Add hover functionality for Longest Gap highlighting
+            setupGapDayHighlighting();
             
             // Reset button after animation
             setTimeout(() => {
@@ -9296,6 +9323,48 @@ async function saveProfile({ fullName, file }) {
             if (!ev.target.closest('.heatmap-months')) hideTooltip();
           }, { passive: true });
         }
+      });
+    }
+    
+    // Setup hover highlighting for gap days when hovering over Longest Gap stat
+    function setupGapDayHighlighting() {
+      const longestGapStat = document.getElementById('heatmapLongestGap');
+      const longestGapContainer = longestGapStat?.closest('.heatmap-stats > div');
+      
+      if (!longestGapContainer) {
+        return;
+      }
+      
+      // Check if already set up to avoid duplicate listeners
+      if (longestGapContainer.dataset.gapHighlightSetup === 'true') {
+        return;
+      }
+      longestGapContainer.dataset.gapHighlightSetup = 'true';
+      
+      // Highlight gap days on hover
+      longestGapContainer.addEventListener('mouseenter', () => {
+        const gapDays = window.heatmapLongestGapDays || [];
+        if (gapDays.length === 0) return;
+        
+        gapDays.forEach(dayKey => {
+          const dayElements = document.querySelectorAll(`[data-day-key="${dayKey}"]`);
+          dayElements.forEach(day => {
+            // Only highlight if it's a gap day (intensity 0 and no amount)
+            const intensity = day.getAttribute('data-intensity');
+            const amount = parseFloat(day.getAttribute('data-amount') || '0');
+            if (intensity === '0' && amount <= 0) {
+              day.classList.add('highlight-gap-day');
+            }
+          });
+        });
+      });
+      
+      // Remove highlight on mouse leave
+      longestGapContainer.addEventListener('mouseleave', () => {
+        const highlightedDays = document.querySelectorAll('.highlight-gap-day');
+        highlightedDays.forEach(day => {
+          day.classList.remove('highlight-gap-day');
+        });
       });
     }
     

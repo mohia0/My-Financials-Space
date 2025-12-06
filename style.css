@@ -10511,6 +10511,20 @@ body.splash-complete .mobile-bottom-nav {
 /* Heatmap Day Intensity Levels */
 .heatmap-day[data-intensity="0"] { background: rgba(161, 161, 170, 0.18); }
 
+/* Highlight gap days when hovering over Longest Gap text */
+.heatmap-day.highlight-gap-day {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.3) !important;
+  transition: all 0.2s ease;
+}
+
+[data-theme="light"] .heatmap-day.highlight-gap-day {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
 .heatmap-day[data-intensity="1"] { background: #E0E7FF; }
 .heatmap-day[data-intensity="2"] { background: #C7D2FE; }
 .heatmap-day[data-intensity="3"] { background: #A5B4FC; }
@@ -10556,6 +10570,19 @@ body.splash-complete .mobile-bottom-nav {
 .heatmap-legend-items{ gap:4px !important; }
 
 .heatmap-stats{ margin-top:8px; row-gap:6px; column-gap:24px; }
+
+/* Make Longest Gap stat container interactive */
+.heatmap-stats > div:has(#heatmapLongestGap) {
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+}
+
+.heatmap-stats > div:has(#heatmapLongestGap):hover {
+  background: var(--glass);
+}
 
 
 .heatmap-tooltip.show {
