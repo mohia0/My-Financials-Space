@@ -10429,6 +10429,8 @@ body.splash-complete .mobile-bottom-nav {
   align-content:start;
   width:100%;
   justify-items: center;
+  padding: 0;
+  margin: 0;
 }
 
 .heatmap-month{ 
@@ -11105,6 +11107,7 @@ body.splash-complete .mobile-bottom-nav {
   .heatmap-months{ 
     grid-template-columns:repeat(3, 1fr);
     justify-items: center;
+    gap: 6px;
   }
   
   .heatmap-day {
@@ -11113,8 +11116,10 @@ body.splash-complete .mobile-bottom-nav {
   }
   
   .heatmap-container {
-    margin: 0 -1rem;
+    margin: 0;
     padding: 0.5rem 1rem;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .heatmap-legend-item { width: 7px !important; height: 7px !important; }
@@ -11163,6 +11168,7 @@ body.splash-complete .mobile-bottom-nav {
   .heatmap-months{ 
     grid-template-columns:repeat(2, 1fr);
     justify-items: center;
+    gap: 6px;
   }
   
   .heatmap-day {
@@ -11176,6 +11182,13 @@ body.splash-complete .mobile-bottom-nav {
   
   .heatmap-month-label {
     font-size: 0.6rem;
+  }
+  
+  .heatmap-container {
+    margin: 0;
+    padding: 0.5rem 1rem;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   /* Small mobile heatmap stats */
