@@ -7955,6 +7955,77 @@ header img:hover {
   box-shadow: 0 0 0 3px rgba(var(--muted-rgb), 0.1);
 }
 
+/* Password Input Wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper .auth-input,
+.password-input-wrapper .onboarding-input {
+  padding-right: 45px;
+  width: 100%;
+}
+
+/* Password Toggle Button */
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: color 0.2s ease;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+.password-toggle-btn:hover {
+  color: var(--fg);
+  background: rgba(var(--muted-rgb), 0.1);
+}
+
+.password-toggle-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--muted-rgb), 0.2);
+}
+
+.password-toggle-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  display: block;
+  transition: opacity 0.2s ease;
+}
+
+/* Default: show eye icon, hide eye-off icon */
+.password-toggle-icon-eye {
+  display: block;
+}
+
+.password-toggle-icon-eye-off {
+  display: none;
+}
+
+/* When active (password is visible): hide eye icon, show eye-off icon */
+.password-toggle-btn.active .password-toggle-icon-eye {
+  display: none !important;
+}
+
+.password-toggle-btn.active .password-toggle-icon-eye-off {
+  display: block !important;
+}
+
 .auth-select {
   width: 100%;
   padding: 12px 16px;

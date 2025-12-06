@@ -2351,6 +2351,9 @@ async function saveProfile({ fullName, file }) {
         removeTooltipsFromAuthButtons();
       }
       
+      // Initialize password toggle buttons
+      initializePasswordToggles();
+      
       if (logoutBtn) {
         logoutBtn.addEventListener('click', signOut);
 
@@ -2731,7 +2734,12 @@ async function saveProfile({ fullName, file }) {
         // Ensure sign-in form is shown by default
         showSignInForm();
         
-
+        // Initialize password toggles when modal opens
+        setTimeout(() => {
+          if (typeof initializePasswordToggles === 'function') {
+            initializePasswordToggles();
+          }
+        }, 100);
       }
     }
     
@@ -2752,6 +2760,13 @@ async function saveProfile({ fullName, file }) {
         document.body.classList.add('no-scroll');
         // Hide auth modal if it's open
         closeAuthModal();
+        
+        // Initialize password toggles when modal opens
+        setTimeout(() => {
+          if (typeof initializePasswordToggles === 'function') {
+            initializePasswordToggles();
+          }
+        }, 100);
       }
     }
 
@@ -10246,6 +10261,92 @@ async function saveProfile({ fullName, file }) {
           button.style.pointerEvents = 'auto';
           button.style.cursor = 'pointer';
         }
+      });
+    }
+    
+    // Initialize password toggle functionality
+    function initializePasswordToggles() {
+      // Find all password toggle buttons
+      const passwordToggleButtons = document.querySelectorAll('.password-toggle-btn');
+      
+      passwordToggleButtons.forEach((toggleBtn) => {
+        // Skip if already initialized
+        if (toggleBtn.dataset.initialized === 'true') return;
+        
+        // Find the associated password input
+        const wrapper = toggleBtn.closest('.password-input-wrapper');
+        if (!wrapper) return;
+        
+        const passwordInput = wrapper.querySelector('input[type="password"], input[type="text"]');
+        if (!passwordInput) return;
+        
+        // Add click event listener
+        toggleBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Toggle password visibility
+          if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleBtn.classList.add('active');
+          } else {
+            passwordInput.type = 'password';
+            toggleBtn.classList.remove('active');
+          }
+        });
+        
+        // Mark as initialized
+        toggleBtn.dataset.initialized = 'true';
+      });
+      
+      // Also handle dynamically created password fields (e.g., when modals open)
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          mutation.addedNodes.forEach(function(node) {
+            if (node.nodeType === 1) { // Element node
+              // Check if it's a password toggle button or contains one
+              let toggleBtns = [];
+              if (node.querySelectorAll) {
+                toggleBtns = Array.from(node.querySelectorAll('.password-toggle-btn'));
+              }
+              if (node.classList && node.classList.contains('password-toggle-btn')) {
+                toggleBtns.push(node);
+              }
+              
+              toggleBtns.forEach((toggleBtn) => {
+                // Skip if already initialized
+                if (toggleBtn.dataset.initialized === 'true') return;
+                
+                const wrapper = toggleBtn.closest('.password-input-wrapper');
+                if (!wrapper) return;
+                
+                const passwordInput = wrapper.querySelector('input[type="password"], input[type="text"]');
+                if (!passwordInput) return;
+                
+                toggleBtn.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    toggleBtn.classList.add('active');
+                  } else {
+                    passwordInput.type = 'password';
+                    toggleBtn.classList.remove('active');
+                  }
+                });
+                
+                toggleBtn.dataset.initialized = 'true';
+              });
+            }
+          });
+        });
+      });
+      
+      // Observe the document body for new password fields
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
       });
     }
     
