@@ -10408,7 +10408,153 @@ body.splash-complete .mobile-bottom-nav {
 
 /* ===== INCOME HEATMAP STYLES ===== */
 
-/* Heatmap Year Select uses shared select UI via .select-wrap and .select */
+/* Heatmap Year Custom Dropdown */
+.heatmap-year-dropdown {
+  position: relative;
+  display: inline-block;
+  min-width: 80px;
+  max-width: 120px;
+}
+
+.heatmap-year-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 0.25rem;
+}
+
+.heatmap-year-button:hover {
+  background: var(--card);
+  transform: translateY(-1px);
+}
+
+.heatmap-year-button.active {
+  background: var(--card);
+}
+
+.heatmap-year-button:focus {
+  outline: none;
+  background: var(--card);
+}
+
+.heatmap-year-arrow {
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.heatmap-year-button.active .heatmap-year-arrow {
+  transform: rotate(180deg);
+  color: var(--fg);
+}
+
+.heatmap-year-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+  max-height: 200px;
+  overflow-y: auto;
+  min-width: 100%;
+}
+
+.heatmap-year-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.heatmap-year-item {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--fg);
+  border-bottom: 1px solid var(--stroke);
+}
+
+.heatmap-year-item:last-child {
+  border-bottom: none;
+}
+
+.heatmap-year-item:hover {
+  background: var(--glass);
+  color: var(--fg);
+}
+
+.heatmap-year-item.active {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Light mode adjustments */
+[data-theme="light"] .heatmap-year-menu {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .heatmap-year-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .heatmap-year-item.active {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .heatmap-year-dropdown {
+    min-width: 70px;
+    max-width: 90px;
+  }
+  
+  .heatmap-year-button {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+  
+  .heatmap-year-arrow {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .heatmap-year-item {
+    padding: 0.75rem 0.65rem;
+    font-size: 0.7rem;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .heatmap-year-menu {
+    max-height: 180px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+}
 
 /* Heatmap Container */
 .heatmap-container {
@@ -10780,6 +10926,19 @@ body.splash-complete .mobile-bottom-nav {
   .heatmap-controls > button {
     order: 2;
   }
+  
+  /* Ensure year controls stay together on mobile */
+  .heatmap-year-controls {
+    order: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+  }
+  
+  #heatmapRefreshBtn {
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -10830,6 +10989,18 @@ body.splash-complete .mobile-bottom-nav {
   /* Hide currency indicator on very small screens if needed */
   .heatmap-controls > div:last-child {
     font-size: 0.65rem !important;
+  }
+  
+  /* Keep year controls together on mobile */
+  .heatmap-year-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+  }
+  
+  #heatmapRefreshBtn {
+    flex-shrink: 0;
   }
 }
 

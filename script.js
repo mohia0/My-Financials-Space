@@ -9001,14 +9001,128 @@ async function saveProfile({ fullName, file }) {
     }
     
     // Initialize heatmap
+    // Initialize custom year dropdown for heatmap
+    function initializeHeatmapYearDropdown(availableYears, selectedYear) {
+      const yearButton = document.getElementById('heatmapYearButton');
+      const yearDisplay = document.getElementById('heatmapYearDisplay');
+      const yearDropdown = document.getElementById('heatmapYearDropdown');
+      
+      if (!yearButton || !yearDisplay || !yearDropdown) {
+        console.warn('Heatmap year dropdown elements not found');
+        return;
+      }
+      
+      // Update display
+      yearDisplay.textContent = selectedYear;
+      
+      // Clear and populate dropdown menu
+      yearDropdown.innerHTML = '';
+      availableYears.forEach(year => {
+        const item = document.createElement('div');
+        item.className = 'heatmap-year-item';
+        if (year === selectedYear) {
+          item.classList.add('active');
+        }
+        item.textContent = year;
+        item.dataset.year = year;
+        
+        item.addEventListener('click', () => {
+          const newYear = parseInt(item.dataset.year);
+          if (newYear !== currentHeatmapYear) {
+            currentHeatmapYear = newYear;
+            yearDisplay.textContent = newYear;
+            
+            // Update active state
+            yearDropdown.querySelectorAll('.heatmap-year-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            
+            // Close dropdown
+            yearDropdown.classList.remove('show');
+            yearButton.classList.remove('active');
+            
+            // Update heatmap
+            try {
+              heatmapData = generateHeatmapData(currentHeatmapYear);
+            } catch {
+              heatmapData = {};
+            }
+            
+            const heatmapContainer = document.getElementById('heatmapCalendar');
+            if (heatmapContainer) {
+              heatmapContainer.style.opacity = '0.5';
+              heatmapContainer.innerHTML = '<div class="flex items-center justify-center py-8"><div class="text-sm" style="color:var(--muted)">Loading heatmap...</div></div>';
+              
+              requestAnimationFrame(() => {
+                heatmapContainer.innerHTML = '';
+                const fragment = generateHeatmapCalendar(currentHeatmapYear);
+                heatmapContainer.appendChild(fragment);
+                
+                heatmapContainer.style.opacity = '0';
+                requestAnimationFrame(() => {
+                  heatmapContainer.style.transition = 'opacity 0.3s ease';
+                  heatmapContainer.style.opacity = '1';
+                });
+                
+                updateHeatmapStats(currentHeatmapYear);
+                addHeatmapTooltips();
+                setupGapDayHighlighting();
+              });
+            }
+          } else {
+            // Just close dropdown if same year
+            yearDropdown.classList.remove('show');
+            yearButton.classList.remove('active');
+          }
+        });
+        
+        yearDropdown.appendChild(item);
+      });
+      
+      // Toggle dropdown on button click
+      if (!yearButton._bound) {
+        yearButton._bound = true;
+        yearButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = yearDropdown.classList.contains('show');
+          
+          // Close all other dropdowns first
+          document.querySelectorAll('.heatmap-year-menu.show').forEach(menu => {
+            if (menu !== yearDropdown) {
+              menu.classList.remove('show');
+            }
+          });
+          document.querySelectorAll('.heatmap-year-button.active').forEach(btn => {
+            if (btn !== yearButton) {
+              btn.classList.remove('active');
+            }
+          });
+          
+          if (isOpen) {
+            yearDropdown.classList.remove('show');
+            yearButton.classList.remove('active');
+          } else {
+            yearDropdown.classList.add('show');
+            yearButton.classList.add('active');
+          }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!yearButton.contains(e.target) && !yearDropdown.contains(e.target)) {
+            yearDropdown.classList.remove('show');
+            yearButton.classList.remove('active');
+          }
+        });
+      }
+    }
+
     function initializeHeatmap() {
       const heatmapContainer = document.getElementById('heatmapCalendar');
-      const yearSelect = document.getElementById('heatmapYearSelect');
       const currencyDisplay = document.getElementById('heatmapCurrencyDisplay');
       const refreshBtn = document.getElementById('heatmapRefreshBtn');
       
-      if (!heatmapContainer || !yearSelect) {
-        console.warn('Heatmap elements not found');
+      if (!heatmapContainer) {
+        console.warn('Heatmap container not found');
         return;
       }
       
@@ -9032,17 +9146,8 @@ async function saveProfile({ fullName, file }) {
       // Sort years descending
       availableYears.sort((a, b) => b - a);
       
-      // Clear and populate year select
-      yearSelect.innerHTML = '';
-      availableYears.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        if (year === currentHeatmapYear) {
-          option.selected = true;
-        }
-        yearSelect.appendChild(option);
-      });
+      // Initialize custom dropdown
+      initializeHeatmapYearDropdown(availableYears, currentHeatmapYear);
       
       // Generate heatmap data first (this is fast)
       try {
@@ -9387,11 +9492,29 @@ async function saveProfile({ fullName, file }) {
           console.log('🔄 Syncing heatmap year from', currentHeatmapYear, 'to', newYear);
           currentHeatmapYear = newYear;
           
-          // Update year selector
-          const yearSelect = document.getElementById('heatmapYearSelect');
-          if (yearSelect) {
-            yearSelect.value = newYear;
+          // Update year dropdown
+          const yearDisplay = document.getElementById('heatmapYearDisplay');
+          const yearDropdown = document.getElementById('heatmapYearDropdown');
+          if (yearDisplay) {
+            yearDisplay.textContent = newYear;
           }
+          if (yearDropdown) {
+            yearDropdown.querySelectorAll('.heatmap-year-item').forEach(item => {
+              if (parseInt(item.dataset.year) === newYear) {
+                item.classList.add('active');
+              } else {
+                item.classList.remove('active');
+              }
+            });
+          }
+          
+          // Re-initialize dropdown if years changed
+          const availableYears = Object.keys(state.income).map(year => parseInt(year)).filter(year => !isNaN(year));
+          if (!availableYears.includes(newYear)) {
+            availableYears.push(newYear);
+          }
+          availableYears.sort((a, b) => b - a);
+          initializeHeatmapYearDropdown(availableYears, newYear);
           
           // Regenerate heatmap data
           try {
