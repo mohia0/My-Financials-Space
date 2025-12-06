@@ -1267,6 +1267,80 @@ async function saveProfile({ fullName, file }) {
     initializeMobileNavigation();
     window.addEventListener('resize', initializeMobileNavigation);
     
+    // Hide navbar when keyboard opens on mobile
+    let lastWindowHeight = window.innerHeight;
+    
+    function handleKeyboardVisibility() {
+      const mobileNav = document.querySelector('.mobile-bottom-nav');
+      if (!mobileNav || window.innerWidth > 768) {
+        // Remove keyboard-open class if not on mobile
+        mobileNav?.classList.remove('keyboard-open');
+        return;
+      }
+      
+      // Use Visual Viewport API if available (best for keyboard detection)
+      if (window.visualViewport) {
+        const viewport = window.visualViewport;
+        const windowHeight = window.innerHeight;
+        const viewportHeight = viewport.height;
+        
+        // If viewport height is significantly less than window height, keyboard is likely open
+        // Threshold: if viewport is less than 75% of window height, consider keyboard open
+        const heightDifference = windowHeight - viewportHeight;
+        const threshold = Math.max(windowHeight * 0.25, 150); // At least 150px or 25% of window height
+        
+        if (heightDifference > threshold) {
+          // Keyboard is open - hide navbar
+          mobileNav.classList.add('keyboard-open');
+        } else {
+          // Keyboard is closed - show navbar
+          mobileNav.classList.remove('keyboard-open');
+        }
+      } else {
+        // Fallback: detect based on window resize (less reliable)
+        const currentHeight = window.innerHeight;
+        const heightDiff = lastWindowHeight - currentHeight;
+        
+        // If height decreased significantly (more than 150px), keyboard likely opened
+        if (heightDiff > 150) {
+          mobileNav.classList.add('keyboard-open');
+        } else if (heightDiff < -50 || currentHeight >= lastWindowHeight) {
+          // If height increased or returned to original, keyboard likely closed
+          mobileNav.classList.remove('keyboard-open');
+        }
+        
+        lastWindowHeight = currentHeight;
+      }
+    }
+    
+    // Initialize keyboard visibility handler
+    if (window.visualViewport) {
+      // Use Visual Viewport API (preferred method)
+      window.visualViewport.addEventListener('resize', handleKeyboardVisibility);
+      window.visualViewport.addEventListener('scroll', handleKeyboardVisibility);
+    } else {
+      // Fallback for browsers without Visual Viewport API
+      window.addEventListener('resize', handleKeyboardVisibility);
+    }
+    
+    // Also check on focus/blur of input fields as additional trigger
+    document.addEventListener('focusin', function(e) {
+      if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && window.innerWidth <= 768) {
+        // Small delay to allow keyboard to open
+        setTimeout(handleKeyboardVisibility, 300);
+      }
+    });
+    
+    document.addEventListener('focusout', function(e) {
+      if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && window.innerWidth <= 768) {
+        // Small delay to allow keyboard to close
+        setTimeout(handleKeyboardVisibility, 300);
+      }
+    });
+    
+    // Initial check
+    handleKeyboardVisibility();
+    
     // Mobile navigation function (called from HTML onclick)
     function switchPage(page) {
       showPage(page);

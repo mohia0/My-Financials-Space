@@ -6469,6 +6469,16 @@ header img:hover {
     /* Force hardware acceleration for Android */
     -webkit-transform: translate3d(0, 0, 0) !important;
     transform: translate3d(0, 0, 0) !important;
+    /* Smooth transition when hiding/showing */
+    transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease !important;
+  }
+  
+  /* Hide navbar when keyboard is open */
+  .mobile-bottom-nav.keyboard-open {
+    transform: translateY(100%) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
   
   /* Android WebView specific styles */
