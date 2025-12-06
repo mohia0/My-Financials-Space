@@ -5516,11 +5516,30 @@ async function saveProfile({ fullName, file }) {
         const wrapper = tagInput.closest('.tag-input-wrapper');
         if (state.inputsLocked) {
           tagInput.style.display = 'none';
+          // Hide the add tag icon when locked
+          const addIcon = wrapper?.querySelector('.tag-add-icon');
+          if (addIcon) {
+            addIcon.style.display = 'none';
+          }
           if (wrapper) {
             wrapper.classList.add('locked');
           }
         } else {
           tagInput.style.display = '';
+          // Show the add tag icon when unlocked (if conditions are met)
+          const addIcon = wrapper?.querySelector('.tag-add-icon');
+          if (addIcon && wrapper) {
+            // Check if icon should be visible (input empty, not focused, not max tags)
+            const tagCount = wrapper.querySelectorAll('.tag-chip').length;
+            const maxTags = 5;
+            const isFocused = document.activeElement === tagInput;
+            const hasValue = tagInput.value.trim().length > 0;
+            const isDisabled = tagInput.disabled || tagCount >= maxTags;
+            
+            if (!isFocused && !hasValue && !isDisabled) {
+              addIcon.style.display = 'flex';
+            }
+          }
           if (wrapper) {
             wrapper.classList.remove('locked');
           }
@@ -13766,9 +13785,43 @@ async function saveProfile({ fullName, file }) {
       const tagsInput = document.createElement('input');
       tagsInput.className = 'tag-input';
       tagsInput.type = 'text';
-      tagsInput.placeholder = 'Add tag...';
+      tagsInput.placeholder = '';
       // Track if Enter key was processed to prevent duplicate handling
       let enterKeyProcessed = false;
+      
+      // Create compact add tag icon
+      const addTagIcon = document.createElement('span');
+      addTagIcon.className = 'tag-add-icon';
+      addTagIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2V10M2 6H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      addTagIcon.title = 'Add tag';
+      addTagIcon.addEventListener('click', () => tagsInput.focus());
+      
+      // Show/hide icon based on input state
+      const updateIconVisibility = () => {
+        const tagCount = tagsWrapper.querySelectorAll('.tag-chip').length;
+        const maxTags = 5;
+        const isFocused = document.activeElement === tagsInput;
+        const hasValue = tagsInput.value.trim().length > 0;
+        const isDisabled = tagsInput.disabled || tagCount >= maxTags;
+        
+        if (isFocused || hasValue || isDisabled) {
+          addTagIcon.style.display = 'none';
+        } else {
+          addTagIcon.style.display = 'flex';
+        }
+      };
+      
+      tagsInput.addEventListener('focus', function() {
+        updateIconVisibility();
+      });
+      
+      tagsInput.addEventListener('blur', function() {
+        setTimeout(updateIconVisibility, 100);
+      });
+      
+      tagsInput.addEventListener('input', function() {
+        updateIconVisibility();
+      });
       
       // Prevent form submission on Enter key (important for mobile devices)
       tagsInput.addEventListener('keydown', function(e) {
@@ -13810,7 +13863,7 @@ async function saveProfile({ fullName, file }) {
             const chip = createTagChip(value);
             tagsWrapper.insertBefore(chip, this);
             this.value = '';
-            this.placeholder = 'Add tag...';
+            this.placeholder = '';
             
             // Update wrapper expanded state if needed
             if (currentTagCount >= 2) {
@@ -13832,6 +13885,8 @@ async function saveProfile({ fullName, file }) {
         instantSaveIncomeRow(row, currentYear); // Instant save when tags are modified
       });
       tagsInput.addEventListener('focus', function() {
+        // Hide icon on focus
+        updateIconVisibility();
         // On mobile, ensure keyboard doesn't interfere with dropdown
         const isMobile = 'ontouchstart' in window || window.innerWidth <= 768;
         if (isMobile) {
@@ -13843,6 +13898,10 @@ async function saveProfile({ fullName, file }) {
         showTagSuggestions(this, tagsWrapper);
       });
       tagsInput.addEventListener('blur', function() {
+        // Show icon on blur if input is empty
+        setTimeout(() => {
+          updateIconVisibility();
+        }, 100);
         // Longer delay on mobile to allow for tap events
         const isMobile = 'ontouchstart' in window || window.innerWidth <= 768;
         const delay = isMobile ? 300 : 150;
@@ -13852,8 +13911,13 @@ async function saveProfile({ fullName, file }) {
       // Store row reference for tag system
       tagsWrapper.__rowData = row;
       
+      // Add icon to wrapper before input
+      tagsWrapper.appendChild(addTagIcon);
       tagsWrapper.appendChild(tagsInput);
       tagsDiv.appendChild(tagsWrapper);
+      
+      // Initial icon visibility check
+      updateIconVisibility();
       
       // Date input (same structure as business table)
       const dateDiv = document.createElement('div'); 
@@ -17363,14 +17427,29 @@ function loadNonCriticalResources() {
         }
         
         // Update placeholder if max tags reached
+        const icon = wrapper.querySelector('.tag-add-icon');
         if (wrapper.querySelectorAll('.tag-chip').length >= maxTags) {
           input.placeholder = '';
           input.disabled = true;
+          if (icon) icon.style.display = 'none';
+        } else {
+          // Show icon if input is empty and not focused
+          if (icon && input !== document.activeElement && !input.value.trim()) {
+            icon.style.display = 'flex';
+          }
         }
       } else if (value.length > 0) {
+        // Hide icon when typing
+        const icon = wrapper.querySelector('.tag-add-icon');
+        if (icon) icon.style.display = 'none';
         // Show suggestions as user types
         showTagSuggestions(input, wrapper);
       } else {
+        // Show icon when input is empty
+        const icon = wrapper.querySelector('.tag-add-icon');
+        if (icon && input !== document.activeElement) {
+          icon.style.display = 'flex';
+        }
         // Hide suggestions when input is empty
         hideTagSuggestions(wrapper);
       }
@@ -17388,7 +17467,7 @@ function loadNonCriticalResources() {
           const chip = createTagChip(value);
           wrapper.insertBefore(chip, input);
           input.value = '';
-          input.placeholder = 'Add tag...';
+          input.placeholder = '';
           
           // Add visual feedback - highlight the new tag
           chip.style.transform = 'scale(1.1)';
@@ -17413,6 +17492,14 @@ function loadNonCriticalResources() {
           if (finalTagCount >= maxTags) {
             input.placeholder = '';
             input.disabled = true;
+            const icon = wrapper.querySelector('.tag-add-icon');
+            if (icon) icon.style.display = 'none';
+          } else {
+            // Show icon if input is empty and not focused
+            const icon = wrapper.querySelector('.tag-add-icon');
+            if (icon && input !== document.activeElement && !input.value.trim()) {
+              icon.style.display = 'flex';
+            }
           }
           
           // Focus back on input for better UX (except on mobile)
@@ -17448,8 +17535,13 @@ function loadNonCriticalResources() {
           
           // Re-enable input if under max tags
           if (remainingTagCount < 5) {
-            input.placeholder = 'Add tag...';
+            input.placeholder = '';
             input.disabled = false;
+            // Show icon if input is empty and not focused
+            const icon = wrapper.querySelector('.tag-add-icon');
+            if (icon && input !== document.activeElement && !input.value.trim()) {
+              icon.style.display = 'flex';
+            }
           }
         }
       }
