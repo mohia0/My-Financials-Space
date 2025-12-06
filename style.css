@@ -2653,16 +2653,7 @@ input[type="date"].date-input-minimal {
 }
 
 .custom-date-picker-modal.show::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: -1;
-  pointer-events: auto;
-  backdrop-filter: blur(4px);
+  display: none; /* Remove black backdrop overlay */
 }
 
 .custom-date-picker-modal,
@@ -2676,11 +2667,12 @@ input[type="date"].date-input-minimal {
   border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 1rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   width: 280px;
   position: relative;
   z-index: 999999 !important;
   animation: datePickerSlide 0.15s ease-out;
+  overflow: hidden; /* Prevent any content from creating dark edges */
 }
 
 @keyframes datePickerSlide {
@@ -2694,11 +2686,11 @@ input[type="date"].date-input-minimal {
 
 /* Light mode adjustments */
 [data-theme="light"] .custom-date-picker-modal::before {
-  background: rgba(0, 0, 0, 0.6);
+  display: none; /* Remove black backdrop overlay */
 }
 
 [data-theme="light"] .custom-date-picker {
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 /* Minimal Date Picker Header */
@@ -2839,7 +2831,8 @@ input[type="date"].date-input-minimal {
 .date-picker-footer {
   display: flex;
   gap: 0.5rem;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   padding-top: 0.75rem;
   border-top: 1px solid var(--stroke);
 }
@@ -3435,13 +3428,15 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--card);
-  z-index: 10;
+  z-index: 30 !important; /* Higher z-index to stay above all other elements */
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
+  width: fit-content; /* Make background hug the content */
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow to separate from scrolling content */
 }
 .row > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -3482,13 +3477,15 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--card);
-  z-index: 10;
+  z-index: 30 !important; /* Higher z-index to stay above all other elements */
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
+  width: fit-content; /* Make background hug the content */
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow to separate from scrolling content */
 }
 .row-biz > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-biz > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -3579,25 +3576,30 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   left: 48px; /* 20px drag handle + 28px icon */
   background: var(--card);
-  z-index: 10;
+  z-index: 30 !important; /* Higher z-index to stay above payment and all other elements */
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
   min-width: 108px; /* Minimum width to prevent shrinking */
+  width: fit-content; /* Make background hug the content */
+  max-width: 100%; /* Ensure it doesn't exceed grid column width */
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow to separate from scrolling content */
 }
-.row-income > div:nth-child(4) { grid-column: 4; z-index: 1; } /* Tags */
-.row-income > div:nth-child(5) { grid-column: 5; } /* Date */
-.row-income > div:nth-child(6) { grid-column: 6; } /* All Payment */
-.row-income > div:nth-child(7) { grid-column: 7; } /* Paid USD */
-.row-income > div:nth-child(8) { grid-column: 8; } /* Paid EGP */
-.row-income > div:nth-child(9) { grid-column: 9; } /* Method */
+.row-income > div:nth-child(4) { grid-column: 4; z-index: 1 !important; position: relative; } /* Tags */
+.row-income > div:nth-child(5) { grid-column: 5; z-index: 1 !important; position: relative; } /* Date */
+.row-income > div:nth-child(6) { grid-column: 6; z-index: 1 !important; position: relative; } /* All Payment */
+.row-income > div:nth-child(7) { grid-column: 7; z-index: 1 !important; position: relative; } /* Paid USD */
+.row-income > div:nth-child(8) { grid-column: 8; z-index: 1 !important; position: relative; } /* Paid EGP */
+.row-income > div:nth-child(9) { grid-column: 9; z-index: 1 !important; position: relative; } /* Method */
 .row-income > div:nth-child(10) { 
-  grid-column: 10; /* Note */
+  grid-column: 10; /* Note/Payment */
   min-width: 120px; /* Minimum width to prevent shrinking */
+  z-index: 1 !important; /* Lower z-index to stay below sticky name */
+  position: relative; /* Create stacking context */
 }
-.row-income > div:nth-child(11) { grid-column: 11; } /* Progress */
-.row-income > div:nth-child(12) { grid-column: 12; } /* Delete */
+.row-income > div:nth-child(11) { grid-column: 11; z-index: 1 !important; position: relative; } /* Progress */
+.row-income > div:nth-child(12) { grid-column: 12; z-index: 1 !important; position: relative; } /* Delete */
 
 /* Grouped View Styles */
 .row-project-header {
@@ -4119,6 +4121,9 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  position: relative;
+  z-index: 1 !important; /* Lower z-index to stay below sticky name column */
+  isolation: isolate; /* Create new stacking context */
 }
 
 .payment-button:hover:not(:disabled) {
@@ -4505,18 +4510,7 @@ textarea {
     box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.1);
   }
   
-  /* Add scroll indicator for mobile tables */
-  .table-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 20px;
-    height: 100%;
-    background: linear-gradient(to left, var(--card) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 1;
-  }
+  /* Scroll indicator removed - no gradient overlay */
   
   .table-container .row-head,
   .table-container .row,
@@ -5261,13 +5255,15 @@ textarea {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--glass);
-  z-index: 15;
+  z-index: 31 !important; /* Higher than row names to stay on top */
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
+  width: fit-content; /* Make background hug the content */
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
 }
 .row-head > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-head > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -5300,13 +5296,15 @@ textarea {
   position: sticky;
   left: 56px; /* 24px drag handle + 32px icon */
   background: var(--glass);
-  z-index: 15;
+  z-index: 31 !important; /* Higher than row names to stay on top */
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
   min-width: 80px; /* Reduced width for name inputs */
   max-width: 120px; /* Maximum width to prevent excessive expansion */
+  width: fit-content; /* Make background hug the content */
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
 }
 .row-head.row-biz > div:nth-child(4) { grid-column: 4; } /* Cost USD */
 .row-head.row-biz > div:nth-child(5) { grid-column: 5; } /* Status */
@@ -5330,11 +5328,14 @@ textarea {
   position: sticky;
   left: 48px; /* 20px drag handle + 28px icon */
   background: var(--glass);
-  z-index: 10;
+  z-index: 31 !important; /* Higher than row names to stay on top */
   padding: 0;
   margin: 0;
   text-align: left;
   justify-content: flex-start;
+  width: fit-content; /* Make background hug the content */
+  max-width: 100%; /* Ensure it doesn't exceed grid column width */
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
 }
 .row-head.row-income > div:nth-child(4) { grid-column: 4; } /* Tags */
 .row-head.row-income > div:nth-child(5) { grid-column: 5; } /* Date */
@@ -5426,6 +5427,9 @@ textarea {
     margin: 0;
     min-width: 80px; /* Reduced width for name inputs */
     max-width: 120px; /* Maximum width to prevent excessive expansion */
+    z-index: 30 !important; /* Ensure it stays above everything on mobile */
+    width: fit-content; /* Make background hug the content */
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
   }
   
   .row-income > div:nth-child(3) {
@@ -5435,6 +5439,10 @@ textarea {
     justify-content: flex-start;
     padding: 0;
     margin: 0;
+    z-index: 30 !important; /* Ensure it stays above everything on mobile */
+    width: fit-content; /* Make background hug the content */
+    max-width: 100%; /* Ensure it doesn't exceed grid column width */
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
   }
   
   .row-head > div:nth-child(3),
@@ -5447,6 +5455,9 @@ textarea {
     margin: 0;
     min-width: 80px; /* Reduced width for name inputs */
     max-width: 120px; /* Maximum width to prevent excessive expansion */
+    z-index: 31 !important; /* Even higher for header to stay above row names */
+    width: fit-content; /* Make background hug the content */
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
   }
   
   .row-head.row-income > div:nth-child(3) {
@@ -5456,6 +5467,35 @@ textarea {
     justify-content: flex-start;
     padding: 0;
     margin: 0;
+    z-index: 31 !important; /* Even higher for header to stay above row names */
+    width: fit-content; /* Make background hug the content */
+    max-width: 100%; /* Ensure it doesn't exceed grid column width */
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+  }
+  
+  /* Ensure all columns after sticky name have lower z-index */
+  .row-income > div:nth-child(4),
+  .row-income > div:nth-child(5),
+  .row-income > div:nth-child(6),
+  .row-income > div:nth-child(7),
+  .row-income > div:nth-child(8),
+  .row-income > div:nth-child(9),
+  .row-income > div:nth-child(10),
+  .row-income > div:nth-child(11),
+  .row-income > div:nth-child(12) {
+    z-index: 1 !important; /* Lower than sticky name */
+    position: relative;
+  }
+  
+  /* Specifically ensure payment column stays below sticky name */
+  .row-income > div:nth-child(10) {
+    z-index: 1 !important; /* Lower than sticky name */
+    position: relative;
+  }
+  
+  /* Ensure payment button also has low z-index on mobile */
+  .payment-button {
+    z-index: 1 !important;
   }
 }
 
@@ -10791,18 +10831,7 @@ body.splash-complete .mobile-bottom-nav {
     box-shadow: inset -15px 0 15px -15px rgba(0,0,0,0.1);
   }
   
-  /* Add scroll indicator for tablet tables */
-  .table-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 25px;
-    height: 100%;
-    background: linear-gradient(to left, var(--card) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 1;
-  }
+  /* Scroll indicator removed - no gradient overlay */
   
   /* Tablet income table rows - ensure they don't overflow */
   .table-container .row-head.row-income,

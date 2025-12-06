@@ -17850,6 +17850,7 @@ function loadNonCriticalResources() {
     const nextMonthBtn = document.getElementById('nextMonth');
     const clearDateBtn = document.getElementById('clearDate');
     const todayDateBtn = document.getElementById('todayDate');
+    const closeDatePickerBtn = document.getElementById('closeDatePicker');
     const datePickerDays = document.getElementById('datePickerDays');
     
     
@@ -17920,6 +17921,10 @@ function loadNonCriticalResources() {
     todayDateBtn.addEventListener('click', () => {
       const today = new Date();
       selectDate(today);
+    });
+
+    closeDatePickerBtn.addEventListener('click', () => {
+      hideCustomDatePicker();
     });
 
     // Close on backdrop click - not needed for dropdown
