@@ -3922,10 +3922,11 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .progress-toggle button.progress-100 { 
   background: var(--accent);
-  color: white;
+  color: white !important;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
   position: relative;
+  z-index: 1;
 }
 
 .progress-toggle button.progress-100::before {
@@ -3938,6 +3939,12 @@ input[type="range"]::-moz-range-thumb:hover {
   background: var(--accent);
   border-radius: 6px;
   z-index: -1;
+}
+
+.progress-toggle button.progress-100 * {
+  position: relative;
+  z-index: 2;
+  color: white !important;
 }
 
 /* Enhanced hover effects for progress states */
@@ -4078,9 +4085,10 @@ input[type="range"]::-moz-range-thumb:hover {
 
 [data-theme="light"] .progress-toggle button.progress-100 {
   background: var(--accent);
-  color: white;
+  color: white !important;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3), 0 2px 8px rgba(99, 102, 241, 0.25);
+  z-index: 1;
 }
 
 [data-theme="light"] .progress-toggle button.progress-100::before {
@@ -4091,6 +4099,13 @@ input[type="range"]::-moz-range-thumb:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 4px 12px rgba(99, 102, 241, 0.3);
+  color: white !important;
+}
+
+[data-theme="light"] .progress-toggle button.progress-100 * {
+  position: relative;
+  z-index: 2;
+  color: white !important;
 }
 
 /* Note input styles */

@@ -14160,6 +14160,11 @@ async function saveProfile({ fullName, file }) {
           progressButton.textContent = `${newProgress}%`;
           progressButton.className = `progress-${newProgress}`;
           
+          // Ensure text is always visible - white for 100%
+          if (newProgress === 100) {
+            progressButton.style.color = 'white';
+          }
+          
           // Add visual feedback
           progressButton.style.transform = 'scale(0.95)';
           progressButton.style.transition = 'transform 0.1s ease';
@@ -14167,6 +14172,10 @@ async function saveProfile({ fullName, file }) {
           setTimeout(() => {
             progressButton.style.transform = '';
             progressButton.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            // Ensure color stays white for 100%
+            if (newProgress === 100) {
+              progressButton.style.color = 'white';
+            }
           }, 150);
         }
         
@@ -14959,6 +14968,11 @@ async function saveProfile({ fullName, file }) {
       progressButton.textContent = `${currentProgress}%`;
       progressButton.title = 'Click to cycle through progress (0%, 25%, 50%, 75%, 100%)';
       
+      // Ensure text is always visible - white for 100%
+      if (currentProgress === 100) {
+        progressButton.style.color = 'white';
+      }
+      
       console.log('🎯 Creating progress button for row:', {
         id: row.id,
         name: row.name,
@@ -14999,13 +15013,23 @@ async function saveProfile({ fullName, file }) {
         this.style.transform = 'scale(0.95)';
         this.style.transition = 'transform 0.1s ease';
         
-        // Add a subtle color flash effect
+        // Add a subtle color flash effect (but keep white for 100%)
         const originalColor = this.style.color;
-        this.style.color = 'var(--accent)';
+        if (newProgress === 100) {
+          // Always keep white text for 100% progress
+          this.style.color = 'white';
+        } else {
+          this.style.color = 'var(--accent)';
+        }
         
         setTimeout(() => {
           this.style.transform = '';
-          this.style.color = originalColor;
+          // Reset color - keep white for 100%, otherwise use original
+          if (newProgress === 100) {
+            this.style.color = 'white';
+          } else {
+            this.style.color = originalColor || '';
+          }
           this.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         }, 150);
         
@@ -18139,8 +18163,25 @@ function loadNonCriticalResources() {
         // Handle both click and touch events for mobile compatibility
         const selectTag = () => {
           if (!isTagAlreadyAdded(wrapper, tag)) {
+            // First, show the tag in the input field for immediate feedback
+            input.value = tag;
+            
+            // Then create the chip and add it
             const chip = createTagChip(tag);
             wrapper.insertBefore(chip, input);
+            
+            // Update wrapper expanded state if needed
+            const currentTagCount = wrapper.querySelectorAll('.tag-chip').length;
+            if (currentTagCount >= 3) {
+              wrapper.classList.add('expanded');
+            }
+            
+            // Add visual feedback - highlight the new tag
+            chip.style.transform = 'scale(1.1)';
+            chip.style.transition = 'transform 0.2s ease';
+            setTimeout(() => {
+              chip.style.transform = 'scale(1)';
+            }, 200);
             
             // Use stored row data or find from DOM
             let rowData = wrapper.__rowData;
@@ -18154,8 +18195,33 @@ function loadNonCriticalResources() {
             if (rowData) {
               updateRowTags(wrapper, rowData);
             }
-            input.value = '';
-            input.blur(); // Blur input on mobile after selection
+            
+            // Update icon visibility
+            const icon = wrapper.querySelector('.tag-add-icon');
+            const maxTags = 5;
+            if (currentTagCount >= maxTags) {
+              input.placeholder = '';
+              input.disabled = true;
+              if (icon) icon.style.display = 'none';
+            } else {
+              input.disabled = false;
+              if (icon && input !== document.activeElement && !input.value.trim()) {
+                icon.style.display = 'flex';
+              }
+            }
+            
+            // Clear input after a brief moment to show the chip
+            setTimeout(() => {
+              input.value = '';
+              input.placeholder = '';
+            }, 100);
+            
+            // Focus back on input for better UX (except on mobile)
+            if (!('ontouchstart' in window)) {
+              setTimeout(() => input.focus(), 50);
+            } else {
+              setTimeout(() => input.blur(), 150); // Blur input on mobile after selection
+            }
           }
           hideTagSuggestions(wrapper);
         };
