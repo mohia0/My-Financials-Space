@@ -15719,6 +15719,77 @@ async function saveProfile({ fullName, file }) {
       const paymentDiv = document.createElement('div');
       const deleteDiv = document.createElement('div');
       
+      // Add delete button for project header row
+      deleteDiv.innerHTML = '<button class="delete-btn" data-del-project aria-label="Delete Project">\
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><path d="M7 9h10M9 9v8m6-8v8M5 6h14l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6Zm3-3h8l1 3H7l1-3Z"/></svg></button>';
+      
+      const projectDelBtn = deleteDiv.querySelector('[data-del-project]');
+      projectDelBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (projectDelBtn.classList.contains('delete-confirm')) {
+          // Delete all rows for this project
+          const currentYearData = state.income[currentYear] || [];
+          const projectRows = currentYearData.filter(row => row.name === project.name);
+          
+          if (projectRows.length > 0) {
+            // Delete all rows from Supabase if they have IDs
+            const rowsWithIds = projectRows.filter(row => row.id);
+            if (rowsWithIds.length > 0 && currentUser && supabaseReady) {
+              const idsToDelete = rowsWithIds.map(row => row.id);
+              window.supabaseClient
+                .from('income')
+                .delete()
+                .in('id', idsToDelete)
+                .then(({ error }) => {
+                  if (error) {
+                    showNotification('Failed to delete project', 'error', 2000);
+                  } else {
+                    showNotification('🗑️ Project deleted', 'success', 1500, { force: true });
+                  }
+                });
+            }
+            
+            // Remove all rows from state
+            projectRows.forEach(rowToDelete => {
+              const rowIndex = currentYearData.indexOf(rowToDelete);
+              if (rowIndex !== -1) {
+                currentYearData.splice(rowIndex, 1);
+              }
+            });
+            
+            // Update order properties for remaining rows
+            currentYearData.forEach((row, index) => {
+              row.order = index;
+            });
+            
+            saveToLocal();
+            
+            // Re-render with current view mode
+            const currentYearDataAfterDelete = state.income[currentYear] || [];
+            if (incomeViewMode === 'grouped') {
+              renderGroupedIncomeList('list-income', currentYearDataAfterDelete, false);
+            } else {
+              renderIncomeList('list-income', currentYearDataAfterDelete, false);
+            }
+            setupProgressHeaderToggle();
+            setupPaymentHeaderToggle();
+            updateInputsLockState();
+            addRowButtonListeners();
+            
+            // Update KPIs
+            renderKPIs();
+            updateIncomeKPIsLive();
+          }
+        } else {
+          projectDelBtn.classList.add('delete-confirm');
+          projectDelBtn.innerHTML = 'Confirm';
+          setTimeout(() => {
+            projectDelBtn.classList.remove('delete-confirm');
+            projectDelBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><path d="M7 9h10M9 9v8m6-8v8M5 6h14l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6Zm3-3h8l1 3H7l1-3Z"/></svg>';
+          }, 3000);
+        }
+      });
+      
       projectRow.appendChild(spacerDiv);
       projectRow.appendChild(iconCellDiv);
       projectRow.appendChild(nameDiv);
@@ -18913,16 +18984,12 @@ function loadNonCriticalResources() {
         setupPaymentHeaderToggle();
         addRowButtonListeners();
         
-        // Update add-row button styling for grouped view
+        // Update add-row button styling - keep same style for both views
         const addRowBtn = document.querySelector('[data-add-row="income"]');
         if (addRowBtn) {
-          if (incomeViewMode === 'grouped') {
-            addRowBtn.style.cssText = 'font-size: 0.5rem; padding: 0.25rem 0.5rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 6px; margin-top: 4px; min-height: 20px; height: 20px; line-height: 1;';
-            addRowBtn.innerHTML = '+ Add row';
-          } else {
-            addRowBtn.style.cssText = 'font-size: .65rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 8px; margin-top: 8px;';
-            addRowBtn.innerHTML = '+ Add a row<div class="tooltip">Add a new income entry</div>';
-          }
+          // Use same styling for both standard and grouped view
+          addRowBtn.style.cssText = 'font-size: .65rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 8px; margin-top: 8px;';
+          addRowBtn.innerHTML = '+ Add a row<div class="tooltip">Add a new income entry</div>';
         }
       });
     }
@@ -18930,11 +18997,11 @@ function loadNonCriticalResources() {
     // Initialize toggle on page load (with delay to ensure DOM is ready)
     setTimeout(() => {
       setupIncomeViewToggle();
-      // Update add-row button styling based on initial view mode
+      // Ensure add-row button uses standard styling for both views
       const addRowBtn = document.querySelector('[data-add-row="income"]');
-      if (addRowBtn && incomeViewMode === 'grouped') {
-        addRowBtn.style.cssText = 'font-size: 0.5rem; padding: 0.25rem 0.5rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 6px; margin-top: 4px; min-height: 20px; height: 20px; line-height: 1;';
-        addRowBtn.innerHTML = '+ Add row';
+      if (addRowBtn) {
+        addRowBtn.style.cssText = 'font-size: .65rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 8px; margin-top: 8px;';
+        addRowBtn.innerHTML = '+ Add a row<div class="tooltip">Add a new income entry</div>';
       }
     }, 100);
     

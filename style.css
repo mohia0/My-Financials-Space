@@ -564,16 +564,7 @@ body.onboarding-active .mobile-bottom-nav {
   border-color: var(--accent);
 }
 
-/* Ultra-compact add-row button for grouped view */
-[data-add-row="income"].grouped-view {
-  font-size: 0.5rem !important;
-  padding: 0.25rem 0.5rem !important;
-  min-height: 20px !important;
-  height: 20px !important;
-  line-height: 1 !important;
-  margin-top: 4px !important;
-  border-radius: 6px !important;
-}
+/* Add-row button styling - same for both standard and grouped view */
 
 /* Ensure sub-rows maintain spacing */
 .row-sub-date + .row-project-group {
