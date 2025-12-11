@@ -453,7 +453,7 @@ body.onboarding-active .mobile-bottom-nav {
   white-space: nowrap;
 }
 
-/* Mobile: Move view toggle above years on the right */
+/* Mobile: Stack title/toggle and year controls */
 @media (max-width: 768px) {
   .income-header-container {
     flex-direction: column;
@@ -463,14 +463,8 @@ body.onboarding-active .mobile-bottom-nav {
   
   .income-header-controls {
     width: 100%;
-    flex-direction: column;
     align-items: flex-end;
-    gap: 0.5rem;
-  }
-  
-  .view-toggle-mobile {
-    order: -1; /* Move above years */
-    align-self: flex-end; /* Align to right */
+    justify-content: flex-end;
   }
   
   #yearTabsContainer {
