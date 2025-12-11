@@ -15444,7 +15444,113 @@ async function saveProfile({ fullName, file }) {
       const iconCellDiv = document.createElement('div');
       iconCellDiv.className = 'icon-cell';
       iconCellDiv.innerHTML = `<button type="button" title="Change icon" data-choose-icon>${iconHTML}</button>`;
+      
+      // Tags - only in main project row (use tags from first row)
       const tagsDiv = document.createElement('div');
+      const tagsWrapper = document.createElement('div');
+      tagsWrapper.className = 'tag-input-wrapper';
+      
+      // Get tags from first project row
+      const firstProjectRow = projectRows.length > 0 ? projectRows[0] : null;
+      const existingTags = (firstProjectRow?.tags || '').split(',').filter(tag => tag.trim());
+      existingTags.forEach(tag => {
+        const chip = createTagChip(tag.trim());
+        tagsWrapper.appendChild(chip);
+      });
+      
+      if (existingTags.length >= 3) {
+        tagsWrapper.classList.add('expanded');
+      }
+      
+      const tagsInput = document.createElement('input');
+      tagsInput.className = 'tag-input';
+      tagsInput.type = 'text';
+      tagsInput.placeholder = '';
+      let enterKeyProcessed = false;
+      
+      const addTagIcon = document.createElement('span');
+      addTagIcon.className = 'tag-add-icon';
+      addTagIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2V10M2 6H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      addTagIcon.title = 'Add tag';
+      addTagIcon.addEventListener('click', () => tagsInput.focus());
+      
+      const updateIconVisibility = () => {
+        const tagCount = tagsWrapper.querySelectorAll('.tag-chip').length;
+        const maxTags = 5;
+        const isFocused = document.activeElement === tagsInput;
+        const hasValue = tagsInput.value.trim().length > 0;
+        const isDisabled = tagsInput.disabled || tagCount >= maxTags;
+        
+        if (isFocused || hasValue || isDisabled) {
+          addTagIcon.style.display = 'none';
+        } else {
+          addTagIcon.style.display = 'flex';
+        }
+      };
+      
+      tagsInput.addEventListener('focus', function() {
+        updateIconVisibility();
+        showTagSuggestions(this, tagsWrapper);
+      });
+      
+      tagsInput.addEventListener('blur', function() {
+        setTimeout(updateIconVisibility, 100);
+        const isMobile = 'ontouchstart' in window || window.innerWidth <= 768;
+        const delay = isMobile ? 300 : 150;
+        setTimeout(() => hideTagSuggestions(tagsWrapper), delay);
+      });
+      
+      tagsInput.addEventListener('input', function() {
+        updateIconVisibility();
+        if (firstProjectRow) {
+          handleTagInput(this, tagsWrapper, firstProjectRow);
+          // Update tags for all rows in the project
+          const tagString = Array.from(tagsWrapper.querySelectorAll('.tag-chip'))
+            .map(chip => chip.querySelector('span:first-child')?.textContent.trim())
+            .filter(Boolean)
+            .join(',');
+          projectRows.forEach(row => {
+            row.tags = tagString;
+            instantSaveIncomeRow(row, currentYear);
+          });
+        }
+      });
+      
+      tagsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          enterKeyProcessed = true;
+          if (firstProjectRow) {
+            handleTagKeydown(e, this, tagsWrapper, firstProjectRow);
+            // Update tags for all rows in the project
+            setTimeout(() => {
+              const tagString = Array.from(tagsWrapper.querySelectorAll('.tag-chip'))
+                .map(chip => chip.querySelector('span:first-child')?.textContent.trim())
+                .filter(Boolean)
+                .join(',');
+              projectRows.forEach(row => {
+                row.tags = tagString;
+                instantSaveIncomeRow(row, currentYear);
+              });
+            }, 50);
+          }
+          setTimeout(() => {
+            this.blur();
+            enterKeyProcessed = false;
+          }, 100);
+          return false;
+        }
+        if (firstProjectRow) {
+          handleTagKeydown(e, this, tagsWrapper, firstProjectRow);
+        }
+      });
+      
+      tagsWrapper.__rowData = firstProjectRow;
+      tagsWrapper.appendChild(addTagIcon);
+      tagsWrapper.appendChild(tagsInput);
+      tagsDiv.appendChild(tagsWrapper);
+      updateIconVisibility();
       
       // Date column with add-date button
       const dateDiv = document.createElement('div');
@@ -15504,7 +15610,21 @@ async function saveProfile({ fullName, file }) {
         // Find the actual row in state that corresponds to this date entry
         const currentYearData = state.income[currentYear] || [];
         const projectRows = currentYearData.filter(row => row.name === project.name);
-        const actualRow = projectRows[dateIdx] || projectRows[0]; // Use dateIdx or fallback to first
+        
+        // Try to match by date and other properties for better accuracy
+        let actualRow = null;
+        if (dateEntry.date) {
+          // Try to find exact match by date
+          actualRow = projectRows.find(row => row.date === dateEntry.date);
+        }
+        // If no exact match, try by index
+        if (!actualRow && dateIdx < projectRows.length) {
+          actualRow = projectRows[dateIdx];
+        }
+        // Fallback to first row
+        if (!actualRow && projectRows.length > 0) {
+          actualRow = projectRows[0];
+        }
         
         // Create sub-row with same structure as main row
         const subDateRow = document.createElement('div');
@@ -15529,109 +15649,9 @@ async function saveProfile({ fullName, file }) {
         nameDiv.style.cssText = 'padding-left: 1.5rem; font-size: 0.7rem; color: var(--muted);';
         // No text content - name is only in main row
         
-        // Tags - use exact same logic as main rows
+        // Tags - removed from sub-rows, only in main row (empty div to preserve alignment)
         const tagsDiv = document.createElement('div');
-        const tagsWrapper = document.createElement('div');
-        tagsWrapper.className = 'tag-input-wrapper';
-        
-        const existingTags = (actualRow?.tags || dateEntry.tags || '').split(',').filter(tag => tag.trim());
-        existingTags.forEach(tag => {
-          const chip = createTagChip(tag.trim());
-          tagsWrapper.appendChild(chip);
-        });
-        
-        if (existingTags.length >= 3) {
-          tagsWrapper.classList.add('expanded');
-        }
-        
-        const tagsInput = document.createElement('input');
-        tagsInput.className = 'tag-input';
-        tagsInput.type = 'text';
-        tagsInput.placeholder = '';
-        let enterKeyProcessed = false;
-        
-        const addTagIcon = document.createElement('span');
-        addTagIcon.className = 'tag-add-icon';
-        addTagIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2V10M2 6H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-        addTagIcon.title = 'Add tag';
-        addTagIcon.addEventListener('click', () => tagsInput.focus());
-        
-        const updateIconVisibility = () => {
-          const tagCount = tagsWrapper.querySelectorAll('.tag-chip').length;
-          const maxTags = 5;
-          const isFocused = document.activeElement === tagsInput;
-          const hasValue = tagsInput.value.trim().length > 0;
-          const isDisabled = tagsInput.disabled || tagCount >= maxTags;
-          
-          if (isFocused || hasValue || isDisabled) {
-            addTagIcon.style.display = 'none';
-          } else {
-            addTagIcon.style.display = 'flex';
-          }
-        };
-        
-        tagsInput.addEventListener('focus', function() {
-          updateIconVisibility();
-          showTagSuggestions(this, tagsWrapper);
-        });
-        
-        tagsInput.addEventListener('blur', function() {
-          setTimeout(updateIconVisibility, 100);
-          const isMobile = 'ontouchstart' in window || window.innerWidth <= 768;
-          const delay = isMobile ? 300 : 150;
-          setTimeout(() => hideTagSuggestions(tagsWrapper), delay);
-        });
-        
-        tagsInput.addEventListener('input', function() {
-          updateIconVisibility();
-          const rowData = actualRow || dateEntry;
-          handleTagInput(this, tagsWrapper, rowData);
-          if (actualRow) {
-            instantSaveIncomeRow(actualRow, currentYear);
-          } else {
-            // Update dateEntry and save
-            dateEntry.tags = Array.from(tagsWrapper.querySelectorAll('.tag-chip'))
-              .map(chip => chip.querySelector('span:first-child')?.textContent.trim())
-              .filter(Boolean)
-              .join(',');
-            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
-          }
-        });
-        
-        tagsInput.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
-            enterKeyProcessed = true;
-            const rowData = actualRow || dateEntry;
-            handleTagKeydown(e, this, tagsWrapper, rowData);
-            
-            // Update tags in dateEntry if needed
-            if (!actualRow && rowData === dateEntry) {
-              setTimeout(() => {
-                dateEntry.tags = Array.from(tagsWrapper.querySelectorAll('.tag-chip'))
-                  .map(chip => chip.querySelector('span:first-child')?.textContent.trim())
-                  .filter(Boolean)
-                  .join(',');
-                saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
-              }, 50);
-            }
-            
-            setTimeout(() => {
-              this.blur();
-              enterKeyProcessed = false;
-            }, 100);
-            return false;
-          }
-          const rowData = actualRow || dateEntry;
-          handleTagKeydown(e, this, tagsWrapper, rowData);
-        });
-        
-        tagsWrapper.__rowData = actualRow || dateEntry;
-        tagsWrapper.appendChild(addTagIcon);
-        tagsWrapper.appendChild(tagsInput);
-        tagsDiv.appendChild(tagsWrapper);
-        updateIconVisibility();
+        // Empty - tags are only in the main project row
         
         // Date input - use exact same logic as main rows
         const dateDiv = document.createElement('div');
@@ -15692,13 +15712,33 @@ async function saveProfile({ fullName, file }) {
         
         dateInput.addEventListener('change', function() {
           const dateValue = this.value;
+          
+          // Update both actualRow and dateEntry to keep them in sync
           if (actualRow) {
             actualRow.date = dateValue;
+            // Also update dateEntry to keep them in sync
+            dateEntry.date = dateValue;
             instantSaveIncomeRow(actualRow, currentYear);
           } else {
             dateEntry.date = dateValue;
-            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+            // Try to find and update the actual row in state
+            const currentYearData = state.income[currentYear] || [];
+            const projectRows = currentYearData.filter(row => row.name === project.name);
+            if (dateIdx < projectRows.length) {
+              const rowToUpdate = projectRows[dateIdx];
+              rowToUpdate.date = dateValue;
+              instantSaveIncomeRow(rowToUpdate, currentYear);
+            } else {
+              saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+            }
           }
+          
+          // Update the stored row data reference
+          if (subDateRow.__rowData) {
+            subDateRow.__rowData.date = dateValue;
+          }
+          
+          // Force update the display immediately
           updateDateDisplay();
           updateIncomeKPIsLive();
           // Update project row totals (if dates affect sorting/totals)
@@ -16019,7 +16059,8 @@ async function saveProfile({ fullName, file }) {
         }
         
         progressButton.addEventListener('click', function() {
-          const current = parseInt(actualRow?.progress || dateEntry.progress || 0);
+          // Get current progress - ensure we're reading from the right source
+          const current = parseInt(actualRow?.progress ?? dateEntry.progress ?? 0);
           let newProgress;
           switch(current) {
             case 0: newProgress = 25; break;
@@ -16030,14 +16071,31 @@ async function saveProfile({ fullName, file }) {
             default: newProgress = 0;
           }
           
+          // Update the progress value - ensure both actualRow and dateEntry are updated
           if (actualRow) {
             actualRow.progress = newProgress;
+            // Also update dateEntry to keep them in sync
+            dateEntry.progress = newProgress;
             instantSaveIncomeRow(actualRow, currentYear);
           } else {
             dateEntry.progress = newProgress;
-            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+            // If we have a row reference stored, update it too
+            if (subDateRow.__rowData) {
+              subDateRow.__rowData.progress = newProgress;
+            }
+            // Try to find and update the actual row in state
+            const currentYearData = state.income[currentYear] || [];
+            const projectRows = currentYearData.filter(row => row.name === project.name);
+            if (dateIdx < projectRows.length) {
+              const rowToUpdate = projectRows[dateIdx];
+              rowToUpdate.progress = newProgress;
+              instantSaveIncomeRow(rowToUpdate, currentYear);
+            } else {
+              saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+            }
           }
           
+          // Update UI immediately
           this.textContent = `${newProgress}%`;
           this.className = `progress-${newProgress}`;
           if (newProgress === 100) {
@@ -16045,36 +16103,60 @@ async function saveProfile({ fullName, file }) {
           } else {
             this.style.color = '';
           }
+          
+          // Add visual feedback like standard view
+          this.style.transform = 'scale(0.95)';
+          this.style.transition = 'transform 0.1s ease';
+          setTimeout(() => {
+            this.style.transform = '';
+            this.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          }, 150);
         });
         
         progressDiv.appendChild(progressButton);
         
-        // Payment button - with default ordinal labels
+        // Payment button - same as standard view (cycle through options)
         const paymentDiv = document.createElement('div');
         const paymentButton = document.createElement('button');
         paymentButton.className = 'input payment-button';
         paymentButton.type = 'button';
-        paymentButton.setAttribute('aria-label', 'Payment type');
         
-        // Get default label for this index
-        const defaultLabel = getDefaultPaymentLabel(dateIdx);
+        // Payment options in order (same as standard view)
+        const paymentOptions = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Full Balance'];
         
-        // Use existing note if set, otherwise use default
+        // Get current note value
         let currentNote = actualRow?.note || dateEntry.note || '';
-        const defaultLabels = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Fourth Deposit', 'Fifth Deposit'];
         
-        // If note is empty or matches old default pattern, use new default
-        if (!currentNote || currentNote === 'Full Balance' || (defaultLabels.includes(currentNote) && currentNote !== defaultLabel)) {
-          currentNote = defaultLabel;
-          // Save the default label
-          if (actualRow) {
-            actualRow.note = defaultLabel;
+        // Initialize with existing note value or default to "Full Balance"
+        let currentPaymentIndex = 0;
+        if (currentNote) {
+          const existingIndex = paymentOptions.indexOf(currentNote);
+          if (existingIndex !== -1) {
+            currentPaymentIndex = existingIndex;
           } else {
-            dateEntry.note = defaultLabel;
+            // If note exists but doesn't match any option, default to Full Balance
+            currentPaymentIndex = 3;
+            currentNote = 'Full Balance';
+            if (actualRow) {
+              actualRow.note = 'Full Balance';
+            } else {
+              dateEntry.note = 'Full Balance';
+            }
+          }
+        } else {
+          // Default to Full Balance
+          currentNote = 'Full Balance';
+          currentPaymentIndex = 3;
+          if (actualRow) {
+            actualRow.note = 'Full Balance';
+          } else {
+            dateEntry.note = 'Full Balance';
           }
         }
         
         paymentButton.textContent = currentNote;
+        
+        // Apply compact styling (same as standard view)
         paymentButton.style.fontSize = '0.65rem';
         paymentButton.style.padding = '0.25rem 0.5rem';
         paymentButton.style.borderRadius = '6px';
@@ -16091,65 +16173,116 @@ async function saveProfile({ fullName, file }) {
         paymentButton.style.whiteSpace = 'nowrap';
         paymentButton.style.transition = 'all 0.2s ease';
         
-        // Make payment button editable (click to edit, or cycle through defaults)
-        let isEditingPayment = false;
-        paymentButton.addEventListener('click', function(e) {
-          if (isEditingPayment) return;
+        // Cycle through payment options on click (same as standard view)
+        paymentButton.addEventListener('click', function() {
+          currentPaymentIndex = (currentPaymentIndex + 1) % paymentOptions.length;
+          const newPayment = paymentOptions[currentPaymentIndex];
+          paymentButton.textContent = newPayment;
           
-          // On first click, make it editable
-          isEditingPayment = true;
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.value = currentNote;
-          input.className = 'editable-input';
-          input.style.cssText = 'width: 100%; padding: 0.25rem 0.5rem; font-size: 0.65rem; border: 1px solid var(--stroke); border-radius: 4px; background: var(--card); color: var(--fg); outline: none;';
-          
-          const originalText = paymentButton.textContent;
-          paymentButton.textContent = '';
-          paymentButton.appendChild(input);
-          input.focus();
-          input.select();
-          
-          const saveEdit = () => {
-            const newValue = input.value.trim() || defaultLabel;
-            paymentButton.textContent = newValue;
-            paymentButton.removeChild(input);
-            isEditingPayment = false;
-            currentNote = newValue;
-            
-            if (actualRow) {
-              actualRow.note = newValue;
-              instantSaveIncomeRow(actualRow, currentYear);
-            } else {
-              dateEntry.note = newValue;
-              saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
-            }
-          };
-          
-          const cancelEdit = () => {
-            paymentButton.textContent = originalText;
-            if (paymentButton.contains(input)) {
-              paymentButton.removeChild(input);
-            }
-            isEditingPayment = false;
-          };
-          
-          input.addEventListener('blur', saveEdit);
-          input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              saveEdit();
-            } else if (e.key === 'Escape') {
-              e.preventDefault();
-              cancelEdit();
-            }
-          });
+          if (actualRow) {
+            actualRow.note = newPayment;
+            instantSaveIncomeRow(actualRow, currentYear);
+          } else {
+            dateEntry.note = newPayment;
+            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+          }
         });
         
         paymentDiv.appendChild(paymentButton);
         
-        // Delete button (empty but preserves alignment)
+        // Delete button - same as standard view, positioned on left
         const deleteDiv = document.createElement('div');
+        deleteDiv.innerHTML = '<button class="delete-btn" data-del aria-label="Delete">\
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><path d="M7 9h10M9 9v8m6-8v8M5 6h14l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6Zm3-3h8l1 3H7l1-3Z"/></svg></button>';
+        
+        const delBtn = deleteDiv.querySelector('[data-del]');
+        delBtn.addEventListener('click', function() {
+          if (delBtn.classList.contains('delete-confirm')) {
+            // Find and remove the actual row from state
+            const currentYearData = state.income[currentYear] || [];
+            const projectRows = currentYearData.filter(row => row.name === project.name);
+            
+            // Find the row to delete (by date index or by matching the actualRow)
+            let rowToDelete = null;
+            let rowIndex = -1;
+            
+            if (actualRow && actualRow.id) {
+              // Find by ID
+              rowIndex = currentYearData.findIndex(row => row.id === actualRow.id);
+              if (rowIndex !== -1) {
+                rowToDelete = currentYearData[rowIndex];
+              }
+            } else if (dateIdx < projectRows.length) {
+              // Find by date index in project rows
+              rowToDelete = projectRows[dateIdx];
+              rowIndex = currentYearData.findIndex(row => 
+                row.name === project.name && 
+                row.date === rowToDelete.date &&
+                Math.abs((row.paidUsd || 0) - (rowToDelete.paidUsd || 0)) < 0.01
+              );
+            }
+            
+            if (rowToDelete && rowIndex !== -1) {
+              // If the row has an ID, delete it from Supabase
+              if (rowToDelete.id && currentUser && supabaseReady) {
+                window.supabaseClient
+                  .from('income')
+                  .delete()
+                  .eq('id', rowToDelete.id)
+                  .then(({ error }) => {
+                    if (error) {
+                      showNotification('Failed to delete income', 'error', 2000);
+                    } else {
+                      showNotification('🗑️ Income deleted', 'success', 1500, { force: true });
+                    }
+                  });
+              }
+              
+              // Add removal animation
+              subDateRow.classList.add('row-removing');
+              
+              // Wait for animation to complete before removing
+              setTimeout(() => {
+                currentYearData.splice(rowIndex, 1);
+                
+                // Update order properties for remaining rows
+                currentYearData.forEach((row, index) => {
+                  row.order = index;
+                });
+                
+                saveToLocal();
+                
+                // Re-render with current view mode
+                const currentYearDataAfterDelete = state.income[currentYear] || [];
+                if (incomeViewMode === 'grouped') {
+                  renderGroupedIncomeList('list-income', currentYearDataAfterDelete, false);
+                } else {
+                  renderIncomeList('list-income', currentYearDataAfterDelete, false);
+                }
+                setupProgressHeaderToggle();
+                updateInputsLockState();
+                addRowButtonListeners();
+                
+                // Update KPIs
+                renderKPIs();
+                updateIncomeKPIsLive();
+              }, 300);
+            } else {
+              // Fallback: just remove from view
+              subDateRow.classList.add('row-removing');
+              setTimeout(() => {
+                subDateRow.remove();
+              }, 300);
+            }
+          } else {
+            delBtn.classList.add('delete-confirm');
+            delBtn.innerHTML = 'Confirm';
+            setTimeout(() => {
+              delBtn.classList.remove('delete-confirm');
+              delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4"><path d="M7 9h10M9 9v8m6-8v8M5 6h14l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6Zm3-3h8l1 3H7l1-3Z"/></svg>';
+            }, 3000);
+          }
+        });
         
         // Append all cells in correct order
         subDateRow.appendChild(spacerDiv);
@@ -19675,6 +19808,87 @@ function loadNonCriticalResources() {
       hideCustomDatePicker();
     });
 
+    // Text input for fast date entry
+    const datePickerTextInput = document.getElementById('datePickerTextInput');
+    if (datePickerTextInput) {
+      // Update text input when picker opens
+      const updateTextInput = () => {
+        if (currentDatePickerInput && currentDatePickerInput.value) {
+          datePickerTextInput.value = currentDatePickerInput.value;
+        } else {
+          datePickerTextInput.value = '';
+        }
+      };
+      
+      // Parse date from text input (supports YYYY-MM-DD and MM/DD/YYYY)
+      const parseDateFromText = (text) => {
+        text = text.trim();
+        if (!text) return null;
+        
+        // Try YYYY-MM-DD format first
+        if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+          const date = new Date(text);
+          if (!isNaN(date.getTime())) return date;
+        }
+        
+        // Try MM/DD/YYYY format
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) {
+          const parts = text.split('/');
+          const month = parseInt(parts[0]) - 1;
+          const day = parseInt(parts[1]);
+          const year = parseInt(parts[2]);
+          const date = new Date(year, month, day);
+          if (!isNaN(date.getTime())) return date;
+        }
+        
+        // Try DD/MM/YYYY format
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) {
+          const parts = text.split('/');
+          const day = parseInt(parts[0]);
+          const month = parseInt(parts[1]) - 1;
+          const year = parseInt(parts[2]);
+          const date = new Date(year, month, day);
+          if (!isNaN(date.getTime())) return date;
+        }
+        
+        return null;
+      };
+      
+      // Handle Enter key or blur to apply date
+      const applyDateFromText = () => {
+        const parsedDate = parseDateFromText(datePickerTextInput.value);
+        if (parsedDate) {
+          selectDate(parsedDate);
+        } else if (datePickerTextInput.value.trim()) {
+          // Invalid date format - show error briefly
+          datePickerTextInput.style.borderColor = 'var(--error, #ef4444)';
+          setTimeout(() => {
+            datePickerTextInput.style.borderColor = '';
+          }, 2000);
+        }
+      };
+      
+      datePickerTextInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyDateFromText();
+        }
+      });
+      
+      datePickerTextInput.addEventListener('blur', () => {
+        if (datePickerTextInput.value.trim()) {
+          applyDateFromText();
+        }
+      });
+      
+      // Update text input when picker opens
+      const originalShowCustomDatePicker = showCustomDatePicker;
+      showCustomDatePicker = function(inputElement) {
+        originalShowCustomDatePicker(inputElement);
+        setTimeout(updateTextInput, 100);
+      };
+    }
+
     // Close on backdrop click - not needed for dropdown
     // customDatePicker.addEventListener('click', (e) => {
     //   if (e.target === customDatePicker) {
@@ -19738,6 +19952,12 @@ function loadNonCriticalResources() {
 
       updateDatePickerHeader();
       renderDatePickerDays();
+      
+      // Update text input with current value
+      const datePickerTextInput = document.getElementById('datePickerTextInput');
+      if (datePickerTextInput && inputElement) {
+        datePickerTextInput.value = inputElement.value || '';
+      }
       
       // Simple positioning - just show it
       const datePickerModal = customDatePicker;

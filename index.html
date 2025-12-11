@@ -719,11 +719,11 @@
 
       <!-- Income Table -->
       <section class="p-0 space-y-2">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-4 income-header-container">
           <h2 class="text-sm font-medium px-1 sticky-header" style="color:var(--fg)">Income</h2>
-          <div class="flex items-center gap-2">
-            <!-- View Toggle -->
-            <button id="incomeViewToggle" class="view-toggle-btn" title="Toggle between standard and grouped view">
+          <div class="flex items-center gap-2 income-header-controls">
+            <!-- View Toggle - will be moved above years on mobile -->
+            <button id="incomeViewToggle" class="view-toggle-btn view-toggle-mobile" title="Toggle between standard and grouped view">
               <span id="viewToggleText">Grouped</span>
             </button>
             <!-- Year Tabs (only visible on Income page) -->
@@ -2001,6 +2001,9 @@
         <div class="weekday">Sat</div>
       </div>
       <div class="date-picker-days" id="datePickerDays"></div>
+      <div class="date-picker-text-input-container" style="width: 100%; padding: 0.5rem 0.75rem; border-top: 1px solid var(--stroke);">
+        <input type="text" id="datePickerTextInput" class="date-picker-text-input" placeholder="Type date (YYYY-MM-DD or MM/DD/YYYY)" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--stroke); border-radius: 4px; background: var(--card); color: var(--fg); font-size: 0.75rem; font-weight: 400; min-height: 32px; box-sizing: border-box;">
+      </div>
       <div class="date-picker-footer">
         <button class="date-picker-btn" id="closeDatePicker">Close</button>
         <div style="display: flex; gap: 0.5rem;">
