@@ -5808,6 +5808,16 @@ async function saveProfile({ fullName, file }) {
         }
       });
       
+      // Handle Add Date buttons in grouped view - hide them when locked
+      const addDateButtons = document.querySelectorAll('.add-date-btn');
+      addDateButtons.forEach(button => {
+        if (state.inputsLocked) {
+          button.style.display = 'none';
+        } else {
+          button.style.display = '';
+        }
+      });
+      
       // Handle tag input fields - hide them when locked but keep tag badges visible
       // Filter out auth modal tag inputs
       const filteredTagInputs = Array.from(allTagInputs).filter(tagInput => {
@@ -15670,16 +15680,25 @@ async function saveProfile({ fullName, file }) {
       addDateBtn.className = 'add-date-btn';
       addDateBtn.title = 'Add date to this project';
       addDateBtn.style.cssText = 'min-width: 80px; height: 28px; padding: 0.25rem 0.5rem; font-size: 0.65rem; border: 1.5px dashed var(--stroke); background: var(--glass); color: var(--muted); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; font-weight: 500;';
+      
+      // Hide button when inputs are locked
+      if (state.inputsLocked) {
+        addDateBtn.style.display = 'none';
+      }
+      
       addDateBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (state.inputsLocked) return;
         addDateToProject(project.name, currentYear);
       });
       addDateBtn.addEventListener('mouseenter', function() {
+        if (state.inputsLocked) return;
         this.style.borderColor = 'var(--accent)';
         this.style.color = 'var(--fg)';
         this.style.background = 'var(--hover)';
       });
       addDateBtn.addEventListener('mouseleave', function() {
+        if (state.inputsLocked) return;
         this.style.borderColor = 'var(--stroke)';
         this.style.color = 'var(--muted)';
         this.style.background = 'var(--glass)';

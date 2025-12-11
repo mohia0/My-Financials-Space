@@ -3770,7 +3770,7 @@ input[type="range"]::-moz-range-thumb:hover {
   grid-column: 3; /* Project Name */
   position: sticky;
   left: 28px; /* 28px icon (spacer is empty, no width) */
-  background: var(--card);
+  background: transparent;
   z-index: 30 !important; /* Higher z-index to stay above payment and all other elements */
   padding: 0;
   margin: 0;
@@ -3780,7 +3780,17 @@ input[type="range"]::-moz-range-thumb:hover {
   width: fit-content; /* Make background hug the content */
   max-width: 100%; /* Ensure it doesn't exceed grid column width */
   box-shadow: none; /* No shadow initially - will appear on scroll */
-  transition: box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Show background on row hover */
+.row-income:hover > div:nth-child(3) {
+  background: var(--card);
+}
+
+/* Light mode hover background */
+[data-theme="light"] .row-income:hover > div:nth-child(3) {
+  background: rgba(248, 250, 252, 0.9);
 }
 .row-income > div:nth-child(4) { grid-column: 4; z-index: 1 !important; position: relative; } /* Tags */
 .row-income > div:nth-child(5) { grid-column: 5; z-index: 1 !important; position: relative; } /* Date */
@@ -5556,7 +5566,7 @@ textarea {
   grid-column: 3; /* Project Name */
   position: sticky;
   left: 28px; /* 28px icon (spacer is empty, no width) */
-  background: var(--glass);
+  background: var(--glass); /* Header keeps background for visibility */
   z-index: 31 !important; /* Higher than row names to stay on top */
   padding: 0;
   margin: 0;
@@ -5670,7 +5680,7 @@ textarea {
   
   .row-income > div:nth-child(3) {
     left: 40px; /* Adjusted for income table mobile layout */
-    background: var(--card);
+    background: transparent;
     text-align: left;
     justify-content: flex-start;
     padding: 0;
@@ -5679,7 +5689,12 @@ textarea {
     width: fit-content; /* Make background hug the content */
     max-width: 100%; /* Ensure it doesn't exceed grid column width */
     box-shadow: none; /* No shadow initially - will appear on scroll */
-    transition: box-shadow 0.2s ease;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  /* Show background on row hover for mobile */
+  .row-income:hover > div:nth-child(3) {
+    background: var(--card);
   }
   
   .row-head > div:nth-child(3),
