@@ -23,7 +23,7 @@ let currencyRates;
 let columnOrder = ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
 
 // Multi-date support: View mode for income table
-let incomeViewMode = 'standard'; // 'standard' or 'grouped'
+let incomeViewMode = 'grouped'; // 'standard' or 'grouped'
 
 // Helper functions for multi-date support
 // Normalize row data to support both old format (single date) and new format (dates array)
@@ -2059,6 +2059,7 @@ async function saveProfile({ fullName, file }) {
       // Use forceFullRender=true to ensure we get fresh data for the new year
       renderIncomeList('list-income', state.income[year], true, true);
       setupProgressHeaderToggle();
+      setupPaymentHeaderToggle();
       
       // Update KPIs for the selected year
       console.log('🔄 Calling renderKPIs for year:', year);
@@ -2264,6 +2265,7 @@ async function saveProfile({ fullName, file }) {
         updateInputsLockState();
         addRowButtonListeners();
         setupProgressHeaderToggle();
+        setupPaymentHeaderToggle();
         // Add smooth animation only to the new row
         animateNewRow('list-income', currentYearData.length - 1);
         // Re-initialize drag and drop after rendering
@@ -7132,6 +7134,7 @@ async function saveProfile({ fullName, file }) {
       // Force full re-render for income to ensure year switching works properly
       renderIncomeList('list-income', currentYearData, true, true);
       setupProgressHeaderToggle();
+      setupPaymentHeaderToggle();
     };
     
     const rowMonthlyUSD = (r)=> {
@@ -14323,6 +14326,112 @@ async function saveProfile({ fullName, file }) {
     });
   }
   
+  // Setup payment header click handler to organize payment labels by order
+  function setupPaymentHeaderToggle() {
+    const paymentHeader = document.getElementById('headerPayment');
+    if (!paymentHeader) return;
+    
+    // Remove existing listener to prevent duplicates
+    const newHeader = paymentHeader.cloneNode(true);
+    paymentHeader.parentNode.replaceChild(newHeader, paymentHeader);
+    
+    newHeader.addEventListener('click', function() {
+      const currentYearData = state.income[currentYear] || [];
+      if (currentYearData.length === 0) return;
+      
+      if (incomeViewMode === 'grouped') {
+        // Grouped view: organize sub-rows by order
+        const grouped = groupIncomeByProject(currentYearData);
+        
+        grouped.forEach(project => {
+          const projectRows = currentYearData.filter(row => row.name === project.name);
+          
+          // Sort project rows by date to maintain order
+          projectRows.sort((a, b) => {
+            const dateA = new Date(a.date || '1900-01-01');
+            const dateB = new Date(b.date || '1900-01-01');
+            return dateA - dateB;
+          });
+          
+          // If only one row, assign "Full Balance", otherwise assign in order
+          if (projectRows.length === 1) {
+            projectRows[0].note = 'Full Balance';
+            instantSaveIncomeRow(projectRows[0], currentYear);
+          } else {
+            // Assign "1st Deposit", "2nd Deposit", etc. in order
+            projectRows.forEach((row, index) => {
+              const paymentLabels = ['1st Deposit', '2nd Deposit', '3rd Deposit', '4th Deposit', '5th Deposit'];
+              const label = index < paymentLabels.length 
+                ? paymentLabels[index] 
+                : `${index + 1}${getOrdinalSuffix(index + 1)} Deposit`;
+              
+              row.note = label;
+              instantSaveIncomeRow(row, currentYear);
+            });
+          }
+        });
+      } else {
+        // Standard view: organize rows by project
+        const projectsMap = new Map();
+        
+        // Group rows by project name
+        currentYearData.forEach((row, index) => {
+          const projectName = row.name || 'Untitled Project';
+          if (!projectsMap.has(projectName)) {
+            projectsMap.set(projectName, []);
+          }
+          projectsMap.get(projectName).push({ row, index });
+        });
+        
+        // For each project, assign payment labels in order
+        projectsMap.forEach((rows, projectName) => {
+          // Sort rows by date to maintain consistent order
+          rows.sort((a, b) => {
+            const dateA = new Date(a.row.date || '1900-01-01');
+            const dateB = new Date(b.row.date || '1900-01-01');
+            return dateA - dateB;
+          });
+          
+          if (rows.length === 1) {
+            // Single row gets "Full Balance"
+            rows[0].row.note = 'Full Balance';
+            instantSaveIncomeRow(rows[0].row, currentYear);
+          } else {
+            // Multiple rows get "1st Deposit", "2nd Deposit", etc.
+            rows.forEach((item, index) => {
+              const paymentLabels = ['1st Deposit', '2nd Deposit', '3rd Deposit', '4th Deposit', '5th Deposit'];
+              const label = index < paymentLabels.length 
+                ? paymentLabels[index] 
+                : `${index + 1}${getOrdinalSuffix(index + 1)} Deposit`;
+              
+              item.row.note = label;
+              instantSaveIncomeRow(item.row, currentYear);
+            });
+          }
+        });
+        
+        // Update DOM
+        const incomeRows = document.querySelectorAll('#list-income .row.row-income:not(.row-project-group)');
+        incomeRows.forEach((rowElement) => {
+          const paymentButton = rowElement.querySelector('.payment-button');
+          if (paymentButton && rowElement.__rowData) {
+            paymentButton.textContent = rowElement.__rowData.note || 'Full Balance';
+          }
+        });
+      }
+      
+      // Re-render to update all payment buttons
+      renderIncomeList('list-income', currentYearData, false);
+    });
+  }
+  
+  // Helper function for ordinal suffixes
+  function getOrdinalSuffix(n) {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return s[(v - 20) % 10] || s[v] || s[0];
+  }
+  
   function renderIncomeList(containerId, arr, enableAnimations = true, forceFullRender = false) {
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
@@ -15024,6 +15133,7 @@ async function saveProfile({ fullName, file }) {
             const currentYearData = state.income[currentYear] || [];
             renderIncomeList('list-income', currentYearData, false);
             setupProgressHeaderToggle();
+            setupPaymentHeaderToggle();
             updateInputsLockState();
             addRowButtonListeners();
             
@@ -15222,7 +15332,7 @@ async function saveProfile({ fullName, file }) {
       paymentButton.type = 'button';
       
       // Payment options in order
-      const paymentOptions = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Full Balance'];
+      const paymentOptions = ['1st Deposit', '2nd Deposit', '3rd Deposit', 'Full Balance'];
       
       // Initialize with existing note value or default to "Full Balance"
       let currentPaymentIndex = 0;
@@ -15350,7 +15460,7 @@ async function saveProfile({ fullName, file }) {
     
     // Function to get default payment label based on index
     const getDefaultPaymentLabel = (index) => {
-      const labels = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Fourth Deposit', 'Fifth Deposit'];
+      const labels = ['1st Deposit', '2nd Deposit', '3rd Deposit', '4th Deposit', '5th Deposit'];
       if (index < labels.length) {
         return labels[index];
       }
@@ -15370,7 +15480,7 @@ async function saveProfile({ fullName, file }) {
       const projectRows = currentYearData.filter(row => row.name === projectName);
       
       // Get custom labels (any that don't match default pattern)
-      const defaultLabels = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Fourth Deposit', 'Fifth Deposit'];
+      const defaultLabels = ['1st Deposit', '2nd Deposit', '3rd Deposit', '4th Deposit', '5th Deposit'];
       const customLabels = new Set();
       
       if (preserveCustomLabels) {
@@ -16122,7 +16232,7 @@ async function saveProfile({ fullName, file }) {
         paymentButton.type = 'button';
         
         // Payment options in order (same as standard view)
-        const paymentOptions = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Full Balance'];
+        const paymentOptions = ['1st Deposit', '2nd Deposit', '3rd Deposit', 'Full Balance'];
         
         // Get current note value
         let currentNote = actualRow?.note || dateEntry.note || '';
@@ -16260,6 +16370,7 @@ async function saveProfile({ fullName, file }) {
                   renderIncomeList('list-income', currentYearDataAfterDelete, false);
                 }
                 setupProgressHeaderToggle();
+                setupPaymentHeaderToggle();
                 updateInputsLockState();
                 addRowButtonListeners();
                 
@@ -16321,9 +16432,9 @@ async function saveProfile({ fullName, file }) {
       const v = n % 100;
       return s[(v - 20) % 10] || s[v] || s[0];
     };
-    const defaultLabel = nextIndex === 0 ? 'First Deposit' : 
-                        nextIndex === 1 ? 'Second Deposit' : 
-                        nextIndex === 2 ? 'Third Deposit' :
+    const defaultLabel = nextIndex === 0 ? '1st Deposit' : 
+                        nextIndex === 1 ? '2nd Deposit' : 
+                        nextIndex === 2 ? '3rd Deposit' :
                         `${nextIndex + 1}${getOrdinalSuffix(nextIndex + 1)} Deposit`;
     
     // Find existing project to copy icon and allPayment
@@ -16335,7 +16446,7 @@ async function saveProfile({ fullName, file }) {
       date: new Date().toISOString().split('T')[0],
       allPayment: existingProject ? (existingProject.allPayment || 0) : 0,
       paidUsd: 0,
-      tags: '',
+      tags: existingProject ? (existingProject.tags || '') : '', // Copy tags from existing project row
       method: 'Bank Transfer',
       progress: 0,
       note: defaultLabel, // Use default ordinal label
@@ -16352,6 +16463,7 @@ async function saveProfile({ fullName, file }) {
     // Re-render with current view mode
     renderIncomeList('list-income', currentYearData, false, true);
     setupProgressHeaderToggle();
+    setupPaymentHeaderToggle();
     addRowButtonListeners();
   }
   
@@ -16647,6 +16759,7 @@ function loadNonCriticalResources() {
     updateInputsLockState();
     addRowButtonListeners();
     setupProgressHeaderToggle();
+    setupPaymentHeaderToggle();
   }
   
   // Animate only the new row that was added
@@ -18778,6 +18891,7 @@ function loadNonCriticalResources() {
         const currentYearData = state.income[currentYear] || [];
         renderIncomeList('list-income', currentYearData, false, true);
         setupProgressHeaderToggle();
+        setupPaymentHeaderToggle();
         addRowButtonListeners();
         
         // Update add-row button styling for grouped view

@@ -495,7 +495,14 @@ body.onboarding-active .mobile-bottom-nav {
 .row-project-group {
   font-weight: 600;
   background: var(--glass) !important;
-  border-bottom: 2px solid var(--stroke);
+  border-bottom: 3px solid var(--stroke);
+}
+
+/* Add bold top border to project groups that follow another project group or sub-row */
+.row-project-group:not(:first-child),
+.row-sub-date + .row-project-group {
+  border-top: 3px solid var(--stroke);
+  margin-top: 2px;
 }
 
 /* Sub-rows must have exact same grid structure and alignment as main rows */
