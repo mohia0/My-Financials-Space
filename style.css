@@ -439,6 +439,130 @@ body.onboarding-active .mobile-bottom-nav {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
 }
 
+/* Income View Toggle Button */
+.view-toggle-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.view-toggle-btn:hover {
+  background: var(--hover);
+  border-color: var(--muted);
+}
+
+[data-theme="light"] .view-toggle-btn {
+  background: rgba(248, 250, 252, 0.8);
+}
+
+[data-theme="light"] .view-toggle-btn:hover {
+  background: rgba(241, 245, 249, 0.9);
+}
+
+/* Grouped Income View Styles */
+.row-project-group {
+  font-weight: 600;
+  background: var(--glass) !important;
+  border-bottom: 2px solid var(--stroke);
+}
+
+/* Sub-rows must have exact same grid structure and alignment as main rows */
+.row-sub-date {
+  display: grid;
+  grid-template-columns: 24px 32px 1.5fr .8fr .8fr .8fr 1fr 1fr 1fr 1fr 32px;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--stroke);
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), background-color 0.2s ease;
+  background: var(--card);
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  position: relative;
+  min-height: auto;
+}
+
+.row-sub-date:hover {
+  transform: translate3d(0, -1px, 0);
+  background: var(--glass);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  opacity: 1;
+}
+
+/* Ensure all inputs in sub-rows align perfectly with main table columns */
+.row-sub-date > div {
+  /* Inherit all styles from main row */
+}
+
+/* Add-date button in date column */
+.add-date-btn {
+  min-width: 80px;
+  height: 28px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  border: 1.5px dashed var(--stroke);
+  background: var(--glass);
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.add-date-btn:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+[data-theme="light"] .add-date-btn {
+  background: rgba(248, 250, 252, 0.8);
+}
+
+[data-theme="light"] .add-date-btn:hover {
+  background: rgba(241, 245, 249, 0.9);
+  border-color: var(--accent);
+}
+
+/* Ultra-compact add-row button for grouped view */
+[data-add-row="income"].grouped-view {
+  font-size: 0.5rem !important;
+  padding: 0.25rem 0.5rem !important;
+  min-height: 20px !important;
+  height: 20px !important;
+  line-height: 1 !important;
+  margin-top: 4px !important;
+  border-radius: 6px !important;
+}
+
+/* Ensure sub-rows maintain spacing */
+.row-sub-date + .row-project-group {
+  margin-top: 0;
+}
+
+/* Light mode sub-row backgrounds */
+[data-theme="light"] .row-sub-date {
+  background: rgba(248, 250, 252, 0.8);
+}
+
+[data-theme="light"] .row-sub-date:hover {
+  background: rgba(241, 245, 249, 0.9);
+}
+
 [data-theme="light"] .year-add-btn:hover {
   background: rgba(99, 102, 241, 0.05) !important;
   border-color: rgba(99, 102, 241, 0.3) !important;
@@ -3614,12 +3738,12 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 /* Perfect grid alignment for income table */
-.row-income > div:nth-child(1) { grid-column: 1; } /* Drag handle */
+.row-income > div:nth-child(1) { grid-column: 1; } /* Spacer */
 .row-income > div:nth-child(2) { grid-column: 2; } /* Icon */
 .row-income > div:nth-child(3) { 
   grid-column: 3; /* Project Name */
   position: sticky;
-  left: 48px; /* 20px drag handle + 28px icon */
+  left: 28px; /* 28px icon (spacer is empty, no width) */
   background: var(--card);
   z-index: 30 !important; /* Higher z-index to stay above payment and all other elements */
   padding: 0;
@@ -3638,13 +3762,15 @@ input[type="range"]::-moz-range-thumb:hover {
 .row-income > div:nth-child(7) { grid-column: 7; z-index: 1 !important; position: relative; } /* Paid USD */
 .row-income > div:nth-child(8) { grid-column: 8; z-index: 1 !important; position: relative; } /* Paid EGP */
 .row-income > div:nth-child(9) { grid-column: 9; z-index: 1 !important; position: relative; } /* Method */
-.row-income > div:nth-child(10) { 
-  grid-column: 10; /* Note/Payment */
-  min-width: 120px; /* Minimum width to prevent shrinking */
+.row-income > div:nth-child(10) { grid-column: 10; z-index: 1 !important; position: relative; } /* Progress */
+.row-income > div:nth-child(11) { 
+  grid-column: 11; /* Payment */
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
   z-index: 1 !important; /* Lower z-index to stay below sticky name */
   position: relative; /* Create stacking context */
 }
-.row-income > div:nth-child(11) { grid-column: 11; z-index: 1 !important; position: relative; } /* Progress */
 .row-income > div:nth-child(12) { grid-column: 12; z-index: 1 !important; position: relative; } /* Delete */
 
 /* Grouped View Styles */
@@ -3799,6 +3925,21 @@ input[type="range"]::-moz-range-thumb:hover {
 .row-income,
 .row-head {
   display: grid !important;
+}
+
+/* Sticky table header for ALL tables */
+.table-container .row-head {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--card) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
+}
+
+[data-theme="light"] .table-container .row-head {
+  background: rgba(248, 250, 252, 0.95) !important;
+  backdrop-filter: blur(10px);
 }
 
 /* Minimal Progress Toggle - Clean and Interactive Design */
@@ -4165,7 +4306,8 @@ textarea {
 
 /* Payment button styles (replaces note input) */
 .payment-button {
-  width: 100%;
+  width: fit-content;
+  min-width: fit-content;
   padding: 0.25rem 0.5rem;
   font-size: 0.65rem;
   border: 1px solid var(--stroke);
@@ -4180,8 +4322,6 @@ textarea {
   text-align: left;
   cursor: pointer;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   position: relative;
   z-index: 1 !important; /* Lower z-index to stay below sticky name column */
   isolation: isolate; /* Create new stacking context */
@@ -4692,8 +4832,8 @@ textarea {
   .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
   .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
   .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
-  .table-container .row-head.row-income > div:nth-child(10) { text-align: left; } /* Note */
-  .table-container .row-head.row-income > div:nth-child(11) { text-align: right; } /* Progress */
+  .table-container .row-head.row-income > div:nth-child(10) { text-align: center; } /* Progress */
+  .table-container .row-head.row-income > div:nth-child(11) { text-align: left; } /* Payment */
   
   /* Better mobile layout for income table */
   .table-container .row-income {
@@ -4704,19 +4844,19 @@ textarea {
     white-space: nowrap;
   }
   
-  /* Fixed widths for name and note inputs on 500px screens */
+  /* Fixed widths for name and payment inputs on 500px screens */
   .table-container .row-income > div:nth-child(3) input,
-  .table-container .row-income > div:nth-child(10) input,
-  .table-container .row-income > div:nth-child(10) textarea {
+  .table-container .row-income > div:nth-child(11) input,
+  .table-container .row-income > div:nth-child(11) textarea {
     min-width: 100% !important;
     width: 100% !important;
   }
   
-  /* Ensure minimum widths for name and note on 500px screens */
+  /* Ensure minimum widths for name and payment on 500px screens */
   .table-container .row-income > div:nth-child(3) {
     min-width: 120px !important;
   }
-  .table-container .row-income > div:nth-child(10) {
+  .table-container .row-income > div:nth-child(11) {
     min-width: 80px !important;
   }
   
@@ -4825,8 +4965,8 @@ textarea {
   .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
   .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
   .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
-  .table-container .row-head.row-income > div:nth-child(10) { text-align: left; } /* Note */
-  .table-container .row-head.row-income > div:nth-child(11) { text-align: right; } /* Progress */
+  .table-container .row-head.row-income > div:nth-child(10) { text-align: center; } /* Progress */
+  .table-container .row-head.row-income > div:nth-child(11) { text-align: left; } /* Payment */
   
   /* Ensure proper alignment on 480px screens for tags and date */
   .table-container .row-income > div:nth-child(4) {
@@ -5380,7 +5520,7 @@ textarea {
 .row-head.row-biz > div:nth-child(12) { grid-column: 12; } /* Empty */
 
 .row-head.row-income{ 
-  grid-template-columns:20px 28px 1fr 1.2fr 100px 100px 100px 120px 1fr 28px; 
+  grid-template-columns:20px 28px 108px 1.2fr 100px 100px 100px 120px 1fr 100px 120px 28px; 
 }
 
 /* Perfect grid alignment for income header */
@@ -5389,7 +5529,7 @@ textarea {
 .row-head.row-income > div:nth-child(3) { 
   grid-column: 3; /* Project Name */
   position: sticky;
-  left: 48px; /* 20px drag handle + 28px icon */
+  left: 28px; /* 28px icon (spacer is empty, no width) */
   background: var(--glass);
   z-index: 31 !important; /* Higher than row names to stay on top */
   padding: 0;
@@ -5407,7 +5547,9 @@ textarea {
 .row-head.row-income > div:nth-child(7) { grid-column: 7; } /* Paid USD */
 .row-head.row-income > div:nth-child(8) { grid-column: 8; } /* Paid EGP */
 .row-head.row-income > div:nth-child(9) { grid-column: 9; } /* Method */
-.row-head.row-income > div:nth-child(10) { grid-column: 10; } /* Empty */
+.row-head.row-income > div:nth-child(10) { grid-column: 10; } /* Progress */
+.row-head.row-income > div:nth-child(11) { grid-column: 11; } /* Payment */
+.row-head.row-income > div:nth-child(12) { grid-column: 12; } /* Empty */
 
 /* Sticky section headers */
  .sticky-header {
@@ -5420,11 +5562,14 @@ textarea {
    backdrop-filter: blur(10px);
  }
 
- /* Sticky table headers */
+ /* Sticky table headers - floating header that appears on scroll */
  .table-header-sticky {
-   position: relative;
-   z-index: 10;
-   background: transparent;
+   position: fixed;
+   top: 0;
+   left: 0;
+   right: 0;
+   z-index: 1000;
+   background: var(--card) !important;
    backdrop-filter: blur(20px);
    border-bottom: 1px solid var(--stroke);
    font-size: 0.65rem;
@@ -5463,7 +5608,7 @@ textarea {
 
  /* Income sticky header */
  .table-header-sticky.income-header {
-   grid-template-columns: 20px 28px 1fr 1.2fr 100px 100px 100px 120px 1fr 28px;
+   grid-template-columns: 20px 28px 108px 1.2fr 100px 100px 100px 120px 1fr 100px 120px 28px;
  }
 .row-sum{ 
   font-weight:600; 
@@ -5746,6 +5891,13 @@ textarea {
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* Empty spacer div for income table (replaces drag handle) */
+.row-income .spacer {
+  width: 20px;
+  min-width: 20px;
+  max-width: 20px;
 }
 
 /* Improved Untitled UI Date Picker Styles */
@@ -11299,8 +11451,8 @@ body.splash-complete .mobile-bottom-nav {
   .table-container .row-head.row-income > div:nth-child(7) { text-align: center; } /* Paid USD */
   .table-container .row-head.row-income > div:nth-child(8) { text-align: center; } /* Paid EGP */
   .table-container .row-head.row-income > div:nth-child(9) { text-align: left; } /* Method */
-  .table-container .row-head.row-income > div:nth-child(10) { text-align: left; } /* Note */
-  .table-container .row-head.row-income > div:nth-child(11) { text-align: right; } /* Progress */
+  .table-container .row-head.row-income > div:nth-child(10) { text-align: center; } /* Progress */
+  .table-container .row-head.row-income > div:nth-child(11) { text-align: left; } /* Payment */
   
   /* Tablet delete button styling */
   .table-container .row-income .delete-btn {

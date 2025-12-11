@@ -22,6 +22,136 @@ let state = {
 let currencyRates;
 let columnOrder = ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'];
 
+// Multi-date support: View mode for income table
+let incomeViewMode = 'standard'; // 'standard' or 'grouped'
+
+// Helper functions for multi-date support
+// Normalize row data to support both old format (single date) and new format (dates array)
+function normalizeIncomeRow(row) {
+  // If already has dates array, return as is
+  if (row.dates && Array.isArray(row.dates)) {
+    return row;
+  }
+  
+  // Convert old format to new format
+  return {
+    ...row,
+    dates: [{
+      date: row.date || '',
+      paidUsd: row.paidUsd || 0,
+      tags: row.tags || '',
+      method: row.method || 'Bank Transfer',
+      progress: row.progress || 0,
+      note: row.note || 'Full Balance',
+      id: row.id // Preserve ID if exists
+    }]
+  };
+}
+
+// Convert normalized row back to old format (for backward compatibility with save functions)
+function denormalizeIncomeRow(normalizedRow) {
+  if (!normalizedRow.dates || normalizedRow.dates.length === 0) {
+    return normalizedRow;
+  }
+  
+  // Use first date as primary (for backward compatibility)
+  const firstDate = normalizedRow.dates[0];
+  return {
+    ...normalizedRow,
+    date: firstDate.date,
+    paidUsd: firstDate.paidUsd,
+    tags: firstDate.tags,
+    method: firstDate.method,
+    progress: firstDate.progress,
+    note: firstDate.note,
+    // Remove dates array to match old format
+    dates: undefined
+  };
+}
+
+// Get first date of a project for sorting
+function getFirstDateOfProject(row) {
+  const normalized = normalizeIncomeRow(row);
+  if (normalized.dates && normalized.dates.length > 0) {
+    return normalized.dates[0].date || '1900-01-01';
+  }
+  return normalized.date || '1900-01-01';
+}
+
+// Get total paid USD for all dates in a project
+function getTotalPaidUsdForProject(row) {
+  const normalized = normalizeIncomeRow(row);
+  if (normalized.dates && normalized.dates.length > 0) {
+    return normalized.dates.reduce((sum, date) => sum + (Number(date.paidUsd) || 0), 0);
+  }
+  return Number(normalized.paidUsd) || 0;
+}
+
+// Group income rows by project name
+function groupIncomeByProject(arr) {
+  const groups = new Map();
+  
+  arr.forEach(row => {
+    const normalized = normalizeIncomeRow(row);
+    const projectName = normalized.name || 'Untitled Project';
+    
+    if (!groups.has(projectName)) {
+      groups.set(projectName, {
+        name: projectName,
+        allPayment: normalized.allPayment || 0,
+        icon: normalized.icon || 'fa:dollar-sign',
+        id: normalized.id, // Keep first row's ID
+        order: normalized.order || 0,
+        dates: []
+      });
+    }
+    
+    const group = groups.get(projectName);
+    
+      // Add all dates from this row to the group
+      if (normalized.dates && normalized.dates.length > 0) {
+        normalized.dates.forEach(dateEntry => {
+          group.dates.push({
+            ...dateEntry,
+            allPayment: dateEntry.allPayment || normalized.allPayment || 0, // Ensure allPayment is included
+            projectId: normalized.id // Track which original row this came from
+          });
+        });
+      } else {
+      // Old format: create a date entry from the row
+      group.dates.push({
+        date: normalized.date || '',
+        paidUsd: normalized.paidUsd || 0,
+        allPayment: normalized.allPayment || 0,
+        tags: normalized.tags || '',
+        method: normalized.method || 'Bank Transfer',
+        progress: normalized.progress || 0,
+        note: normalized.note || 'Full Balance',
+        projectId: normalized.id
+      });
+    }
+  });
+  
+  // Sort dates within each group by date
+  groups.forEach(group => {
+    group.dates.sort((a, b) => {
+      const dateA = new Date(a.date || '1900-01-01');
+      const dateB = new Date(b.date || '1900-01-01');
+      return dateA - dateB;
+    });
+  });
+  
+  // Convert map to array and sort by first date
+  const groupedArray = Array.from(groups.values());
+  groupedArray.sort((a, b) => {
+    const dateA = new Date(getFirstDateOfProject({ dates: a.dates }) || '1900-01-01');
+    const dateB = new Date(getFirstDateOfProject({ dates: b.dates }) || '1900-01-01');
+    return dateA - dateB;
+  });
+  
+  return groupedArray;
+}
+
 // Sticky Header Scroll Interactions
 let lastScrollY = 0;
 let ticking = false;
@@ -4439,7 +4569,8 @@ async function saveProfile({ fullName, file }) {
               const duplicates = [];
               
               incomeData.forEach(income => {
-                const key = `${income.name}_${income.amount}_${income.year}_${income.month}`;
+                // For duplicate detection, use name, date, and paid_usd (not amount/month which may not exist)
+                const key = `${income.name}_${income.date}_${income.paid_usd}_${income.year}`;
                 if (seen.has(key)) {
                   duplicates.push(income.id);
                 } else {
@@ -14196,6 +14327,13 @@ async function saveProfile({ fullName, file }) {
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
     
+    // Check view mode and route to appropriate renderer
+    if (incomeViewMode === 'grouped') {
+      renderGroupedIncomeList(containerId, arr, enableAnimations, forceFullRender);
+      return;
+    }
+    
+    // Standard view rendering (existing logic)
     // Check if this is a refresh operation (existing rows present)
     const existingRows = wrap.querySelectorAll('.row');
     const isRefresh = existingRows.length > 0 && !forceFullRender;
@@ -14209,8 +14347,42 @@ async function saveProfile({ fullName, file }) {
     // For initial render or forced full render, clear and rebuild
     wrap.innerHTML = '';
     
-    // Sort array by date (oldest to newest) before rendering
-    const sortedArr = [...arr].sort((a, b) => {
+    // Expand multi-date rows into separate rows for standard view
+    const expandedArr = [];
+    arr.forEach(row => {
+      const normalized = normalizeIncomeRow(row);
+      if (normalized.dates && normalized.dates.length > 1) {
+        // Multi-date row: create a row for each date
+        normalized.dates.forEach((dateEntry, dateIdx) => {
+          expandedArr.push({
+            ...normalized,
+            date: dateEntry.date,
+            paidUsd: dateEntry.paidUsd,
+            tags: dateEntry.tags,
+            method: dateEntry.method,
+            progress: dateEntry.progress,
+            note: dateEntry.note,
+            // Keep dates array for grouped view compatibility
+            dates: normalized.dates,
+            dateIndex: dateIdx
+          });
+        });
+      } else {
+        // Single date row (old format or single date in new format)
+        expandedArr.push({
+          ...normalized,
+          date: normalized.dates && normalized.dates[0] ? normalized.dates[0].date : normalized.date,
+          paidUsd: normalized.dates && normalized.dates[0] ? normalized.dates[0].paidUsd : normalized.paidUsd,
+          tags: normalized.dates && normalized.dates[0] ? normalized.dates[0].tags : normalized.tags,
+          method: normalized.dates && normalized.dates[0] ? normalized.dates[0].method : normalized.method,
+          progress: normalized.dates && normalized.dates[0] ? normalized.dates[0].progress : normalized.progress,
+          note: normalized.dates && normalized.dates[0] ? normalized.dates[0].note : normalized.note
+        });
+      }
+    });
+    
+    // Sort array by first date of each project (oldest to newest) before rendering
+    const sortedArr = [...expandedArr].sort((a, b) => {
       const dateA = new Date(a.date || '1900-01-01');
       const dateB = new Date(b.date || '1900-01-01');
       return dateA - dateB; // Oldest first
@@ -14240,11 +14412,9 @@ async function saveProfile({ fullName, file }) {
       div.setAttribute('draggable', 'false');
       div.__rowData = row; // Store row data for tag system
       
-      // Drag handle cell - hidden but preserves space
-      const dragHandleDiv = document.createElement('div');
-      dragHandleDiv.className = 'drag-handle drag-handle-hidden';
-      dragHandleDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 6h8M8 12h8M8 18h8"/></svg>';
-      dragHandleDiv.title = 'Drag to reorder';
+      // Empty spacer div (replaces drag handle)
+      const spacerDiv = document.createElement('div');
+      spacerDiv.className = 'spacer';
       
       // Icon cell
       const iconName = row.icon || 'fa:dollar-sign';
@@ -14880,7 +15050,7 @@ async function saveProfile({ fullName, file }) {
       iconBtn.addEventListener('click', async () => await openIconPicker(arr, idx));
       
       // Append all cells
-      div.appendChild(dragHandleDiv);
+      div.appendChild(spacerDiv);
       div.appendChild(iconDiv);
       div.appendChild(nameDiv);
       div.appendChild(tagsDiv);
@@ -15045,8 +15215,8 @@ async function saveProfile({ fullName, file }) {
       
       progressDiv.appendChild(progressButton);
       
-      // Payment button (replaces note input)
-      const noteDiv = document.createElement('div');
+      // Payment button
+      const paymentDiv = document.createElement('div');
       const paymentButton = document.createElement('button');
       paymentButton.className = 'input payment-button';
       paymentButton.type = 'button';
@@ -15084,7 +15254,8 @@ async function saveProfile({ fullName, file }) {
       paymentButton.style.fontSize = '0.65rem';
       paymentButton.style.padding = '0.25rem 0.5rem';
       paymentButton.style.borderRadius = '6px';
-      paymentButton.style.width = '100%';
+      paymentButton.style.width = 'fit-content';
+      paymentButton.style.minWidth = 'fit-content';
       paymentButton.style.textAlign = 'left';
       paymentButton.style.cursor = 'pointer';
       paymentButton.style.border = '1px solid var(--stroke)';
@@ -15094,8 +15265,6 @@ async function saveProfile({ fullName, file }) {
       paymentButton.style.height = '24px';
       paymentButton.style.lineHeight = '1.2';
       paymentButton.style.whiteSpace = 'nowrap';
-      paymentButton.style.overflow = 'hidden';
-      paymentButton.style.textOverflow = 'ellipsis';
       paymentButton.style.transition = 'all 0.2s ease';
       
       // Cycle through payment options on click
@@ -15115,10 +15284,10 @@ async function saveProfile({ fullName, file }) {
         instantSaveIncomeRow(row, currentYear);
       });
       
-      noteDiv.appendChild(paymentButton);
+      paymentDiv.appendChild(paymentButton);
       
       div.appendChild(progressDiv);
-      div.appendChild(noteDiv);
+      div.appendChild(paymentDiv);
       div.appendChild(deleteDiv);
       
       wrap.appendChild(div);
@@ -15129,6 +15298,958 @@ async function saveProfile({ fullName, file }) {
     
     // Apply lock state to newly rendered income rows
     updateInputsLockState();
+  }
+  
+  // Grouped view rendering function
+  function renderGroupedIncomeList(containerId, arr, enableAnimations = true, forceFullRender = false) {
+    const wrap = document.getElementById(containerId);
+    if (!wrap) return;
+    
+    // Clear container for grouped view
+    wrap.innerHTML = '';
+    
+    // Group rows by project name
+    const grouped = groupIncomeByProject(arr);
+    
+    // Sort groups by first date
+    grouped.sort((a, b) => {
+      const dateA = new Date(getFirstDateOfProject({ dates: a.dates }) || '1900-01-01');
+      const dateB = new Date(getFirstDateOfProject({ dates: b.dates }) || '1900-01-01');
+      return dateA - dateB;
+    });
+    
+    // Function to update project row totals live
+    const updateProjectRowTotals = (projectName, projectRowElement) => {
+      const currentYearData = state.income[currentYear] || [];
+      const projectRows = currentYearData.filter(row => row.name === projectName);
+      
+      // Calculate totals from all sub-rows
+      const totalPaidUsd = projectRows.reduce((sum, row) => sum + (Number(row.paidUsd) || 0), 0);
+      // All Payment comes from the main project row (first row), not sum of sub-rows
+      const totalAllPayment = projectRows.length > 0 ? (Number(projectRows[0].allPayment) || 0) : 0;
+      const totalPaidEgp = totalPaidUsd * state.fx;
+      const totalPaidSelected = usdToSelectedCurrency(totalPaidUsd);
+      
+      // Update the displayed values in project row (children: spacer, icon, name, tags, date, allPayment, paidUsd, paidEgp, method, progress, payment, delete)
+      const allPaymentDiv = projectRowElement.children[5];
+      const paidUsdDiv = projectRowElement.children[6];
+      const paidEgpDiv = projectRowElement.children[7];
+      
+      if (allPaymentDiv) allPaymentDiv.textContent = `$${nfINT.format(totalAllPayment)}`;
+      if (paidUsdDiv) paidUsdDiv.textContent = `$${nfINT.format(totalPaidUsd)}`;
+      if (paidEgpDiv) paidEgpDiv.textContent = `${state.currencySymbol} ${nfINT.format(Math.round(totalPaidSelected))}`;
+      
+      // Also update the sum row at the bottom
+      updateIncomeSum(currentYearData);
+      
+      // Announce to screen readers
+      if (paidUsdDiv) {
+        paidUsdDiv.setAttribute('aria-label', `Total paid USD: ${nfINT.format(totalPaidUsd)}`);
+      }
+    };
+    
+    // Function to get default payment label based on index
+    const getDefaultPaymentLabel = (index) => {
+      const labels = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Fourth Deposit', 'Fifth Deposit'];
+      if (index < labels.length) {
+        return labels[index];
+      }
+      return `${index + 1}${getOrdinalSuffix(index + 1)} Deposit`;
+    };
+    
+    // Helper for ordinal suffixes
+    const getOrdinalSuffix = (n) => {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return s[(v - 20) % 10] || s[v] || s[0];
+    };
+    
+    // Function to reassign default payment labels for a project
+    const reassignDefaultPaymentLabels = (projectName, preserveCustomLabels = true) => {
+      const currentYearData = state.income[currentYear] || [];
+      const projectRows = currentYearData.filter(row => row.name === projectName);
+      
+      // Get custom labels (any that don't match default pattern)
+      const defaultLabels = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Fourth Deposit', 'Fifth Deposit'];
+      const customLabels = new Set();
+      
+      if (preserveCustomLabels) {
+        projectRows.forEach((row, idx) => {
+          const note = row.note || '';
+          // Check if it's a custom label (not a default)
+          const isDefault = defaultLabels.some((label, i) => 
+            label === note || (idx === i && note === getDefaultPaymentLabel(i))
+          );
+          if (!isDefault && note && !note.match(/^\d+(st|nd|rd|th)\s+Deposit$/i)) {
+            customLabels.add(idx);
+          }
+        });
+      }
+      
+      // Reassign labels
+      projectRows.forEach((row, idx) => {
+        if (!customLabels.has(idx)) {
+          const newLabel = getDefaultPaymentLabel(idx);
+          row.note = newLabel;
+          instantSaveIncomeRow(row, currentYear);
+        }
+      });
+    };
+    
+    // Render each project group
+    grouped.forEach((project, projectIdx) => {
+      const currentYearData = state.income[currentYear] || [];
+      const projectRows = currentYearData.filter(row => row.name === project.name);
+      
+      // Calculate totals
+      const totalPaidUsd = projectRows.reduce((sum, row) => sum + (Number(row.paidUsd) || 0), 0);
+      // All Payment comes from the main project row (first row), not sum of sub-rows
+      const totalAllPayment = projectRows.length > 0 ? (Number(projectRows[0].allPayment) || 0) : 0;
+      const totalPaidEgp = totalPaidUsd * state.fx;
+      const totalPaidSelected = usdToSelectedCurrency(totalPaidUsd);
+      
+      // Project header row
+      const projectRow = document.createElement('div');
+      projectRow.className = 'row row-income row-project-group';
+      projectRow.setAttribute('data-project-name', project.name);
+      projectRow.setAttribute('data-project-index', projectIdx);
+      
+      // Icon cell
+      const iconName = project.icon || 'fa:dollar-sign';
+      let iconHTML = '';
+      if (iconName.startsWith('custom-image:')) {
+        const imageData = iconName.replace('custom-image:', '');
+        iconHTML = `<img src="${imageData}" class="custom-svg-icon" onload="applySmartSVGInversion(this)" />`;
+      } else if (iconName.startsWith('fa-glyph:')) {
+        const unicode = iconName.replace('fa-glyph:', '');
+        iconHTML = `<i class="fa-solid" style="font-family:'Font Awesome 6 Pro'; color:inherit;">&#x${unicode};</i>`;
+      } else {
+        const cleanIconName = iconName.replace(/^(fa-solid|fa-regular|fa:)/, '');
+        const isBrand = ['amazon','apple','google','microsoft','facebook','twitter','instagram','linkedin','youtube','github','reddit','discord','slack','telegram','whatsapp','dropbox','stripe','paypal','visa','mastercard','bitcoin','dribbble','behance','figma','trello','wordpress','medium','chrome','firefox','android','spotify','netflix','adobe','shopify','wix','zoom','skype','docker','aws','gitlab','bitbucket','stackoverflow','codepen','npm','node-js','react','vue','angular','html5','css3','js','python','java','git','webflow'].includes(cleanIconName);
+        const iconClass = isBrand ? 'fa-brands' : 'fa-solid';
+        const fontFamily = isBrand ? 'Font Awesome 6 Brands' : 'Font Awesome 6 Pro';
+        iconHTML = `<i class="${iconClass} fa-${cleanIconName}" style="color:inherit; font-family:'${fontFamily}' !important;"></i>`;
+      }
+      
+      // Project name cell (no add-date button here)
+      const nameDiv = document.createElement('div');
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = project.name || 'Untitled Project';
+      nameSpan.style.fontWeight = '600';
+      nameDiv.appendChild(nameSpan);
+      
+      // Build project row structure
+      const spacerDiv = document.createElement('div');
+      spacerDiv.className = 'spacer';
+      const iconCellDiv = document.createElement('div');
+      iconCellDiv.className = 'icon-cell';
+      iconCellDiv.innerHTML = `<button type="button" title="Change icon" data-choose-icon>${iconHTML}</button>`;
+      const tagsDiv = document.createElement('div');
+      
+      // Date column with add-date button
+      const dateDiv = document.createElement('div');
+      dateDiv.style.position = 'relative';
+      const addDateBtn = document.createElement('button');
+      addDateBtn.innerHTML = '+ Add Date';
+      addDateBtn.className = 'add-date-btn';
+      addDateBtn.title = 'Add date to this project';
+      addDateBtn.style.cssText = 'min-width: 80px; height: 28px; padding: 0.25rem 0.5rem; font-size: 0.65rem; border: 1.5px dashed var(--stroke); background: var(--glass); color: var(--muted); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; font-weight: 500;';
+      addDateBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addDateToProject(project.name, currentYear);
+      });
+      addDateBtn.addEventListener('mouseenter', function() {
+        this.style.borderColor = 'var(--accent)';
+        this.style.color = 'var(--fg)';
+        this.style.background = 'var(--hover)';
+      });
+      addDateBtn.addEventListener('mouseleave', function() {
+        this.style.borderColor = 'var(--stroke)';
+        this.style.color = 'var(--muted)';
+        this.style.background = 'var(--glass)';
+      });
+      dateDiv.appendChild(addDateBtn);
+      
+      const allPaymentDiv = document.createElement('div');
+      allPaymentDiv.style.fontWeight = '600';
+      allPaymentDiv.textContent = `$${nfINT.format(totalAllPayment)}`;
+      const paidUsdDiv = document.createElement('div');
+      paidUsdDiv.style.fontWeight = '600';
+      paidUsdDiv.textContent = `$${nfINT.format(totalPaidUsd)}`;
+      const paidEgpDiv = document.createElement('div');
+      paidEgpDiv.style.fontWeight = '600';
+      paidEgpDiv.textContent = `${state.currencySymbol} ${nfINT.format(Math.round(totalPaidSelected))}`;
+      const methodDiv = document.createElement('div');
+      const progressDiv = document.createElement('div');
+      const paymentDiv = document.createElement('div');
+      const deleteDiv = document.createElement('div');
+      
+      projectRow.appendChild(spacerDiv);
+      projectRow.appendChild(iconCellDiv);
+      projectRow.appendChild(nameDiv);
+      projectRow.appendChild(tagsDiv);
+      projectRow.appendChild(dateDiv);
+      projectRow.appendChild(allPaymentDiv);
+      projectRow.appendChild(paidUsdDiv);
+      projectRow.appendChild(paidEgpDiv);
+      projectRow.appendChild(methodDiv);
+      projectRow.appendChild(progressDiv);
+      projectRow.appendChild(paymentDiv);
+      projectRow.appendChild(deleteDiv);
+      
+      wrap.appendChild(projectRow);
+      
+      // Render sub-dates using the same input creation logic as main rows
+      project.dates.forEach((dateEntry, dateIdx) => {
+        // Find the actual row in state that corresponds to this date entry
+        const currentYearData = state.income[currentYear] || [];
+        const projectRows = currentYearData.filter(row => row.name === project.name);
+        const actualRow = projectRows[dateIdx] || projectRows[0]; // Use dateIdx or fallback to first
+        
+        // Create sub-row with same structure as main row
+        const subDateRow = document.createElement('div');
+        subDateRow.className = 'row row-income row-sub-date';
+        subDateRow.setAttribute('data-project-name', project.name);
+        subDateRow.setAttribute('data-date-index', dateIdx);
+        if (actualRow) {
+          subDateRow.setAttribute('data-row-index', currentYearData.indexOf(actualRow));
+          subDateRow.__rowData = actualRow; // Store row data reference
+        }
+        
+        // Empty spacer (replaces drag handle)
+        const spacerDiv = document.createElement('div');
+        spacerDiv.className = 'spacer';
+        
+        // Icon (empty but preserves alignment)
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'icon-cell';
+        
+        // Name (empty - no name input in sub-rows, just visual indent)
+        const nameDiv = document.createElement('div');
+        nameDiv.style.cssText = 'padding-left: 1.5rem; font-size: 0.7rem; color: var(--muted);';
+        // No text content - name is only in main row
+        
+        // Tags - use exact same logic as main rows
+        const tagsDiv = document.createElement('div');
+        const tagsWrapper = document.createElement('div');
+        tagsWrapper.className = 'tag-input-wrapper';
+        
+        const existingTags = (actualRow?.tags || dateEntry.tags || '').split(',').filter(tag => tag.trim());
+        existingTags.forEach(tag => {
+          const chip = createTagChip(tag.trim());
+          tagsWrapper.appendChild(chip);
+        });
+        
+        if (existingTags.length >= 3) {
+          tagsWrapper.classList.add('expanded');
+        }
+        
+        const tagsInput = document.createElement('input');
+        tagsInput.className = 'tag-input';
+        tagsInput.type = 'text';
+        tagsInput.placeholder = '';
+        let enterKeyProcessed = false;
+        
+        const addTagIcon = document.createElement('span');
+        addTagIcon.className = 'tag-add-icon';
+        addTagIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2V10M2 6H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+        addTagIcon.title = 'Add tag';
+        addTagIcon.addEventListener('click', () => tagsInput.focus());
+        
+        const updateIconVisibility = () => {
+          const tagCount = tagsWrapper.querySelectorAll('.tag-chip').length;
+          const maxTags = 5;
+          const isFocused = document.activeElement === tagsInput;
+          const hasValue = tagsInput.value.trim().length > 0;
+          const isDisabled = tagsInput.disabled || tagCount >= maxTags;
+          
+          if (isFocused || hasValue || isDisabled) {
+            addTagIcon.style.display = 'none';
+          } else {
+            addTagIcon.style.display = 'flex';
+          }
+        };
+        
+        tagsInput.addEventListener('focus', function() {
+          updateIconVisibility();
+          showTagSuggestions(this, tagsWrapper);
+        });
+        
+        tagsInput.addEventListener('blur', function() {
+          setTimeout(updateIconVisibility, 100);
+          const isMobile = 'ontouchstart' in window || window.innerWidth <= 768;
+          const delay = isMobile ? 300 : 150;
+          setTimeout(() => hideTagSuggestions(tagsWrapper), delay);
+        });
+        
+        tagsInput.addEventListener('input', function() {
+          updateIconVisibility();
+          const rowData = actualRow || dateEntry;
+          handleTagInput(this, tagsWrapper, rowData);
+          if (actualRow) {
+            instantSaveIncomeRow(actualRow, currentYear);
+          } else {
+            // Update dateEntry and save
+            dateEntry.tags = Array.from(tagsWrapper.querySelectorAll('.tag-chip'))
+              .map(chip => chip.querySelector('span:first-child')?.textContent.trim())
+              .filter(Boolean)
+              .join(',');
+            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+          }
+        });
+        
+        tagsInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            enterKeyProcessed = true;
+            const rowData = actualRow || dateEntry;
+            handleTagKeydown(e, this, tagsWrapper, rowData);
+            
+            // Update tags in dateEntry if needed
+            if (!actualRow && rowData === dateEntry) {
+              setTimeout(() => {
+                dateEntry.tags = Array.from(tagsWrapper.querySelectorAll('.tag-chip'))
+                  .map(chip => chip.querySelector('span:first-child')?.textContent.trim())
+                  .filter(Boolean)
+                  .join(',');
+                saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+              }, 50);
+            }
+            
+            setTimeout(() => {
+              this.blur();
+              enterKeyProcessed = false;
+            }, 100);
+            return false;
+          }
+          const rowData = actualRow || dateEntry;
+          handleTagKeydown(e, this, tagsWrapper, rowData);
+        });
+        
+        tagsWrapper.__rowData = actualRow || dateEntry;
+        tagsWrapper.appendChild(addTagIcon);
+        tagsWrapper.appendChild(tagsInput);
+        tagsDiv.appendChild(tagsWrapper);
+        updateIconVisibility();
+        
+        // Date input - use exact same logic as main rows
+        const dateDiv = document.createElement('div');
+        dateDiv.style.position = 'relative';
+        const dateContainer = document.createElement('div');
+        dateContainer.className = 'next-date-container';
+        dateContainer.style.cssText = 'display: flex; align-items: center; gap: 0.25rem; font-size: 0.65rem; color: var(--muted);';
+        
+        const dateInput = document.createElement('input');
+        dateInput.className = 'input date-input-minimal';
+        dateInput.type = 'date';
+        dateInput.value = actualRow?.date || dateEntry.date || '';
+        dateInput.style.display = 'none';
+        
+        const dateDisplay = document.createElement('span');
+        dateDisplay.className = 'next-date-display';
+        dateDisplay.style.cssText = 'cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 4px; transition: all 0.2s ease;';
+        
+        const updateDateDisplay = () => {
+          const dateValue = actualRow?.date || dateEntry.date || '';
+          if (dateValue) {
+            dateDisplay.textContent = formatDateForDisplay(dateValue);
+            dateDisplay.style.color = 'var(--fg)';
+            dateDisplay.style.backgroundColor = 'var(--hover)';
+          } else {
+            dateDisplay.textContent = 'Set date';
+            dateDisplay.style.color = 'var(--muted)';
+            dateDisplay.style.backgroundColor = 'transparent';
+          }
+        };
+        
+        updateDateDisplay();
+        
+        dateDisplay.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (state.inputsLocked) return;
+          
+          if (typeof window.openDatePicker === 'function') {
+            window.openDatePicker(dateInput);
+          } else if (typeof window.showCustomDatePicker === 'function') {
+            window.showCustomDatePicker(dateInput);
+          } else {
+            const picker = document.getElementById('customDatePicker');
+            if (picker) {
+              picker.style.display = 'block';
+              picker.style.position = 'fixed';
+              picker.style.top = '50%';
+              picker.style.left = '50%';
+              picker.style.transform = 'translate(-50%, -50%)';
+              picker.style.zIndex = '999999';
+              picker.classList.add('show');
+              document.body.style.overflow = 'hidden';
+              window._tempDateInput = dateInput;
+            }
+          }
+        });
+        
+        dateInput.addEventListener('change', function() {
+          const dateValue = this.value;
+          if (actualRow) {
+            actualRow.date = dateValue;
+            instantSaveIncomeRow(actualRow, currentYear);
+          } else {
+            dateEntry.date = dateValue;
+            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+          }
+          updateDateDisplay();
+          updateIncomeKPIsLive();
+          // Update project row totals (if dates affect sorting/totals)
+          updateProjectRowTotals(project.name, projectRow);
+        });
+        
+        dateContainer.appendChild(dateDisplay);
+        dateContainer.appendChild(dateInput);
+        dateDiv.appendChild(dateContainer);
+        
+        // All Payment (empty for sub-rows - only shown in main row)
+        const allPaymentDiv = document.createElement('div');
+        // Empty div to maintain column alignment
+        
+        // Paid USD input - use exact same logic as main rows
+        const paidUsdDiv = document.createElement('div');
+        const paidUsdInput = document.createElement('input');
+        paidUsdInput.className = 'input cost-input';
+        paidUsdInput.type = 'number';
+        paidUsdInput.step = '0.01';
+        paidUsdInput.value = (actualRow?.paidUsd || dateEntry.paidUsd || 0).toFixed(2);
+        paidUsdInput.placeholder = 'Paid $';
+        paidUsdInput.style.fontSize = '0.75rem';
+        paidUsdInput.style.padding = '0.5rem 0.75rem';
+        paidUsdInput.style.borderRadius = '8px';
+        paidUsdInput.addEventListener('input', function() {
+          const value = Number(this.value) || 0;
+          if (actualRow) {
+            actualRow.paidUsd = value;
+            instantSaveIncomeRow(actualRow, currentYear);
+            
+            // Update paid EGP display
+            const paidSelectedValue = usdToSelectedCurrency(value);
+            paidEgpDiv.textContent = state.currencySymbol + ' ' + nfINT.format(Math.round(paidSelectedValue));
+            
+            // Live update main project row totals
+            updateProjectRowTotals(project.name, projectRow);
+            
+            if (typeof updateIncomeRowCalculations === 'function') {
+              updateIncomeRowCalculations(subDateRow, actualRow);
+            }
+            updateIncomeKPIsLive();
+          } else {
+            dateEntry.paidUsd = value;
+            // Update paid EGP display
+            const paidSelectedValue = usdToSelectedCurrency(value);
+            paidEgpDiv.textContent = state.currencySymbol + ' ' + nfINT.format(Math.round(paidSelectedValue));
+            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+            // Live update main project row totals
+            updateProjectRowTotals(project.name, projectRow);
+          }
+        });
+        paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
+        const paidUsdWrapper = paidUsdDiv.querySelector('.cost-input-wrapper');
+        const paidUsdDollarDisplay = document.createElement('span');
+        paidUsdDollarDisplay.className = 'cost-dollar-display';
+        paidUsdDollarDisplay.textContent = '$';
+        paidUsdWrapper.appendChild(paidUsdDollarDisplay);
+        paidUsdWrapper.appendChild(paidUsdInput);
+        
+        // Paid EGP - use exact same logic as main rows
+        const paidEgpDiv = document.createElement('div');
+        paidEgpDiv.className = 'paid-egp-cell editable-value';
+        const paidEgpValue = actualRow?.paidEgp || (actualRow?.paidUsd || dateEntry.paidUsd || 0) * state.fx;
+        const paidSelectedValue = usdToSelectedCurrency(actualRow?.paidUsd || dateEntry.paidUsd || 0);
+        paidEgpDiv.textContent = state.currencySymbol + ' ' + nfINT.format(Math.round(paidSelectedValue));
+        paidEgpDiv.setAttribute('data-field', 'paidEgp');
+        paidEgpDiv.setAttribute('data-row-id', actualRow?.id || '');
+        paidEgpDiv.setAttribute('data-year', currentYear);
+        
+        paidEgpDiv.addEventListener('click', function() {
+          if (this.classList.contains('editing')) return;
+          
+          this.classList.add('editing');
+          const currentValue = actualRow?.paidEgp || paidEgpValue;
+          
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.value = Math.round(currentValue);
+          input.className = 'editable-input';
+          input.style.textAlign = 'left';
+          input.style.padding = '0.25rem 0.5rem';
+          input.style.fontSize = '0.65rem';
+          input.style.minWidth = '60px';
+          
+          const originalContent = this.textContent;
+          this.textContent = '';
+          this.appendChild(input);
+          input.focus();
+          input.select();
+          
+          const saveEdit = () => {
+            const newValue = parseFloat(input.value) || 0;
+            if (actualRow) {
+              actualRow.paidEgp = newValue;
+              const year = currentYear;
+              const stateRowIndex = (state.income[year] || []).findIndex(stateRow => 
+                stateRow.id === actualRow.id || 
+                (stateRow.name === actualRow.name && stateRow.date === actualRow.date)
+              );
+              if (stateRowIndex !== -1) {
+                state.income[year][stateRowIndex].paidEgp = newValue;
+              }
+              this.textContent = state.currencySymbol + ' ' + nfINT.format(Math.round(newValue));
+              this.classList.remove('editing');
+              try {
+                saveIncomeRowDirectly(actualRow, currentYear);
+              } catch (error) {
+                saveToLocal();
+                showNotification('Saved locally (cloud sync failed)', 'warning', 2000);
+              }
+              // Live update main project row totals (paid EGP affects paid USD calculation)
+              updateProjectRowTotals(project.name, projectRow);
+            } else {
+              dateEntry.paidEgp = newValue;
+              saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+              this.textContent = state.currencySymbol + ' ' + nfINT.format(Math.round(newValue));
+              this.classList.remove('editing');
+              // Live update main project row totals
+              updateProjectRowTotals(project.name, projectRow);
+            }
+          };
+          
+          const cancelEdit = () => {
+            this.textContent = originalContent;
+            this.classList.remove('editing');
+          };
+          
+          input.addEventListener('blur', saveEdit);
+          input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              saveEdit();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              cancelEdit();
+            }
+          });
+        });
+        
+        // Method dropdown - use exact same logic as main rows (simplified version)
+        const methodDiv = document.createElement('div');
+        const methodDropdown = document.createElement('div');
+        methodDropdown.className = 'method-dropdown-minimal';
+        
+        const methodTrigger = document.createElement('button');
+        methodTrigger.className = 'method-trigger-minimal';
+        methodTrigger.innerHTML = `
+          <span class="method-text">${actualRow?.method || dateEntry.method || 'Bank Transfer'}</span>
+          <svg class="method-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        `;
+        
+        const methodMenu = document.createElement('div');
+        methodMenu.className = 'method-menu-minimal';
+        
+        const customInputSection = document.createElement('div');
+        customInputSection.className = 'method-custom-section';
+        customInputSection.style.cssText = 'padding: 0.5rem; border-bottom: 1px solid var(--stroke); margin-bottom: 0.25rem;';
+        
+        const customInput = document.createElement('input');
+        customInput.type = 'text';
+        customInput.placeholder = 'Add custom method...';
+        customInput.className = 'method-custom-input';
+        customInput.style.cssText = 'width: 100%; padding: 0.25rem 0.5rem; font-size: 0.7rem; border: 1px solid var(--stroke); border-radius: 4px; background: var(--card); color: var(--fg); outline: none;';
+        
+        customInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const value = this.value.trim();
+            if (value) {
+              addCustomMethodOption(value);
+              this.value = '';
+              refreshMethodDropdown();
+            }
+          }
+        });
+        
+        const refreshMethodDropdown = () => {
+          methodMenu.innerHTML = '';
+          methodMenu.appendChild(customInputSection);
+          renderMethodOptions(methodMenu, actualRow || dateEntry, methodDropdown);
+        };
+        
+        customInputSection.appendChild(customInput);
+        methodMenu.appendChild(customInputSection);
+        
+        const renderMethodOptions = (container, rowData, dropdown) => {
+          const options = getAllMethodOptions();
+          const customOptions = getCustomMethodOptions();
+          
+          options.forEach(option => {
+            const item = document.createElement('div');
+            item.className = 'method-item-minimal';
+            item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; cursor: pointer; transition: all 0.2s ease;';
+            
+            if (option === (rowData.method || 'Bank Transfer')) {
+              item.classList.add('selected');
+            }
+            
+            const itemText = document.createElement('span');
+            itemText.textContent = option;
+            itemText.style.flex = '1';
+            item.appendChild(itemText);
+            
+            if (customOptions.includes(option)) {
+              const removeBtn = document.createElement('button');
+              removeBtn.innerHTML = '×';
+              removeBtn.className = 'method-remove-btn';
+              removeBtn.style.cssText = 'background: none; border: none; color: var(--muted); cursor: pointer; padding: 0.125rem 0.25rem; border-radius: 2px; font-size: 0.8rem; margin-left: 0.5rem; transition: all 0.2s ease;';
+              removeBtn.title = 'Remove this option';
+              
+              removeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                removeCustomMethodOption(option);
+                refreshMethodDropdown();
+              });
+              
+              item.appendChild(removeBtn);
+            }
+            
+            const selectMethod = function(e) {
+              if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+              
+              rowData.method = option;
+              methodTrigger.querySelector('.method-text').textContent = option;
+              methodMenu.querySelectorAll('.method-item-minimal').forEach(i => i.classList.remove('selected'));
+              this.classList.add('selected');
+              methodDropdown.classList.remove('open');
+              methodMenu.classList.remove('show');
+              
+              if (methodMenu.parentNode === document.body) {
+                methodMenu.remove();
+              }
+              
+              if (actualRow) {
+                instantSaveIncomeRow(actualRow, currentYear);
+              } else {
+                saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+              }
+            };
+            
+            item.addEventListener('click', selectMethod);
+            item.addEventListener('touchend', function(e) {
+              e.preventDefault();
+              selectMethod.call(this, e);
+            });
+            
+            container.appendChild(item);
+          });
+        };
+        
+        renderMethodOptions(methodMenu, actualRow || dateEntry, methodDropdown);
+        
+        const toggleMethodDropdown = function(e) {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          
+          document.querySelectorAll('.method-dropdown-minimal.open').forEach(dd => {
+            if (dd !== methodDropdown) {
+              dd.classList.remove('open');
+              const menu = dd.querySelector('.method-menu-minimal');
+              if (menu) {
+                menu.classList.remove('show');
+                if (menu.parentNode === document.body) {
+                  menu.remove();
+                }
+              }
+            }
+          });
+          
+          methodDropdown.classList.toggle('open');
+          
+          if (methodMenu.classList.contains('show')) {
+            methodMenu.classList.remove('show');
+            if (methodMenu.parentNode === document.body) {
+              methodMenu.remove();
+            }
+          } else {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile && methodMenu.parentNode !== document.body) {
+              document.body.appendChild(methodMenu);
+            }
+            positionDropdown(methodTrigger, methodMenu);
+            methodMenu.classList.add('show');
+          }
+        };
+        
+        methodTrigger.addEventListener('click', toggleMethodDropdown);
+        methodTrigger.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          toggleMethodDropdown(e);
+        });
+        
+        methodDropdown.appendChild(methodTrigger);
+        methodDropdown.appendChild(methodMenu);
+        methodDiv.appendChild(methodDropdown);
+        
+        // Progress toggle - use exact same logic as main rows
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'progress-toggle';
+        
+        const progressButton = document.createElement('button');
+        const currentProgress = actualRow?.progress || dateEntry.progress || 0;
+        progressButton.className = `progress-${currentProgress}`;
+        progressButton.textContent = `${currentProgress}%`;
+        progressButton.title = 'Click to cycle through progress (0%, 25%, 50%, 75%, 100%)';
+        
+        if (currentProgress === 100) {
+          progressButton.style.color = 'white';
+        }
+        
+        progressButton.addEventListener('click', function() {
+          const current = parseInt(actualRow?.progress || dateEntry.progress || 0);
+          let newProgress;
+          switch(current) {
+            case 0: newProgress = 25; break;
+            case 25: newProgress = 50; break;
+            case 50: newProgress = 75; break;
+            case 75: newProgress = 100; break;
+            case 100: newProgress = 0; break;
+            default: newProgress = 0;
+          }
+          
+          if (actualRow) {
+            actualRow.progress = newProgress;
+            instantSaveIncomeRow(actualRow, currentYear);
+          } else {
+            dateEntry.progress = newProgress;
+            saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+          }
+          
+          this.textContent = `${newProgress}%`;
+          this.className = `progress-${newProgress}`;
+          if (newProgress === 100) {
+            this.style.color = 'white';
+          } else {
+            this.style.color = '';
+          }
+        });
+        
+        progressDiv.appendChild(progressButton);
+        
+        // Payment button - with default ordinal labels
+        const paymentDiv = document.createElement('div');
+        const paymentButton = document.createElement('button');
+        paymentButton.className = 'input payment-button';
+        paymentButton.type = 'button';
+        paymentButton.setAttribute('aria-label', 'Payment type');
+        
+        // Get default label for this index
+        const defaultLabel = getDefaultPaymentLabel(dateIdx);
+        
+        // Use existing note if set, otherwise use default
+        let currentNote = actualRow?.note || dateEntry.note || '';
+        const defaultLabels = ['First Deposit', 'Second Deposit', 'Third Deposit', 'Fourth Deposit', 'Fifth Deposit'];
+        
+        // If note is empty or matches old default pattern, use new default
+        if (!currentNote || currentNote === 'Full Balance' || (defaultLabels.includes(currentNote) && currentNote !== defaultLabel)) {
+          currentNote = defaultLabel;
+          // Save the default label
+          if (actualRow) {
+            actualRow.note = defaultLabel;
+          } else {
+            dateEntry.note = defaultLabel;
+          }
+        }
+        
+        paymentButton.textContent = currentNote;
+        paymentButton.style.fontSize = '0.65rem';
+        paymentButton.style.padding = '0.25rem 0.5rem';
+        paymentButton.style.borderRadius = '6px';
+        paymentButton.style.width = 'fit-content';
+        paymentButton.style.minWidth = 'fit-content';
+        paymentButton.style.textAlign = 'left';
+        paymentButton.style.cursor = 'pointer';
+        paymentButton.style.border = '1px solid var(--stroke)';
+        paymentButton.style.background = 'var(--card)';
+        paymentButton.style.color = 'var(--fg)';
+        paymentButton.style.minHeight = '24px';
+        paymentButton.style.height = '24px';
+        paymentButton.style.lineHeight = '1.2';
+        paymentButton.style.whiteSpace = 'nowrap';
+        paymentButton.style.transition = 'all 0.2s ease';
+        
+        // Make payment button editable (click to edit, or cycle through defaults)
+        let isEditingPayment = false;
+        paymentButton.addEventListener('click', function(e) {
+          if (isEditingPayment) return;
+          
+          // On first click, make it editable
+          isEditingPayment = true;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = currentNote;
+          input.className = 'editable-input';
+          input.style.cssText = 'width: 100%; padding: 0.25rem 0.5rem; font-size: 0.65rem; border: 1px solid var(--stroke); border-radius: 4px; background: var(--card); color: var(--fg); outline: none;';
+          
+          const originalText = paymentButton.textContent;
+          paymentButton.textContent = '';
+          paymentButton.appendChild(input);
+          input.focus();
+          input.select();
+          
+          const saveEdit = () => {
+            const newValue = input.value.trim() || defaultLabel;
+            paymentButton.textContent = newValue;
+            paymentButton.removeChild(input);
+            isEditingPayment = false;
+            currentNote = newValue;
+            
+            if (actualRow) {
+              actualRow.note = newValue;
+              instantSaveIncomeRow(actualRow, currentYear);
+            } else {
+              dateEntry.note = newValue;
+              saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
+            }
+          };
+          
+          const cancelEdit = () => {
+            paymentButton.textContent = originalText;
+            if (paymentButton.contains(input)) {
+              paymentButton.removeChild(input);
+            }
+            isEditingPayment = false;
+          };
+          
+          input.addEventListener('blur', saveEdit);
+          input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              saveEdit();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              cancelEdit();
+            }
+          });
+        });
+        
+        paymentDiv.appendChild(paymentButton);
+        
+        // Delete button (empty but preserves alignment)
+        const deleteDiv = document.createElement('div');
+        
+        // Append all cells in correct order
+        subDateRow.appendChild(spacerDiv);
+        subDateRow.appendChild(iconDiv);
+        subDateRow.appendChild(nameDiv);
+        subDateRow.appendChild(tagsDiv);
+        subDateRow.appendChild(dateDiv);
+        subDateRow.appendChild(allPaymentDiv);
+        subDateRow.appendChild(paidUsdDiv);
+        subDateRow.appendChild(paidEgpDiv);
+        subDateRow.appendChild(methodDiv);
+        subDateRow.appendChild(progressDiv);
+        subDateRow.appendChild(paymentDiv);
+        subDateRow.appendChild(deleteDiv);
+        
+        wrap.appendChild(subDateRow);
+      });
+    });
+    
+    // Update income sum for grouped view
+    updateIncomeSum(arr);
+    
+    // Apply lock state
+    updateInputsLockState();
+  }
+  
+  // Helper function to add a date to an existing project
+  function addDateToProject(projectName, year) {
+    const currentYearData = state.income[year] || [];
+    
+    // Find existing project rows to determine next ordinal
+    const projectRows = currentYearData.filter(row => row.name === projectName);
+    const nextIndex = projectRows.length;
+    const getOrdinalSuffix = (n) => {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return s[(v - 20) % 10] || s[v] || s[0];
+    };
+    const defaultLabel = nextIndex === 0 ? 'First Deposit' : 
+                        nextIndex === 1 ? 'Second Deposit' : 
+                        nextIndex === 2 ? 'Third Deposit' :
+                        `${nextIndex + 1}${getOrdinalSuffix(nextIndex + 1)} Deposit`;
+    
+    // Find existing project to copy icon and allPayment
+    const existingProject = projectRows[0] || null;
+    
+    // Create a new row with the same project name (this will be grouped in grouped view)
+    const newRow = {
+      name: projectName,
+      date: new Date().toISOString().split('T')[0],
+      allPayment: existingProject ? (existingProject.allPayment || 0) : 0,
+      paidUsd: 0,
+      tags: '',
+      method: 'Bank Transfer',
+      progress: 0,
+      note: defaultLabel, // Use default ordinal label
+      icon: existingProject ? (existingProject.icon || 'fa:dollar-sign') : 'fa:dollar-sign',
+      order: currentYearData.length
+    };
+    
+    currentYearData.push(newRow);
+    
+    // Save and re-render
+    saveToLocal();
+    instantSaveIncomeRow(newRow, year);
+    
+    // Re-render with current view mode
+    renderIncomeList('list-income', currentYearData, false, true);
+    setupProgressHeaderToggle();
+    addRowButtonListeners();
+  }
+  
+  // Helper function to save a date entry back to project
+  function saveDateEntryToProject(projectName, dateIndex, dateEntry, year) {
+    const currentYearData = state.income[year] || [];
+    
+    // In grouped view, we need to find the actual row that corresponds to this date index
+    // Since we group by project name, we need to find all rows with this project name
+    const projectRows = currentYearData.filter(row => row.name === projectName);
+    
+    if (projectRows.length > 0 && dateIndex < projectRows.length) {
+      const rowToUpdate = projectRows[dateIndex];
+      
+      // Update the row with the date entry data
+      if (dateEntry.date !== undefined) rowToUpdate.date = dateEntry.date;
+      if (dateEntry.paidUsd !== undefined) rowToUpdate.paidUsd = dateEntry.paidUsd;
+      if (dateEntry.paidEgp !== undefined) rowToUpdate.paidEgp = dateEntry.paidEgp;
+      if (dateEntry.tags !== undefined) rowToUpdate.tags = dateEntry.tags;
+      if (dateEntry.method !== undefined) rowToUpdate.method = dateEntry.method;
+      if (dateEntry.progress !== undefined) rowToUpdate.progress = dateEntry.progress;
+      if (dateEntry.note !== undefined) rowToUpdate.note = dateEntry.note;
+      
+      saveToLocal();
+      instantSaveIncomeRow(rowToUpdate, year);
+      
+      // Update KPIs
+      updateIncomeKPIsLive();
+      const currentYearData = state.income[year] || [];
+      updateIncomeSum(currentYearData);
+    }
   }
   
   function updateIncomeSum(arr) {
@@ -17501,6 +18622,55 @@ function loadNonCriticalResources() {
         });
       }
     }
+    
+    // Setup income view toggle
+    function setupIncomeViewToggle() {
+      const toggleBtn = document.getElementById('incomeViewToggle');
+      const toggleText = document.getElementById('viewToggleText');
+      if (!toggleBtn || !toggleText) return;
+      
+      // Update button text based on current mode
+      const updateToggleText = () => {
+        toggleText.textContent = incomeViewMode === 'standard' ? 'Grouped' : 'Standard';
+      };
+      
+      updateToggleText();
+      
+      toggleBtn.addEventListener('click', () => {
+        // Toggle view mode
+        incomeViewMode = incomeViewMode === 'standard' ? 'grouped' : 'standard';
+        updateToggleText();
+        
+        // Re-render income table with new view mode
+        const currentYearData = state.income[currentYear] || [];
+        renderIncomeList('list-income', currentYearData, false, true);
+        setupProgressHeaderToggle();
+        addRowButtonListeners();
+        
+        // Update add-row button styling for grouped view
+        const addRowBtn = document.querySelector('[data-add-row="income"]');
+        if (addRowBtn) {
+          if (incomeViewMode === 'grouped') {
+            addRowBtn.style.cssText = 'font-size: 0.5rem; padding: 0.25rem 0.5rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 6px; margin-top: 4px; min-height: 20px; height: 20px; line-height: 1;';
+            addRowBtn.innerHTML = '+ Add row';
+          } else {
+            addRowBtn.style.cssText = 'font-size: .65rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 8px; margin-top: 8px;';
+            addRowBtn.innerHTML = '+ Add a row<div class="tooltip">Add a new income entry</div>';
+          }
+        }
+      });
+    }
+    
+    // Initialize toggle on page load (with delay to ensure DOM is ready)
+    setTimeout(() => {
+      setupIncomeViewToggle();
+      // Update add-row button styling based on initial view mode
+      const addRowBtn = document.querySelector('[data-add-row="income"]');
+      if (addRowBtn && incomeViewMode === 'grouped') {
+        addRowBtn.style.cssText = 'font-size: 0.5rem; padding: 0.25rem 0.5rem; border: 1px dashed var(--stroke); background: var(--glass); color: var(--muted); transition: all .2s ease; border-radius: 6px; margin-top: 4px; min-height: 20px; height: 20px; line-height: 1;';
+        addRowBtn.innerHTML = '+ Add row';
+      }
+    }, 100);
     
     // Add event listeners when page loads
     addRowButtonListeners();

@@ -721,8 +721,13 @@
       <section class="p-0 space-y-2">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-sm font-medium px-1 sticky-header" style="color:var(--fg)">Income</h2>
-          <!-- Year Tabs (only visible on Income page) -->
-          <div id="yearTabsContainer" class="flex items-center gap-1">
+          <div class="flex items-center gap-2">
+            <!-- View Toggle -->
+            <button id="incomeViewToggle" class="view-toggle-btn" title="Toggle between standard and grouped view">
+              <span id="viewToggleText">Grouped</span>
+            </button>
+            <!-- Year Tabs (only visible on Income page) -->
+            <div id="yearTabsContainer" class="flex items-center gap-1">
             <!-- Year tabs will be dynamically generated here -->
             <button id="manageYearsBtn" class="year-tab-manage" title="Manage Years">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3">
@@ -730,12 +735,13 @@
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
             </button>
+            </div>
           </div>
         </div>
         <div class="table-container">
           <div class="table">
             <div class="row row-head row-income">
-              <div></div><div></div><div class="tooltip-trigger">Project Name<div class="tooltip">Name of the project or client</div></div><div class="tooltip-trigger">Tags<div class="tooltip">Project categories or tags</div></div><div class="tooltip-trigger">Date<div class="tooltip">Payment received date</div></div><div class="tooltip-trigger">All Payment<div class="tooltip">Total project payment amount</div></div><div class="tooltip-trigger">Paid USD<div class="tooltip">Amount paid in US Dollars</div></div><div class="tooltip-trigger" id="headerPaidEGP">Paid EGP<div class="tooltip">Amount paid in EGP</div></div><div class="tooltip-trigger">Method<div class="tooltip">Payment method (bank, cash, etc.)</div></div><div class="tooltip-trigger" id="headerProgress" style="cursor: pointer;">Progress<div class="tooltip">Project completion progress (click header to toggle all rows between 0% and 100%)</div></div><div class="tooltip-trigger">PAYMENT<div class="tooltip">Payment type: First Deposit, Second Deposit, Third Deposit, or Full Balance</div></div><div></div>
+              <div></div><div></div><div class="tooltip-trigger">Project Name<div class="tooltip">Name of the project or client</div></div><div class="tooltip-trigger">Tags<div class="tooltip">Project categories or tags</div></div><div class="tooltip-trigger">Date<div class="tooltip">Payment received date</div></div><div class="tooltip-trigger">All Payment<div class="tooltip">Total project payment amount</div></div><div class="tooltip-trigger">Paid USD<div class="tooltip">Amount paid in US Dollars</div></div><div class="tooltip-trigger" id="headerPaidEGP">Paid EGP<div class="tooltip">Amount paid in EGP</div></div><div class="tooltip-trigger">Method<div class="tooltip">Payment method (bank, cash, etc.)</div></div><div class="tooltip-trigger" id="headerProgress" style="cursor: pointer;">Progress<div class="tooltip">Project completion progress (click header to toggle all rows between 0% and 100%)</div></div><div class="tooltip-trigger">Payment<div class="tooltip">Payment type: First Deposit, Second Deposit, Third Deposit, or Full Balance</div></div><div></div>
             </div>
             <div id="list-income"></div>
             <button class="btn w-full justify-start text-xs py-3 mx-0 my-3 tooltip-trigger" data-add-row="income" style="font-size:.65rem; border:1px dashed var(--stroke); background:var(--glass); color:var(--muted); transition:all .2s ease; border-radius:8px; margin-top:8px;">+ Add a row<div class="tooltip">Add a new income entry</div></button>
