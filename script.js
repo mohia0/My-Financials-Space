@@ -795,22 +795,26 @@ function resetSplashScreen() {
 const SUPABASE_URL = 'https://whurxquryihxeqkwzaly.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXJ4cXVyeWloeGVxa3d6YWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NjE4ODgsImV4cCI6MjA3NjEzNzg4OH0.SP3SAmaNSTht4oV_rKE8DY7wHmdR7NYjqDjpXV7elDE';
 
-// Initialize Supabase with optimized configuration
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'financial-tool'
+// Initialize Supabase with optimized configuration (only if not already initialized)
+if (!window.supabaseClient && window.supabase) {
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'financial-tool'
+      }
     }
-  }
-});
+  });
 
-// Make Supabase available globally
-window.supabaseClient = supabase;
+  // Make Supabase available globally
+  window.supabaseClient = supabase;
+} else if (!window.supabase) {
+  console.warn('⚠️ Supabase SDK not loaded. Make sure the Supabase CDN script is loaded before script.js');
+}
 
 // Utility function to slugify file names
 function slugify(name) {
