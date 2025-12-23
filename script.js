@@ -16619,7 +16619,15 @@ async function saveProfile({ fullName, file }) {
   function updateIncomeSum(arr) {
     const sumEl = document.getElementById('sum-income');
     if (sumEl) {
-      const totalAllPayment = arr.reduce((sum, r) => sum + (Number(r.allPayment) || 0), 0);
+      // Count each project name only once to avoid incorrect results when projects have multiple inputs
+      const projectMap = new Map();
+      arr.forEach(r => {
+        const projectName = (r.name || 'Untitled Project').trim();
+        if (!projectMap.has(projectName)) {
+          projectMap.set(projectName, Number(r.allPayment) || 0);
+        }
+      });
+      const totalAllPayment = Array.from(projectMap.values()).reduce((sum, val) => sum + val, 0);
       const totalPaidUsd = arr.reduce((sum, r) => sum + (Number(r.paidUsd) || 0), 0);
       const totalPaidEgp = totalPaidUsd * state.fx;
       const totalPaidSelected = usdToSelectedCurrency(totalPaidUsd);
