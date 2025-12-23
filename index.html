@@ -2007,10 +2007,15 @@
         <input type="text" id="datePickerTextInput" class="date-picker-text-input" placeholder="Type date (YYYY-MM-DD or MM/DD/YYYY)" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--stroke); border-radius: 4px; background: var(--card); color: var(--fg); font-size: 0.75rem; font-weight: 400; min-height: 32px; box-sizing: border-box;">
       </div>
       <div class="date-picker-footer">
-        <button class="date-picker-btn" id="closeDatePicker">Close</button>
+        <button class="date-picker-btn-icon" id="closeDatePicker" title="Close" style="padding: 0.5rem; min-width: auto; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
         <div style="display: flex; gap: 0.5rem;">
           <button class="date-picker-btn" id="clearDate">Clear</button>
           <button class="date-picker-btn primary" id="todayDate">Today</button>
+          <button class="date-picker-btn primary" id="applyDate" style="background: var(--accent, #6366f1); color: white;">Apply</button>
         </div>
       </div>
     </div>

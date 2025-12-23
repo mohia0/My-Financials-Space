@@ -15555,12 +15555,37 @@ async function saveProfile({ fullName, file }) {
         iconHTML = `<i class="${iconClass} fa-${cleanIconName}" style="color:inherit; font-family:'${fontFamily}' !important;"></i>`;
       }
       
-      // Project name cell (no add-date button here)
+      // Project name cell (no add-date button here) - editable input
       const nameDiv = document.createElement('div');
-      const nameSpan = document.createElement('span');
-      nameSpan.textContent = project.name || 'Untitled Project';
-      nameSpan.style.fontWeight = '600';
-      nameDiv.appendChild(nameSpan);
+      const nameInput = document.createElement('input');
+      nameInput.className = 'input';
+      nameInput.type = 'text';
+      nameInput.value = project.name || 'Untitled Project';
+      nameInput.placeholder = 'Project name';
+      nameInput.style.fontSize = '0.7rem';
+      nameInput.style.padding = '0.4rem 0.6rem';
+      nameInput.style.borderRadius = '8px';
+      nameInput.style.fontWeight = '600';
+      // Respect locked state
+      if (state.inputsLocked) {
+        nameInput.disabled = true;
+        nameInput.style.cursor = 'not-allowed';
+        nameInput.style.opacity = '0.6';
+      }
+      nameInput.addEventListener('input', function() {
+        if (state.inputsLocked) return; // Don't allow editing when locked
+        const newName = this.value.trim() || 'Untitled Project';
+        // Update all rows with the same project name
+        projectRows.forEach(row => {
+          row.name = newName;
+          instantSaveIncomeRow(row, currentYear);
+        });
+        // Update the project name in the grouped data structure
+        project.name = newName;
+        // Update the data attribute for reference
+        projectRow.setAttribute('data-project-name', newName);
+      });
+      nameDiv.appendChild(nameInput);
       
       // Build project row structure
       const spacerDiv = document.createElement('div');
@@ -19863,6 +19888,7 @@ function loadNonCriticalResources() {
   let customDatePicker = null;
   let currentDatePickerInput = null;
   let currentDatePickerDate = new Date();
+  let selectedDate = null; // Track the currently selected date (for Apply button)
   let isDatePickerOpen = false;
   let datePickerTimeout = null;
 
@@ -20003,9 +20029,36 @@ function loadNonCriticalResources() {
       hideCustomDatePicker();
     });
 
+    // Apply button handler
+    const applyDateBtn = document.getElementById('applyDate');
+    if (applyDateBtn) {
+      applyDateBtn.addEventListener('click', () => {
+        if (selectedDate) {
+          selectDate(selectedDate);
+        } else if (currentDatePickerInput && currentDatePickerInput.value) {
+          // If no date was selected but input has a value, use that
+          const existingDate = new Date(currentDatePickerInput.value);
+          if (!isNaN(existingDate.getTime())) {
+            selectDate(existingDate);
+          }
+        } else {
+          // If nothing selected, use today's date
+          selectDate(new Date());
+        }
+      });
+    }
+
     todayDateBtn.addEventListener('click', () => {
       const today = new Date();
-      selectDate(today);
+      selectedDate = today;
+      currentDatePickerDate = new Date(today);
+      updateDatePickerHeader();
+      renderDatePickerDays();
+      // Update text input
+      const datePickerTextInput = document.getElementById('datePickerTextInput');
+      if (datePickerTextInput) {
+        datePickerTextInput.value = formatDateForInput(today);
+      }
     });
 
     closeDatePickerBtn.addEventListener('click', () => {
@@ -20019,17 +20072,36 @@ function loadNonCriticalResources() {
       const updateTextInput = () => {
         if (currentDatePickerInput && currentDatePickerInput.value) {
           datePickerTextInput.value = currentDatePickerInput.value;
+          // Set selected date from input value
+          const inputDate = new Date(currentDatePickerInput.value);
+          if (!isNaN(inputDate.getTime())) {
+            selectedDate = inputDate;
+          }
         } else {
           datePickerTextInput.value = '';
+          selectedDate = null;
         }
       };
       
-      // Parse date from text input (supports YYYY-MM-DD and MM/DD/YYYY)
+      // Parse date from text input (supports flexible formats like 2025-2-23, 2025-02-23, MM/DD/YYYY, etc.)
       const parseDateFromText = (text) => {
         text = text.trim();
         if (!text) return null;
         
-        // Try YYYY-MM-DD format first
+        // Try YYYY-MM-DD format (flexible: allows single digits like 2025-2-23)
+        const ymdFlexible = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+        if (ymdFlexible.test(text)) {
+          const parts = text.split('-');
+          const year = parseInt(parts[0]);
+          const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+          const day = parseInt(parts[2]);
+          const date = new Date(year, month, day);
+          if (!isNaN(date.getTime()) && date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+            return date;
+          }
+        }
+        
+        // Try standard YYYY-MM-DD format
         if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
           const date = new Date(text);
           if (!isNaN(date.getTime())) return date;
@@ -20042,7 +20114,9 @@ function loadNonCriticalResources() {
           const day = parseInt(parts[1]);
           const year = parseInt(parts[2]);
           const date = new Date(year, month, day);
-          if (!isNaN(date.getTime())) return date;
+          if (!isNaN(date.getTime()) && date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+            return date;
+          }
         }
         
         // Try DD/MM/YYYY format
@@ -20052,17 +20126,22 @@ function loadNonCriticalResources() {
           const month = parseInt(parts[1]) - 1;
           const year = parseInt(parts[2]);
           const date = new Date(year, month, day);
-          if (!isNaN(date.getTime())) return date;
+          if (!isNaN(date.getTime()) && date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+            return date;
+          }
         }
         
         return null;
       };
       
-      // Handle Enter key or blur to apply date
+      // Handle Enter key or blur to update selected date (but not apply yet)
       const applyDateFromText = () => {
         const parsedDate = parseDateFromText(datePickerTextInput.value);
         if (parsedDate) {
-          selectDate(parsedDate);
+          selectedDate = parsedDate;
+          currentDatePickerDate = new Date(parsedDate);
+          updateDatePickerHeader();
+          renderDatePickerDays();
         } else if (datePickerTextInput.value.trim()) {
           // Invalid date format - show error briefly
           datePickerTextInput.style.borderColor = 'var(--error, #ef4444)';
@@ -20076,6 +20155,22 @@ function loadNonCriticalResources() {
         if (e.key === 'Enter') {
           e.preventDefault();
           applyDateFromText();
+          // Auto-apply on Enter if date is valid
+          if (selectedDate) {
+            selectDate(selectedDate);
+          }
+        }
+      });
+      
+      datePickerTextInput.addEventListener('input', () => {
+        // Real-time parsing as user types
+        const parsedDate = parseDateFromText(datePickerTextInput.value);
+        if (parsedDate) {
+          selectedDate = parsedDate;
+          currentDatePickerDate = new Date(parsedDate);
+          updateDatePickerHeader();
+          renderDatePickerDays();
+          datePickerTextInput.style.borderColor = '';
         }
       });
       
@@ -20102,10 +20197,16 @@ function loadNonCriticalResources() {
 
     // Close date picker when clicking outside
     document.addEventListener('click', (e) => {
-      if (customDatePicker.classList.contains('show') && 
-          !e.target.closest('.custom-date-picker-modal') && 
-          e.target.type !== 'date') {
-        hideCustomDatePicker();
+      if (customDatePicker && customDatePicker.classList.contains('show')) {
+        // Check if click is outside the date picker modal
+        const isInsidePicker = e.target.closest('.custom-date-picker-modal') || 
+                               e.target.closest('.custom-date-picker') ||
+                               e.target.closest('.date-day') ||
+                               e.target.closest('#datePickerTextInput');
+        
+        if (!isInsidePicker && e.target.type !== 'date') {
+          hideCustomDatePicker();
+        }
       }
     });
   }
@@ -20187,13 +20288,23 @@ function loadNonCriticalResources() {
       // Prevent body scroll when date picker is open
       document.body.style.overflow = 'hidden';
       
-      // Add click handler to close when clicking backdrop
+      // Add click handler to close when clicking backdrop (but not the picker content)
       const backdropClickHandler = (e) => {
-        if (e.target === datePickerModal || e.target.classList.contains('custom-date-picker-modal')) {
+        // Only close if clicking directly on the modal backdrop, not on any child elements
+        if (e.target === datePickerModal || 
+            (e.target.classList.contains('custom-date-picker-modal') && e.target === datePickerModal)) {
           hideCustomDatePicker();
           datePickerModal.removeEventListener('click', backdropClickHandler);
         }
       };
+      
+      // Stop propagation on the picker content to prevent backdrop clicks
+      const pickerContent = datePickerModal.querySelector('.custom-date-picker');
+      if (pickerContent) {
+        pickerContent.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+      }
       
       // Remove any existing handler first
       datePickerModal.removeEventListener('click', backdropClickHandler);
@@ -20212,6 +20323,7 @@ function loadNonCriticalResources() {
     customDatePicker.classList.remove('show');
     customDatePicker.style.display = 'none';
     currentDatePickerInput = null;
+    selectedDate = null; // Reset selected date when closing
     isDatePickerOpen = false;
     
     // Restore body scroll
@@ -20257,8 +20369,10 @@ function loadNonCriticalResources() {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       const isToday = date.toDateString() === today.toDateString();
-      const isSelected = currentDatePickerInput && 
-        currentDatePickerInput.value === formatDateForInput(date);
+      // Check if this date is selected (either from input value or selectedDate)
+      const dateStr = formatDateForInput(date);
+      const isSelected = (selectedDate && formatDateForInput(selectedDate) === dateStr) ||
+        (currentDatePickerInput && currentDatePickerInput.value === dateStr);
       
       const dayElement = createDayElement(day, false, isToday, isSelected);
       datePickerDays.appendChild(dayElement);
@@ -20289,11 +20403,20 @@ function loadNonCriticalResources() {
     }
 
     if (!isOtherMonth) {
-      dayElement.addEventListener('click', () => {
+      dayElement.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent event from bubbling to document
         const year = currentDatePickerDate.getFullYear();
         const month = currentDatePickerDate.getMonth();
-        const selectedDate = new Date(year, month, day);
-        selectDate(selectedDate);
+        const clickedDate = new Date(year, month, day);
+        // Update selected date but don't apply yet (wait for Apply button)
+        selectedDate = clickedDate;
+        // Update text input
+        const datePickerTextInput = document.getElementById('datePickerTextInput');
+        if (datePickerTextInput) {
+          datePickerTextInput.value = formatDateForInput(clickedDate);
+        }
+        // Re-render to show selection
+        renderDatePickerDays();
       });
     }
 

@@ -759,6 +759,18 @@ body.onboarding-active .mobile-bottom-nav {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
 }
 
+[data-theme="light"] .date-day.today {
+  background: transparent !important;
+  color: var(--fg) !important;
+  border: 2px solid var(--accent) !important;
+}
+
+[data-theme="light"] .date-day.today.selected {
+  background: var(--accent) !important;
+  color: white !important;
+  border: 2px solid var(--accent) !important;
+}
+
 /* Light mode range sliders */
 [data-theme="light"] input[type="range"]::-webkit-slider-thumb:hover,
 [data-theme="light"] input[type="range"]::-moz-range-thumb:hover {
@@ -2999,9 +3011,16 @@ input[type="date"].date-input-minimal {
 }
 
 .date-day.today {
+  background: transparent;
+  color: var(--fg);
+  font-weight: 600;
+  border: 2px solid var(--accent);
+}
+
+.date-day.today.selected {
   background: var(--accent);
   color: white;
-  font-weight: 600;
+  border: 2px solid var(--accent);
 }
 
 .date-day.selected {
@@ -3009,6 +3028,7 @@ input[type="date"].date-input-minimal {
   color: white;
   font-weight: 600;
   transform: scale(1.1);
+  border: 2px solid var(--accent);
 }
 
 /* Minimal Footer Buttons */
