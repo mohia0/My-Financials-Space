@@ -461,6 +461,13 @@ body.onboarding-active .mobile-bottom-nav {
     gap: 0.5rem;
   }
   
+  /* Ensure title and view button are left-aligned on mobile */
+  .income-header-container > div:first-child {
+    align-self: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+  }
+  
   .income-header-controls {
     width: 100%;
     align-items: flex-end;
