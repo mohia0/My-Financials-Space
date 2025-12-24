@@ -1504,7 +1504,13 @@ async function saveProfile({ fullName, file }) {
       } else {
         console.log('🆕 Current year tab not found, creating it');
         // If current year tab doesn't exist, create it and set as active
-        createYearTab(currentYearString);
+        // Ensure the year exists in state.income
+        if (!state.income[currentYearString]) {
+          state.income[currentYearString] = [];
+          console.log(`🆕 Created current year ${currentYearString} in income data structure`);
+        }
+        // Use addYearToTabs to create the tab (it handles everything)
+        addYearToTabs(currentYearString);
         switchYear(currentYearString);
       }
     }
@@ -1691,7 +1697,20 @@ async function saveProfile({ fullName, file }) {
       refreshYearManagementPanel();
       
       // Save changes locally and to Supabase
+      // This will update available_years in user_settings (removing the deleted year)
       save();
+      
+      // Explicitly sync to ensure available_years is updated immediately
+      if (typeof window.saveToSupabase === 'function' && window.syncSystemReady && window.isInitialized) {
+        setTimeout(async () => {
+          try {
+            await window.saveToSupabase();
+            console.log(`✅ Year ${year} removed and available_years updated in Supabase`);
+          } catch (error) {
+            console.error(`❌ Failed to sync year removal:`, error);
+          }
+        }, 100);
+      }
       
       // Close dialog
       closeYearConfirmDialog();
@@ -1951,17 +1970,25 @@ async function saveProfile({ fullName, file }) {
       const dataYears = Object.keys(dataToUse).map(year => parseInt(year));
       console.log('📅 Found years:', dataYears);
       
+      const currentYearNum = new Date().getFullYear();
       let years = [];
       
       // Only add default years if there are NO years at all
       if (dataYears.length === 0) {
-        const currentYearNum = new Date().getFullYear();
         years = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
-
       } else {
-        // Use only the years that have data
+        // Use the years that have data
         years = dataYears;
-
+        
+        // Always ensure current year exists (create it if it doesn't)
+        if (!years.includes(currentYearNum)) {
+          years.push(currentYearNum);
+          // Initialize the year in state.income if it doesn't exist
+          if (!state.income[currentYearNum.toString()]) {
+            state.income[currentYearNum.toString()] = [];
+            console.log(`🆕 Created current year ${currentYearNum} in income data structure`);
+          }
+        }
       }
       
       // Sort years chronologically
@@ -1984,30 +2011,26 @@ async function saveProfile({ fullName, file }) {
       });
       
       // Always set current year as active (prioritize current year)
+      // This ensures that when 2026 comes, it will automatically be the default view
       if (years.length > 0) {
         const currentYearNum = new Date().getFullYear();
+        const currentYearStr = currentYearNum.toString();
+        
+        // Always prioritize current year - set it as active
         if (years.includes(currentYearNum)) {
-          // Current year exists, set it as active
-          switchYear(currentYearNum.toString());
-          console.log('✅ Set current year as active:', currentYearNum);
+          switchYear(currentYearStr);
+          console.log('✅ Set current year as active (default view):', currentYearNum);
         } else {
-          // Current year doesn't exist, set the most recent year as active
+          // This shouldn't happen now since we ensure current year exists above
+          // But as a fallback, set the most recent year as active
           const mostRecentYear = years[years.length - 1];
           switchYear(mostRecentYear.toString());
-          console.log('✅ Set most recent year as active:', mostRecentYear);
+          console.log('⚠️ Current year not found, set most recent year as active:', mostRecentYear);
         }
       }
       
-
-      
-      // Save years to Supabase to ensure they're persisted
-      console.log('🔄 New year added, triggering sync...');
-      save(); // This will update available_years in user_settings
-      
-      // Force sync to ensure new year is saved to cloud
-      setTimeout(async () => {
-        await syncNewYearToCloud(newYear);
-      }, 100); // Small delay to ensure state is updated
+      // Note: Years are saved automatically when state.income is updated
+      // The save() function will update available_years in user_settings
     }
     
     function addYearToTabs(newYear) {
@@ -2044,9 +2067,20 @@ async function saveProfile({ fullName, file }) {
       yearTabsContainer.insertBefore(newYearTab, insertBefore);
       
       // Save changes locally and to Supabase
+      // This will update available_years in user_settings (including the new year)
       save();
       
-
+      // Explicitly sync to ensure available_years is updated immediately
+      if (typeof window.saveToSupabase === 'function' && window.syncSystemReady && window.isInitialized) {
+        setTimeout(async () => {
+          try {
+            await window.saveToSupabase();
+            console.log(`✅ Year ${newYear} added and available_years updated in Supabase`);
+          } catch (error) {
+            console.error(`❌ Failed to sync new year:`, error);
+          }
+        }, 100);
+      }
     }
     
     function updateIncomeForYear(year) {
@@ -4479,14 +4513,32 @@ async function saveProfile({ fullName, file }) {
             });
           });
           
+          // Also preserve years from available_years in settings (even if empty)
+          // This ensures manually added years (like 2026) persist even without income entries
+          if (settingsResult.status === 'fulfilled' && settingsResult.value.data && settingsResult.value.data.available_years) {
+            const availableYears = settingsResult.value.data.available_years;
+            console.log('📅 Restoring years from available_years:', availableYears);
+            if (Array.isArray(availableYears)) {
+              availableYears.forEach(year => {
+                const yearStr = year.toString();
+                if (!newIncomeData[yearStr]) {
+                  newIncomeData[yearStr] = [];
+                  console.log(`✅ Restored empty year ${yearStr} from available_years`);
+                }
+              });
+            }
+          }
+          
           // Replace state.income with fresh data from Supabase
           state.income = newIncomeData;
           
-          // Update available_years in settings to include all years from income data
-          const incomeYears = Object.keys(state.income).map(year => parseInt(year)).sort((a, b) => a - b);
-          
-          // Create year tabs for all years found in Supabase data
+          // Create year tabs for all years found in Supabase data (including empty years from available_years)
           createYearTabsFromData(state.income);
+          
+          // Ensure current year is selected after loading (especially important when switching to income tab)
+          if (currentPage === 'income') {
+            ensureCurrentYearSelected();
+          }
         } else {
           // If no income data in Supabase, keep the years that were initialized from settings
           // but ensure we have at least the default years
@@ -7527,6 +7579,20 @@ async function saveProfile({ fullName, file }) {
           }
           incomeByYear[year].push(mapSupabaseToLocalIncome(income));
         });
+        
+        // Also preserve years from available_years in settings (even if empty)
+        // This ensures manually added years (like 2026) persist even without income entries
+        if (data.settings && data.settings.available_years && Array.isArray(data.settings.available_years)) {
+          console.log('📅 Restoring years from available_years in smoothUpdateData:', data.settings.available_years);
+          data.settings.available_years.forEach(year => {
+            const yearStr = year.toString();
+            if (!incomeByYear[yearStr]) {
+              incomeByYear[yearStr] = [];
+              console.log(`✅ Restored empty year ${yearStr} from available_years`);
+            }
+          });
+        }
+        
         state.income = incomeByYear;
       }
       

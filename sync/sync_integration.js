@@ -362,6 +362,20 @@ async function loadFromSupabase() {
             }
             incomeByYear[year].push(mapSupabaseToLocalIncome(income));
           });
+          
+          // Also preserve years from available_years in settings (even if empty)
+          // This ensures manually added years (like 2026) persist even without income entries
+          if (data.settings && data.settings.available_years && Array.isArray(data.settings.available_years)) {
+            console.log('📅 Restoring years from available_years:', data.settings.available_years);
+            data.settings.available_years.forEach(year => {
+              const yearStr = year.toString();
+              if (!incomeByYear[yearStr]) {
+                incomeByYear[yearStr] = [];
+                console.log(`✅ Restored empty year ${yearStr} from available_years`);
+              }
+            });
+          }
+          
           state.income = incomeByYear;
         }
       }
@@ -382,6 +396,13 @@ async function loadFromSupabase() {
         if (data.income && typeof createYearTabsFromData === 'function') {
           console.log('🔄 Updating year tabs from loaded income data...');
           createYearTabsFromData(state.income);
+          
+          // Ensure current year is selected after loading (especially important when on income page)
+          if (typeof ensureCurrentYearSelected === 'function') {
+            setTimeout(() => {
+              ensureCurrentYearSelected();
+            }, 100);
+          }
         }
         
         // Update UI elements after loading data from Supabase
