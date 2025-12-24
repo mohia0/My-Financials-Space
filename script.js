@@ -11027,10 +11027,10 @@ async function saveProfile({ fullName, file }) {
             insights.push(`📊 Monthly average: ${formatCurrencyWithUSD(usdToSelectedCurrency(monthlyAverage), monthlyAverage)} per month this year.`);
           }
           
-          // Project count
-          const uniqueProjects = new Set(currentYearIncome.map(entry => entry.projectName)).size;
-          if (uniqueProjects > 0) {
-            insights.push(`📈 Active projects: ${uniqueProjects} different projects this year.`);
+          // Average payment amount
+          if (currentYearIncome.length > 0) {
+            const avgPaymentAmount = currentYearTotal / currentYearIncome.length;
+            insights.push(`💵 Average payment: ${formatCurrencyWithUSD(usdToSelectedCurrency(avgPaymentAmount), avgPaymentAmount)} per transaction.`);
           }
           
           // Payment methods analysis
@@ -11502,7 +11502,7 @@ async function saveProfile({ fullName, file }) {
             'Income velocity': 'Your average daily and hourly earnings rate this year.',
             'Year-to-date earnings': 'Total income earned so far this year across all projects.',
             'Monthly average': 'Average monthly income this year based on months elapsed.',
-            'Active projects': 'Number of different projects you\'ve received income from this year.',
+            'Average payment': 'The average amount of each income transaction this year.',
             'Primary payment method': 'The payment method that handles most of your income.',
             'Top project type': 'The project category/tag that generates the most income.',
             'Payment frequency': 'Average number of days between income payments this year.',
