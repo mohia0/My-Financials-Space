@@ -14913,6 +14913,12 @@ async function saveProfile({ fullName, file }) {
         updateIncomeSum(currentYearData);
         // Live KPI updates are already handled in updateIncomeRowCalculations
       });
+      // Select all text on focus for easy editing
+      allPaymentInput.addEventListener('focus', function() {
+        if (!state.inputsLocked) {
+          this.select();
+        }
+      });
       allPaymentDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
       const allPaymentWrapper = allPaymentDiv.querySelector('.cost-input-wrapper');
       const allPaymentDollarDisplay = document.createElement('span');
@@ -14941,6 +14947,12 @@ async function saveProfile({ fullName, file }) {
         const currentYearData = state.income[currentYear] || [];
         updateIncomeSum(currentYearData);
         // Live KPI updates are already handled in updateIncomeRowCalculations
+      });
+      // Select all text on focus for easy editing
+      paidUsdInput.addEventListener('focus', function() {
+        if (!state.inputsLocked) {
+          this.select();
+        }
       });
       paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
       const paidUsdWrapper = paidUsdDiv.querySelector('.cost-input-wrapper');
@@ -15525,7 +15537,16 @@ async function saveProfile({ fullName, file }) {
       const paidUsdDiv = projectRowElement.children[6];
       const paidEgpDiv = projectRowElement.children[7];
       
-      if (allPaymentDiv) allPaymentDiv.textContent = `$${nfINT.format(totalAllPayment)}`;
+      // Update allPayment input value if it exists (editable field)
+      if (allPaymentDiv) {
+        const allPaymentInput = allPaymentDiv.querySelector('.cost-input');
+        if (allPaymentInput) {
+          allPaymentInput.value = (totalAllPayment || 0).toFixed(2);
+        } else {
+          // Fallback to text if input doesn't exist
+          allPaymentDiv.textContent = `$${nfINT.format(totalAllPayment)}`;
+        }
+      }
       if (paidUsdDiv) paidUsdDiv.textContent = `$${nfINT.format(totalPaidUsd)}`;
       if (paidEgpDiv) paidEgpDiv.textContent = `${state.currencySymbol} ${nfINT.format(Math.round(totalPaidSelected))}`;
       
@@ -15800,9 +15821,53 @@ async function saveProfile({ fullName, file }) {
       });
       dateDiv.appendChild(addDateBtn);
       
+      // All Payment - make it editable in grouped view
       const allPaymentDiv = document.createElement('div');
-      allPaymentDiv.style.fontWeight = '600';
-      allPaymentDiv.textContent = `$${nfINT.format(totalAllPayment)}`;
+      allPaymentDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
+      const allPaymentWrapper = allPaymentDiv.querySelector('.cost-input-wrapper');
+      
+      const allPaymentDollarDisplay = document.createElement('span');
+      allPaymentDollarDisplay.className = 'cost-dollar-display';
+      allPaymentDollarDisplay.textContent = '$';
+      allPaymentWrapper.appendChild(allPaymentDollarDisplay);
+      
+      const allPaymentInput = document.createElement('input');
+      allPaymentInput.className = 'input cost-input';
+      allPaymentInput.type = 'number';
+      allPaymentInput.step = '0.01';
+      allPaymentInput.value = (totalAllPayment || 0).toFixed(2);
+      allPaymentInput.placeholder = 'Total $';
+      allPaymentInput.style.fontSize = '0.75rem';
+      allPaymentInput.style.padding = '0.5rem 0.75rem';
+      allPaymentInput.style.borderRadius = '8px';
+      allPaymentInput.style.fontWeight = '600';
+      if (state.inputsLocked) {
+        allPaymentInput.disabled = true;
+        allPaymentInput.style.cursor = 'not-allowed';
+        allPaymentInput.style.opacity = '0.6';
+      }
+      allPaymentInput.addEventListener('input', function() {
+        if (state.inputsLocked) return;
+        const newValue = Number(this.value) || 0;
+        // Update allPayment for all rows in the project
+        projectRows.forEach(row => {
+          row.allPayment = newValue;
+          instantSaveIncomeRow(row, currentYear);
+        });
+        // Update project data structure
+        project.allPayment = newValue;
+        // Live update totals
+        updateProjectRowTotals(project.name, projectRow);
+        updateIncomeKPIsLive();
+      });
+      // Select all text on focus for easy editing
+      allPaymentInput.addEventListener('focus', function() {
+        if (!state.inputsLocked) {
+          this.select();
+        }
+      });
+      allPaymentWrapper.appendChild(allPaymentInput);
+      
       const paidUsdDiv = document.createElement('div');
       paidUsdDiv.style.fontWeight = '600';
       paidUsdDiv.textContent = `$${nfINT.format(totalPaidUsd)}`;
@@ -16084,6 +16149,12 @@ async function saveProfile({ fullName, file }) {
             saveDateEntryToProject(project.name, dateIdx, dateEntry, currentYear);
             // Live update main project row totals
             updateProjectRowTotals(project.name, projectRow);
+          }
+        });
+        // Select all text on focus for easy editing
+        paidUsdInput.addEventListener('focus', function() {
+          if (!state.inputsLocked) {
+            this.select();
           }
         });
         paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
