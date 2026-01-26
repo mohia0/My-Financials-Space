@@ -6521,7 +6521,7 @@ header img:hover {
   right: 0;
   background: var(--bg);
   border-top: 1px solid var(--stroke);
-  padding: 8px 16px 12px;
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom, 0));
   z-index: 9999; /* Higher z-index to ensure it stays on top */
   backdrop-filter: blur(10px);
   /* Ensure it stays within viewport */
@@ -6539,9 +6539,6 @@ header img:hover {
   /* Force hardware acceleration for smooth performance */
   transform: translateZ(0);
   will-change: transform;
-    /* Enhanced safe area handling for system navigation bars */
-    bottom: max(env(safe-area-inset-bottom, 0), 40px);
-    padding-bottom: max(50px, calc(env(safe-area-inset-bottom, 0) + 40px));
 }
 
 .mobile-nav-btn {
@@ -6593,10 +6590,10 @@ header img:hover {
 @media (max-width: 768px) {
   .mobile-bottom-nav {
     display: flex !important;
-    /* Enhanced safe area handling for all mobile devices */
-    bottom: max(env(safe-area-inset-bottom, 0), 40px) !important;
-    /* Generous padding to prevent system navbar overlap (iOS/Android) */
-    padding-bottom: max(50px, calc(env(safe-area-inset-bottom, 0) + 40px)) !important;
+    /* Fixed at the bottom with safe area support */
+    bottom: 0 !important;
+    /* Safe area padding to prevent system navbar overlap (iOS/Android) */
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0)) !important;
     /* Force visibility and proper positioning */
     position: fixed !important;
     left: 0 !important;
@@ -6614,11 +6611,11 @@ header img:hover {
   
   /* Add bottom padding to main content to account for mobile nav */
   #mainContent {
-    padding-bottom: calc(7rem + max(env(safe-area-inset-bottom, 0), 40px)) !important; /* Account for safe area and system navbar */
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0)) !important; /* Account for safe area and system navbar */
     /* Ensure content doesn't get hidden behind the sticky toolbar */
     margin-bottom: 0;
     /* Additional Android WebView compatibility */
-    min-height: calc(100vh - max(env(safe-area-inset-bottom, 0), 40px));
+    min-height: calc(100vh - env(safe-area-inset-bottom, 0));
   }
   
   /* Allow horizontal scroll for tables on mobile */
@@ -6726,11 +6723,11 @@ header img:hover {
     opacity: 1 !important;
     visibility: visible !important;
     transform: translateY(0) !important;
-    /* Enhanced safe area handling for all mobile devices */
+    /* Fixed at the bottom with safe area support */
     position: fixed !important;
-    bottom: max(env(safe-area-inset-bottom, 0), 40px) !important;
-    /* Generous padding to prevent system navbar overlap */
-    padding-bottom: max(50px, calc(env(safe-area-inset-bottom, 0) + 40px)) !important;
+    bottom: 0 !important;
+    /* Safe area padding to prevent system navbar overlap */
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0)) !important;
     /* Ensure it's above system UI */
     z-index: 99999 !important;
     /* Prevent system navbar overlap */
@@ -6752,8 +6749,8 @@ header img:hover {
   
   /* Android WebView specific styles */
   .mobile-bottom-nav.android-webview {
-    bottom: 40px !important;
-    padding-bottom: max(50px, calc(env(safe-area-inset-bottom, 0) + 40px)) !important;
+    bottom: 0 !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0)) !important;
     z-index: 99999 !important;
     position: fixed !important;
     left: 0 !important;
@@ -6776,8 +6773,8 @@ header img:hover {
     gap: 4px;
     padding-left: 12px !important;
     padding-right: 12px !important;
-    /* Padding bottom is handled above with enhanced safe area */
     padding-top: 8px !important;
+    /* Padding bottom is handled above with safe area support */
   }
   
   /* Ensure proper button sizing on very small screens */

@@ -1393,7 +1393,7 @@ async function saveProfile({ fullName, file }) {
         mobileNav.style.left = '0';
         mobileNav.style.right = '0';
         mobileNav.style.width = '100%';
-        mobileNav.style.zIndex = '1000';
+        mobileNav.style.zIndex = '99999';
       }
     }
     
