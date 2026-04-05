@@ -13997,7 +13997,7 @@ async function saveProfile({ fullName, file }) {
          costInput.className = 'input cost-input';
          costInput.type = 'number';
          costInput.step = '0.01';
-         costInput.value = (row.cost || 0).toFixed(2);
+         costInput.value = (row.cost || 0);
          costInput.addEventListener('input', function() {
            row.cost = Number(this.value) || 0;
            save('cost-input');
@@ -14010,7 +14010,7 @@ async function saveProfile({ fullName, file }) {
            // KPIs will be updated by updateRowCalculations
          });
          costInput.addEventListener('blur', function() {
-           this.value = (Number(this.value) || 0).toFixed(2);
+           this.value = (Number(this.value) || 0);
          });
          costDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
          const wrapper = costDiv.querySelector('.cost-input-wrapper');
@@ -14901,7 +14901,7 @@ async function saveProfile({ fullName, file }) {
       allPaymentInput.className = 'input cost-input';
       allPaymentInput.type = 'number';
       allPaymentInput.step = '0.01';
-      allPaymentInput.value = (row.allPayment || 0).toFixed(2);
+      allPaymentInput.value = (row.allPayment || 0);
       allPaymentInput.placeholder = 'Total $';
       allPaymentInput.style.fontSize = '0.75rem';
       allPaymentInput.style.padding = '0.5rem 0.75rem';
@@ -14924,7 +14924,7 @@ async function saveProfile({ fullName, file }) {
       });
       allPaymentInput.addEventListener('blur', function() {
         if (!state.inputsLocked) {
-          this.value = (Number(this.value) || 0).toFixed(2);
+          this.value = (Number(this.value) || 0);
         }
       });
       allPaymentDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
@@ -14941,7 +14941,7 @@ async function saveProfile({ fullName, file }) {
       paidUsdInput.className = 'input cost-input';
       paidUsdInput.type = 'number';
       paidUsdInput.step = '0.01';
-      paidUsdInput.value = (row.paidUsd || 0).toFixed(2);
+      paidUsdInput.value = (row.paidUsd || 0);
       paidUsdInput.placeholder = 'Paid $';
       paidUsdInput.style.fontSize = '0.75rem';
       paidUsdInput.style.padding = '0.5rem 0.75rem';
@@ -14964,7 +14964,7 @@ async function saveProfile({ fullName, file }) {
       });
       paidUsdInput.addEventListener('blur', function() {
         if (!state.inputsLocked) {
-          this.value = (Number(this.value) || 0).toFixed(2);
+          this.value = (Number(this.value) || 0);
         }
       });
       paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
@@ -15555,7 +15555,7 @@ async function saveProfile({ fullName, file }) {
         const allPaymentInput = allPaymentDiv.querySelector('.cost-input');
         if (allPaymentInput) {
           if (document.activeElement !== allPaymentInput) {
-            allPaymentInput.value = (totalAllPayment || 0).toFixed(2);
+            allPaymentInput.value = (totalAllPayment || 0);
           }
         } else {
           // Fallback to text if input doesn't exist
@@ -15850,7 +15850,7 @@ async function saveProfile({ fullName, file }) {
       allPaymentInput.className = 'input cost-input';
       allPaymentInput.type = 'number';
       allPaymentInput.step = '0.01';
-      allPaymentInput.value = (totalAllPayment || 0).toFixed(2);
+      allPaymentInput.value = (totalAllPayment || 0);
       allPaymentInput.placeholder = 'Total $';
       allPaymentInput.style.fontSize = '0.75rem';
       allPaymentInput.style.padding = '0.5rem 0.75rem';
@@ -15883,7 +15883,7 @@ async function saveProfile({ fullName, file }) {
       });
       allPaymentInput.addEventListener('blur', function() {
         if (!state.inputsLocked) {
-          this.value = (Number(this.value) || 0).toFixed(2);
+          this.value = (Number(this.value) || 0);
         }
       });
       allPaymentWrapper.appendChild(allPaymentInput);
@@ -16139,7 +16139,7 @@ async function saveProfile({ fullName, file }) {
         paidUsdInput.className = 'input cost-input';
         paidUsdInput.type = 'number';
         paidUsdInput.step = '0.01';
-        paidUsdInput.value = (actualRow?.paidUsd || dateEntry.paidUsd || 0).toFixed(2);
+        paidUsdInput.value = (actualRow?.paidUsd || dateEntry.paidUsd || 0);
         paidUsdInput.placeholder = 'Paid $';
         paidUsdInput.style.fontSize = '0.75rem';
         paidUsdInput.style.padding = '0.5rem 0.75rem';
@@ -16179,7 +16179,7 @@ async function saveProfile({ fullName, file }) {
         });
         paidUsdInput.addEventListener('blur', function() {
           if (!state.inputsLocked) {
-            this.value = (Number(this.value) || 0).toFixed(2);
+            this.value = (Number(this.value) || 0);
           }
         });
         paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
