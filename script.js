@@ -114,7 +114,8 @@ function groupIncomeByProject(arr) {
           group.dates.push({
             ...dateEntry,
             allPayment: dateEntry.allPayment || normalized.allPayment || 0, // Ensure allPayment is included
-            projectId: normalized.id // Track which original row this came from
+            projectId: normalized.id, // Track which original row this came from
+            _ref: row
           });
         });
       } else {
@@ -127,7 +128,8 @@ function groupIncomeByProject(arr) {
         method: normalized.method || 'Bank Transfer',
         progress: normalized.progress || 0,
         note: normalized.note || 'Full Balance',
-        projectId: normalized.id
+        projectId: normalized.id,
+        _ref: row
       });
     }
   });
@@ -15991,17 +15993,16 @@ async function saveProfile({ fullName, file }) {
         const currentYearData = state.income[currentYear] || [];
         const projectRows = currentYearData.filter(row => row.name === project.name);
         
-        // Try to match by date and other properties for better accuracy
-        let actualRow = null;
-        if (dateEntry.date) {
-          // Try to find exact match by date
+        // Use the tracked original row reference
+        let actualRow = dateEntry._ref || null;
+        
+        // Fallback robust matching just in case
+        if (!actualRow && dateEntry.date) {
           actualRow = projectRows.find(row => row.date === dateEntry.date);
         }
-        // If no exact match, try by index
         if (!actualRow && dateIdx < projectRows.length) {
           actualRow = projectRows[dateIdx];
         }
-        // Fallback to first row
         if (!actualRow && projectRows.length > 0) {
           actualRow = projectRows[0];
         }
@@ -16757,7 +16758,7 @@ async function saveProfile({ fullName, file }) {
     const projectRows = currentYearData.filter(row => row.name === projectName);
     
     if (projectRows.length > 0 && dateIndex < projectRows.length) {
-      const rowToUpdate = projectRows[dateIndex];
+      const rowToUpdate = dateEntry._ref || projectRows[dateIndex];
       
       // Update the row with the date entry data
       if (dateEntry.date !== undefined) rowToUpdate.date = dateEntry.date;
