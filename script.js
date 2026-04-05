@@ -14009,6 +14009,9 @@ async function saveProfile({ fullName, file }) {
            updateExpenseSum(containerId, arr, isBiz);
            // KPIs will be updated by updateRowCalculations
          });
+         costInput.addEventListener('blur', function() {
+           this.value = (Number(this.value) || 0).toFixed(2);
+         });
          costDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
          const wrapper = costDiv.querySelector('.cost-input-wrapper');
          
@@ -14919,6 +14922,11 @@ async function saveProfile({ fullName, file }) {
           this.select();
         }
       });
+      allPaymentInput.addEventListener('blur', function() {
+        if (!state.inputsLocked) {
+          this.value = (Number(this.value) || 0).toFixed(2);
+        }
+      });
       allPaymentDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
       const allPaymentWrapper = allPaymentDiv.querySelector('.cost-input-wrapper');
       const allPaymentDollarDisplay = document.createElement('span');
@@ -14952,6 +14960,11 @@ async function saveProfile({ fullName, file }) {
       paidUsdInput.addEventListener('focus', function() {
         if (!state.inputsLocked) {
           this.select();
+        }
+      });
+      paidUsdInput.addEventListener('blur', function() {
+        if (!state.inputsLocked) {
+          this.value = (Number(this.value) || 0).toFixed(2);
         }
       });
       paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
@@ -15541,7 +15554,9 @@ async function saveProfile({ fullName, file }) {
       if (allPaymentDiv) {
         const allPaymentInput = allPaymentDiv.querySelector('.cost-input');
         if (allPaymentInput) {
-          allPaymentInput.value = (totalAllPayment || 0).toFixed(2);
+          if (document.activeElement !== allPaymentInput) {
+            allPaymentInput.value = (totalAllPayment || 0).toFixed(2);
+          }
         } else {
           // Fallback to text if input doesn't exist
           allPaymentDiv.textContent = `$${nfINT.format(totalAllPayment)}`;
@@ -15866,6 +15881,11 @@ async function saveProfile({ fullName, file }) {
           this.select();
         }
       });
+      allPaymentInput.addEventListener('blur', function() {
+        if (!state.inputsLocked) {
+          this.value = (Number(this.value) || 0).toFixed(2);
+        }
+      });
       allPaymentWrapper.appendChild(allPaymentInput);
       
       const paidUsdDiv = document.createElement('div');
@@ -16155,6 +16175,11 @@ async function saveProfile({ fullName, file }) {
         paidUsdInput.addEventListener('focus', function() {
           if (!state.inputsLocked) {
             this.select();
+          }
+        });
+        paidUsdInput.addEventListener('blur', function() {
+          if (!state.inputsLocked) {
+            this.value = (Number(this.value) || 0).toFixed(2);
           }
         });
         paidUsdDiv.innerHTML = '<div class="cost-input-wrapper"></div>';
