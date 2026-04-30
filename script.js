@@ -1,4 +1,4 @@
-// Global variables
+﻿// Global variables
 let state = {
   fx: null,
   autosave: 'on',
@@ -102,23 +102,30 @@ function groupIncomeByProject(arr) {
         icon: normalized.icon || 'fa:dollar-sign',
         id: normalized.id, // Keep first row's ID
         order: normalized.order || 0,
-        dates: []
+        dates: [],
+        _originalRows: [row]
       });
+    } else {
+      const group = groups.get(projectName);
+      group._originalRows = group._originalRows || [];
+      group._originalRows.push(row);
     }
     
     const group = groups.get(projectName);
     
-      // Add all dates from this row to the group
-      if (normalized.dates && normalized.dates.length > 0) {
-        normalized.dates.forEach(dateEntry => {
-          group.dates.push({
-            ...dateEntry,
-            allPayment: dateEntry.allPayment || normalized.allPayment || 0, // Ensure allPayment is included
-            projectId: normalized.id, // Track which original row this came from
-            _ref: row
-          });
+    // Add all dates from this row to the group
+    if (normalized.dates && normalized.dates.length > 0) {
+      normalized.dates.forEach((dateEntry, originalIdx) => {
+        group.dates.push({
+          ...dateEntry,
+          allPayment: dateEntry.allPayment || normalized.allPayment || 0, // Ensure allPayment is included
+          projectId: normalized.id, // Track which original row this came from
+          _ref: row,
+          _originalDateIndex: originalIdx,
+          _originalRow: row
         });
-      } else {
+      });
+    } else {
       // Old format: create a date entry from the row
       group.dates.push({
         date: normalized.date || '',
@@ -129,7 +136,8 @@ function groupIncomeByProject(arr) {
         progress: normalized.progress || 0,
         note: normalized.note || 'Full Balance',
         projectId: normalized.id,
-        _ref: row
+        _ref: row,
+        _originalRow: row
       });
     }
   });
@@ -6251,7 +6259,9 @@ async function saveProfile({ fullName, file }) {
     
     // Instant save function for expense financial inputs - 0ms delay
     let expenseSaveInProgress = new Set();
+    let pendingExpenseSaves = new Map();
     let incomeSaveInProgress = new Set();
+    let pendingIncomeSaves = new Map();
     
     async function instantSaveExpenseRow(expenseRow, isBiz) {
       console.log('💾 instantSaveExpenseRow called:', { 
@@ -6283,8 +6293,9 @@ async function saveProfile({ fullName, file }) {
       const tableName = isBiz ? 'business_expenses' : 'personal_expenses';
       const rowKey = `${tableName}-${expenseRow.id || 'new'}`;
       
-      // Prevent duplicate saves for the same row
+      // Prevent duplicate saves for the same row, but queue the latest data
       if (expenseSaveInProgress.has(rowKey)) {
+        pendingExpenseSaves.set(rowKey, { expenseRow, isBiz });
         return;
       }
       
@@ -6347,6 +6358,13 @@ async function saveProfile({ fullName, file }) {
       } finally {
         // Remove from in-progress set
         expenseSaveInProgress.delete(rowKey);
+        
+        // Execute any pending save for this row
+        if (pendingExpenseSaves.has(rowKey)) {
+          const pending = pendingExpenseSaves.get(rowKey);
+          pendingExpenseSaves.delete(rowKey);
+          setTimeout(() => instantSaveExpenseRow(pending.expenseRow, pending.isBiz), 10);
+        }
       }
     }
     
@@ -6380,8 +6398,9 @@ async function saveProfile({ fullName, file }) {
       
       const rowKey = `income-${incomeRow.id || 'new'}`;
       
-      // Prevent duplicate saves for the same row
+      // Prevent duplicate saves for the same row, but queue the latest data
       if (incomeSaveInProgress.has(rowKey)) {
+        pendingIncomeSaves.set(rowKey, { incomeRow, year });
         return;
       }
       
@@ -6470,6 +6489,13 @@ async function saveProfile({ fullName, file }) {
       } finally {
         // Remove from in-progress set
         incomeSaveInProgress.delete(rowKey);
+        
+        // Execute any pending save for this row
+        if (pendingIncomeSaves.has(rowKey)) {
+          const pending = pendingIncomeSaves.get(rowKey);
+          pendingIncomeSaves.delete(rowKey);
+          setTimeout(() => instantSaveIncomeRow(pending.incomeRow, pending.year), 10);
+        }
       }
     }
 
@@ -14429,7 +14455,7 @@ async function saveProfile({ fullName, file }) {
         const grouped = groupIncomeByProject(currentYearData);
         
         grouped.forEach(project => {
-          const projectRows = currentYearData.filter(row => row.name === project.name);
+          const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === project.name);
           
           // Sort project rows by date to maintain order
           projectRows.sort((a, b) => {
@@ -14542,11 +14568,15 @@ async function saveProfile({ fullName, file }) {
     wrap.innerHTML = '';
     
     // Expand multi-date rows into separate rows for standard view
+    // IMPORTANT: use the original `row` reference for single-date rows so that
+    // event-listener mutations (row.name = ..., row.paidUsd = ...) write directly
+    // back into state.income[year] and are never lost on re-render.
     const expandedArr = [];
     arr.forEach(row => {
       const normalized = normalizeIncomeRow(row);
       if (normalized.dates && normalized.dates.length > 1) {
-        // Multi-date row: create a row for each date
+        // Multi-date row: create a display row for each date entry.
+        // Carry _originalRef so saves still target the right state object.
         normalized.dates.forEach((dateEntry, dateIdx) => {
           expandedArr.push({
             ...normalized,
@@ -14556,22 +14586,29 @@ async function saveProfile({ fullName, file }) {
             method: dateEntry.method,
             progress: dateEntry.progress,
             note: dateEntry.note,
-            // Keep dates array for grouped view compatibility
             dates: normalized.dates,
-            dateIndex: dateIdx
+            dateIndex: dateIdx,
+            _originalRef: row // ← pointer back to original state entry
           });
         });
       } else {
-        // Single date row (old format or single date in new format)
-        expandedArr.push({
-          ...normalized,
-          date: normalized.dates && normalized.dates[0] ? normalized.dates[0].date : normalized.date,
-          paidUsd: normalized.dates && normalized.dates[0] ? normalized.dates[0].paidUsd : normalized.paidUsd,
-          tags: normalized.dates && normalized.dates[0] ? normalized.dates[0].tags : normalized.tags,
-          method: normalized.dates && normalized.dates[0] ? normalized.dates[0].method : normalized.method,
-          progress: normalized.dates && normalized.dates[0] ? normalized.dates[0].progress : normalized.progress,
-          note: normalized.dates && normalized.dates[0] ? normalized.dates[0].note : normalized.note
-        });
+        // Single date row: push the ORIGINAL state object directly.
+        // normalizeIncomeRow returns the same object if it already has `dates`,
+        // otherwise it returns a fresh object — in that case we still need to
+        // write mutations back to the real state entry, so we set _originalRef.
+        const displayRow = row.dates && Array.isArray(row.dates)
+          ? row           // already normalised in-place — IS the state entry
+          : {
+              ...normalized,
+              date: normalized.dates && normalized.dates[0] ? normalized.dates[0].date : normalized.date,
+              paidUsd: normalized.dates && normalized.dates[0] ? normalized.dates[0].paidUsd : normalized.paidUsd,
+              tags: normalized.dates && normalized.dates[0] ? normalized.dates[0].tags : normalized.tags,
+              method: normalized.dates && normalized.dates[0] ? normalized.dates[0].method : normalized.method,
+              progress: normalized.dates && normalized.dates[0] ? normalized.dates[0].progress : normalized.progress,
+              note: normalized.dates && normalized.dates[0] ? normalized.dates[0].note : normalized.note,
+              _originalRef: row // ← always point back to the real state entry
+            };
+        expandedArr.push(displayRow);
       }
     });
     
@@ -14586,11 +14623,20 @@ async function saveProfile({ fullName, file }) {
     sortedArr.forEach((row, index) => {
       row.order = index;
     });
-    
     // Save updated order to cloud if user is authenticated
+
     if (currentUser && supabaseReady && sortedArr.length > 0) {
       saveIncomeOrderToCloud(sortedArr, currentYear);
     }
+    
+    // Helper: write a field mutation back to the original state entry.
+    // Required for display rows that are copies (have _originalRef).
+    const syncToState = (row, field, value) => {
+      row[field] = value;
+      if (row._originalRef) {
+        row._originalRef[field] = value;
+      }
+    };
     
     sortedArr.forEach((row, idx) => {
       const mUSD = rowIncomeMonthlyUSD(row);
@@ -14609,6 +14655,7 @@ async function saveProfile({ fullName, file }) {
       // Empty spacer div (replaces drag handle)
       const spacerDiv = document.createElement('div');
       spacerDiv.className = 'spacer';
+
       
       // Icon cell
       const iconName = row.icon || 'fa:dollar-sign';
@@ -14641,10 +14688,9 @@ async function saveProfile({ fullName, file }) {
       nameInput.style.padding = '0.4rem 0.6rem';
       nameInput.style.borderRadius = '8px';
       nameInput.addEventListener('input', function() {
-
-        row.name = this.value;
+        syncToState(row, 'name', this.value);
         saveInputValue('projectName', this.value);
-        instantSaveIncomeRow(row, currentYear);
+        instantSaveIncomeRow(row._originalRef || row, currentYear);
       });
       // Removed autocomplete to remove the dropdown arrow
       // addAutocompleteToInput(nameInput, 'projectName');
@@ -14886,9 +14932,9 @@ async function saveProfile({ fullName, file }) {
       
       // Save date when changed
       dateInput.addEventListener('change', function() {
-        row.date = this.value;
+        syncToState(row, 'date', this.value);
         updateDateDisplay();
-        instantSaveIncomeRow(row, currentYear);
+        instantSaveIncomeRow(row._originalRef || row, currentYear);
         updateIncomeKPIsLive();
       });
       
@@ -14909,9 +14955,8 @@ async function saveProfile({ fullName, file }) {
       allPaymentInput.style.padding = '0.5rem 0.75rem';
       allPaymentInput.style.borderRadius = '8px';
       allPaymentInput.addEventListener('input', function() {
-
-        row.allPayment = Number(this.value) || 0;
-        instantSaveIncomeRow(row, currentYear);
+        syncToState(row, 'allPayment', Number(this.value) || 0);
+        instantSaveIncomeRow(row._originalRef || row, currentYear);
         updateIncomeRowCalculations(div, row);
         // Update totals live
         const currentYearData = state.income[currentYear] || [];
@@ -14949,9 +14994,8 @@ async function saveProfile({ fullName, file }) {
       paidUsdInput.style.padding = '0.5rem 0.75rem';
       paidUsdInput.style.borderRadius = '8px';
       paidUsdInput.addEventListener('input', function() {
-
-        row.paidUsd = Number(this.value) || 0;
-        instantSaveIncomeRow(row, currentYear);
+        syncToState(row, 'paidUsd', Number(this.value) || 0);
+        instantSaveIncomeRow(row._originalRef || row, currentYear);
         updateIncomeRowCalculations(div, row);
         // Update totals live
         const currentYearData = state.income[currentYear] || [];
@@ -15093,7 +15137,9 @@ async function saveProfile({ fullName, file }) {
             e.stopPropagation();
           }
           
+          // Write to both display row AND original state entry
           rowData.method = option;
+          if (rowData._originalRef) rowData._originalRef.method = option;
           methodTrigger.querySelector('.method-text').textContent = option;
           methodMenu.querySelectorAll('.method-item-minimal').forEach(i => i.classList.remove('selected'));
           this.classList.add('selected');
@@ -15105,7 +15151,7 @@ async function saveProfile({ fullName, file }) {
             methodMenu.remove();
           }
           
-          instantSaveIncomeRow(rowData, currentYear);
+          instantSaveIncomeRow(rowData._originalRef || rowData, currentYear);
         };
         
         // Add click and touch handlers
@@ -15300,18 +15346,7 @@ async function saveProfile({ fullName, file }) {
         
         const saveEdit = () => {
           const newValue = parseFloat(input.value) || 0;
-          row.paidEgp = newValue;
-          
-          // Update the state as well
-          const year = currentYear;
-          const stateRowIndex = (state.income[year] || []).findIndex(stateRow => 
-            stateRow.id === row.id || 
-            (stateRow.name === row.name && stateRow.date === row.date)
-          );
-          
-          if (stateRowIndex !== -1) {
-            state.income[year][stateRowIndex].paidEgp = newValue;
-          }
+          syncToState(row, 'paidEgp', newValue);
           
           // Update the display
           this.textContent = 'EGP ' + nfINT.format(Math.round(newValue));
@@ -15319,9 +15354,8 @@ async function saveProfile({ fullName, file }) {
           
           // Save to cloud using direct save, with fallback to local save
           try {
-            saveIncomeRowDirectly(row, currentYear);
+            saveIncomeRowDirectly(row._originalRef || row, currentYear);
           } catch (error) {
-
             saveToLocal();
             showNotification('Saved locally (cloud sync failed)', 'warning', 2000);
           }
@@ -15392,42 +15426,9 @@ async function saveProfile({ fullName, file }) {
             newProgress = 0;
         }
         
-        row.progress = newProgress;
-        this.textContent = `${newProgress}%`;
-        this.className = `progress-${newProgress}`;
-        
-        // Add enhanced visual feedback with animation
-        this.style.transform = 'scale(0.95)';
-        this.style.transition = 'transform 0.1s ease';
-        
-        // Add a subtle color flash effect (but keep white for 100%)
-        const originalColor = this.style.color;
-        if (newProgress === 100) {
-          // Always keep white text for 100% progress
-          this.style.color = 'white';
-        } else {
-          this.style.color = 'var(--accent)';
-        }
-        
-        setTimeout(() => {
-          this.style.transform = '';
-          // Reset color - keep white for 100%, otherwise use original
-          if (newProgress === 100) {
-            this.style.color = 'white';
-          } else {
-            this.style.color = originalColor || '';
-          }
-          this.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        }, 150);
-        
-        console.log('🔄 Progress changed to:', newProgress, 'for row:', row.id || row.name);
-        console.log('🔄 Row data before save:', {
-          id: row.id,
-          name: row.name,
-          progress: row.progress,
-          note: row.note
-        });
-        instantSaveIncomeRow(row, currentYear);
+        syncToState(row, 'progress', newProgress);
+        console.log('🔄 Progress changed to:', newProgress, 'for row:', (row._originalRef || row).id || row.name);
+        instantSaveIncomeRow(row._originalRef || row, currentYear);
       });
       
       progressDiv.appendChild(progressButton);
@@ -15489,16 +15490,8 @@ async function saveProfile({ fullName, file }) {
         currentPaymentIndex = (currentPaymentIndex + 1) % paymentOptions.length;
         const newPayment = paymentOptions[currentPaymentIndex];
         paymentButton.textContent = newPayment;
-        row.note = newPayment;
-        
-        console.log('💳 Payment changed to:', newPayment, 'for row:', row.id || row.name);
-        console.log('💳 Row data before save:', {
-          id: row.id,
-          name: row.name,
-          progress: row.progress,
-          note: row.note
-        });
-        instantSaveIncomeRow(row, currentYear);
+        syncToState(row, 'note', newPayment);
+        instantSaveIncomeRow(row._originalRef || row, currentYear);
       });
       
       paymentDiv.appendChild(paymentButton);
@@ -15538,7 +15531,7 @@ async function saveProfile({ fullName, file }) {
     // Function to update project row totals live
     const updateProjectRowTotals = (projectName, projectRowElement) => {
       const currentYearData = state.income[currentYear] || [];
-      const projectRows = currentYearData.filter(row => row.name === projectName);
+      const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === projectName);
       
       // Calculate totals from all sub-rows
       const totalPaidUsd = projectRows.reduce((sum, row) => sum + (Number(row.paidUsd) || 0), 0);
@@ -15595,7 +15588,7 @@ async function saveProfile({ fullName, file }) {
     // Function to reassign default payment labels for a project
     const reassignDefaultPaymentLabels = (projectName, preserveCustomLabels = true) => {
       const currentYearData = state.income[currentYear] || [];
-      const projectRows = currentYearData.filter(row => row.name === projectName);
+      const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === projectName);
       
       // Get custom labels (any that don't match default pattern)
       const defaultLabels = ['1st Deposit', '2nd Deposit', '3rd Deposit', '4th Deposit', '5th Deposit'];
@@ -15627,7 +15620,7 @@ async function saveProfile({ fullName, file }) {
     // Render each project group
     grouped.forEach((project, projectIdx) => {
       const currentYearData = state.income[currentYear] || [];
-      const projectRows = currentYearData.filter(row => row.name === project.name);
+      const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === project.name);
       
       // Calculate totals
       const totalPaidUsd = projectRows.reduce((sum, row) => sum + (Number(row.paidUsd) || 0), 0);
@@ -15911,7 +15904,7 @@ async function saveProfile({ fullName, file }) {
         if (projectDelBtn.classList.contains('delete-confirm')) {
           // Delete all rows for this project
           const currentYearData = state.income[currentYear] || [];
-          const projectRows = currentYearData.filter(row => row.name === project.name);
+          const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === project.name);
           
           if (projectRows.length > 0) {
             // Delete all rows from Supabase if they have IDs
@@ -15991,10 +15984,23 @@ async function saveProfile({ fullName, file }) {
       project.dates.forEach((dateEntry, dateIdx) => {
         // Find the actual row in state that corresponds to this date entry
         const currentYearData = state.income[currentYear] || [];
-        const projectRows = currentYearData.filter(row => row.name === project.name);
+        const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === project.name);
         
         // Use the tracked original row reference
         let actualRow = dateEntry._ref || null;
+        
+        // Helper: write a field mutation back to the actual state entry
+        // For multi-date rows (V6 format), update the specific index in actualRow.dates
+        const syncToGroupedState = (field, value) => {
+          dateEntry[field] = value;
+          if (actualRow) {
+            if (actualRow.dates && Array.isArray(actualRow.dates) && dateEntry._originalDateIndex !== undefined) {
+              actualRow.dates[dateEntry._originalDateIndex][field] = value;
+            } else {
+              actualRow[field] = value;
+            }
+          }
+        };
         
         // Fallback robust matching just in case
         if (!actualRow && dateEntry.date) {
@@ -16094,17 +16100,14 @@ async function saveProfile({ fullName, file }) {
         dateInput.addEventListener('change', function() {
           const dateValue = this.value;
           
-          // Update both actualRow and dateEntry to keep them in sync
+          syncToGroupedState('date', dateValue);
           if (actualRow) {
-            actualRow.date = dateValue;
-            // Also update dateEntry to keep them in sync
-            dateEntry.date = dateValue;
             instantSaveIncomeRow(actualRow, currentYear);
           } else {
             dateEntry.date = dateValue;
             // Try to find and update the actual row in state
             const currentYearData = state.income[currentYear] || [];
-            const projectRows = currentYearData.filter(row => row.name === project.name);
+            const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === project.name);
             if (dateIdx < projectRows.length) {
               const rowToUpdate = projectRows[dateIdx];
               rowToUpdate.date = dateValue;
@@ -16147,8 +16150,9 @@ async function saveProfile({ fullName, file }) {
         paidUsdInput.style.borderRadius = '8px';
         paidUsdInput.addEventListener('input', function() {
           const value = Number(this.value) || 0;
+          syncToGroupedState('paidUsd', value);
+          
           if (actualRow) {
-            actualRow.paidUsd = value;
             instantSaveIncomeRow(actualRow, currentYear);
             
             // Update paid EGP display
@@ -16163,7 +16167,6 @@ async function saveProfile({ fullName, file }) {
             }
             updateIncomeKPIsLive();
           } else {
-            dateEntry.paidUsd = value;
             // Update paid EGP display
             const paidSelectedValue = usdToSelectedCurrency(value);
             paidEgpDiv.textContent = state.currencySymbol + ' ' + nfINT.format(Math.round(paidSelectedValue));
@@ -16360,7 +16363,7 @@ async function saveProfile({ fullName, file }) {
                 e.stopPropagation();
               }
               
-              rowData.method = option;
+              syncToGroupedState('method', option);
               methodTrigger.querySelector('.method-text').textContent = option;
               methodMenu.querySelectorAll('.method-item-minimal').forEach(i => i.classList.remove('selected'));
               this.classList.add('selected');
@@ -16477,7 +16480,7 @@ async function saveProfile({ fullName, file }) {
             }
             // Try to find and update the actual row in state
             const currentYearData = state.income[currentYear] || [];
-            const projectRows = currentYearData.filter(row => row.name === project.name);
+            const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === project.name);
             if (dateIdx < projectRows.length) {
               const rowToUpdate = projectRows[dateIdx];
               rowToUpdate.progress = newProgress;
@@ -16592,7 +16595,7 @@ async function saveProfile({ fullName, file }) {
           if (delBtn.classList.contains('delete-confirm')) {
             // Find and remove the actual row from state
             const currentYearData = state.income[currentYear] || [];
-            const projectRows = currentYearData.filter(row => row.name === project.name);
+            const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === project.name);
             
             // Find the row to delete (by date index or by matching the actualRow)
             let rowToDelete = null;
@@ -16707,7 +16710,7 @@ async function saveProfile({ fullName, file }) {
     const currentYearData = state.income[year] || [];
     
     // Find existing project rows to determine next ordinal
-    const projectRows = currentYearData.filter(row => row.name === projectName);
+    const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === projectName);
     const nextIndex = projectRows.length;
     const getOrdinalSuffix = (n) => {
       const s = ['th', 'st', 'nd', 'rd'];
@@ -16755,19 +16758,23 @@ async function saveProfile({ fullName, file }) {
     
     // In grouped view, we need to find the actual row that corresponds to this date index
     // Since we group by project name, we need to find all rows with this project name
-    const projectRows = currentYearData.filter(row => row.name === projectName);
+    const projectRows = currentYearData.filter(row => ((row.name && row.name.trim() !== '') ? row.name.trim() : 'Untitled Project') === projectName);
     
     if (projectRows.length > 0 && dateIndex < projectRows.length) {
       const rowToUpdate = dateEntry._ref || projectRows[dateIndex];
       
       // Update the row with the date entry data
-      if (dateEntry.date !== undefined) rowToUpdate.date = dateEntry.date;
-      if (dateEntry.paidUsd !== undefined) rowToUpdate.paidUsd = dateEntry.paidUsd;
-      if (dateEntry.paidEgp !== undefined) rowToUpdate.paidEgp = dateEntry.paidEgp;
-      if (dateEntry.tags !== undefined) rowToUpdate.tags = dateEntry.tags;
-      if (dateEntry.method !== undefined) rowToUpdate.method = dateEntry.method;
-      if (dateEntry.progress !== undefined) rowToUpdate.progress = dateEntry.progress;
-      if (dateEntry.note !== undefined) rowToUpdate.note = dateEntry.note;
+      const target = (rowToUpdate.dates && Array.isArray(rowToUpdate.dates) && dateEntry._originalDateIndex !== undefined)
+        ? rowToUpdate.dates[dateEntry._originalDateIndex]
+        : rowToUpdate;
+        
+      if (dateEntry.date !== undefined) target.date = dateEntry.date;
+      if (dateEntry.paidUsd !== undefined) target.paidUsd = dateEntry.paidUsd;
+      if (dateEntry.paidEgp !== undefined) target.paidEgp = dateEntry.paidEgp;
+      if (dateEntry.tags !== undefined) target.tags = dateEntry.tags;
+      if (dateEntry.method !== undefined) target.method = dateEntry.method;
+      if (dateEntry.progress !== undefined) target.progress = dateEntry.progress;
+      if (dateEntry.note !== undefined) target.note = dateEntry.note;
       
       saveToLocal();
       instantSaveIncomeRow(rowToUpdate, year);
@@ -22012,4 +22019,7 @@ function loadNonCriticalResources() {
 
   // Make duplicate check function globally available
   window.checkAndFixDuplicates = checkAndFixDuplicates;
+
+
+
 
