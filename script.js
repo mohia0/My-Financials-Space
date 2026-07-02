@@ -19456,14 +19456,15 @@ function loadNonCriticalResources() {
           // Save and re-render
           if (dropZone.closest('#list-income')) {
             // Use specific save for income table
-            save('drag-drop');
-            // Re-render only the income table to preserve drag functionality
             const currentYearData = state.income[currentYear] || [];
+            currentYearData.forEach(row => instantSaveIncomeRow(row, currentYear));
+            // Re-render only the income table to preserve drag functionality
             renderIncomeList('list-income', currentYearData, true, true); // Force full render for drag
             showNotification('Income row reordered', 'success', 1500);
           } else {
             // Use regular save for other tables
-            save('drag-drop');
+            const isBiz = dropZone.closest('#list-biz') !== null;
+            draggedRowArray.forEach(row => instantSaveExpenseRow(row, isBiz));
             // Re-render only the specific table to preserve drag functionality
             if (dropZone.closest('#list-personal')) {
               renderList('list-personal', state.personal, false, true, true); // Force full render for drag
