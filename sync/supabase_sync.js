@@ -620,6 +620,111 @@ class SupabaseSync {
   }
 
   /**
+   * Save a single row to Supabase atomically.
+   * Marks the row ID in window.recentlySavedRowIds before writing so that
+   * the Realtime echo from this write is silently ignored by sync_integration.js.
+   *
+   * @param {string} tableName  - 'personal_expenses' | 'business_expenses' | 'income'
+   * @param {object} payload    - The column values to upsert (must include user_id for inserts)
+   * @param {string|null} rowId - Existing row UUID for updates, null for inserts
+   * @returns {Promise<object>} - The saved row data (contains id from DB)
+   */
+  async saveSingleRow(tableName, payload, rowId) {
+    try {
+      // Register the row ID so the Realtime echo is suppressed
+      if (!window.recentlySavedRowIds) {
+        window.recentlySavedRowIds = new Set();
+      }
+      if (rowId) {
+        window.recentlySavedRowIds.add(rowId);
+        // Auto-clean after 10s in case Realtime is slow / offline
+        setTimeout(() => window.recentlySavedRowIds.delete(rowId), 10000);
+      }
+
+      if (rowId) {
+        // UPDATE existing row
+        const { data, error } = await this.client
+          .from(tableName)
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq('id', rowId)
+          .eq('user_id', this.userId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        console.log(`✅ saveSingleRow UPDATE ${tableName} id=${rowId}`);
+        return data;
+
+      } else {
+        // INSERT new row
+        const { data, error } = await this.client
+          .from(tableName)
+          .insert({ ...payload, user_id: this.userId })
+          .select()
+          .single();
+
+        if (error) throw error;
+        console.log(`✅ saveSingleRow INSERT ${tableName} → new id=${data.id}`);
+
+        // Suppress the INSERT echo too
+        if (data?.id) {
+          window.recentlySavedRowIds.add(data.id);
+          setTimeout(() => window.recentlySavedRowIds.delete(data.id), 10000);
+        }
+
+        return data;
+      }
+
+    } catch (error) {
+      console.error(`❌ saveSingleRow failed for ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save user_settings row (upsert by user_id).
+   * Always suppresses its own Realtime echo.
+   */
+  async saveSettingsRow(settings) {
+    try {
+      const payload = {
+        user_id: this.userId,
+        fx_rate:                   settings.fx_rate,
+        theme:                     settings.theme,
+        autosave:                  settings.autosave,
+        include_annual_in_monthly: settings.include_annual_in_monthly,
+        column_order:              settings.column_order,
+        available_years:           settings.available_years,
+        inputs_locked:             settings.inputs_locked,
+        preferred_currency:        settings.preferred_currency,
+        updated_at:                new Date().toISOString()
+      };
+
+      const { data, error } = await this.client
+        .from('user_settings')
+        .upsert(payload, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Suppress the echo for settings too
+      if (!window.recentlySavedRowIds) window.recentlySavedRowIds = new Set();
+      if (data?.id) {
+        window.recentlySavedRowIds.add(data.id);
+        setTimeout(() => window.recentlySavedRowIds.delete(data.id), 10000);
+      }
+
+      console.log('✅ saveSettingsRow saved to Supabase');
+      return data;
+
+    } catch (error) {
+      console.error('❌ saveSettingsRow failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Cleanup and disconnect
    */
   async cleanup() {

@@ -5654,7 +5654,7 @@ async function saveProfile({ fullName, file }) {
       }
     }
     applyTheme();
-    $('#btnTheme').addEventListener('click', ()=>{ state.theme = state.theme==='light'?'dark':'light'; save(); applyTheme(); });
+    $('#btnTheme').addEventListener('click', ()=>{ state.theme = state.theme==='light'?'dark':'light'; saveSettingsDebounced(); applyTheme(); });
 
     // Lock/Unlock functionality
     $('#btnLock').addEventListener('click', toggleInputsLock);
@@ -5721,7 +5721,7 @@ async function saveProfile({ fullName, file }) {
         // Immediately save lock state to localStorage
         saveToLocal();
         
-        save('lock');
+        saveSettingsDebounced();
       
       // Save lock state to cloud if user is authenticated
       if (currentUser) {
@@ -6270,108 +6270,73 @@ async function saveProfile({ fullName, file }) {
     let pendingIncomeSaves = new Map();
     
     async function instantSaveExpenseRow(expenseRow, isBiz) {
-      console.log('💾 instantSaveExpenseRow called:', { 
-        name: expenseRow.name, 
-        cost: expenseRow.cost, 
-        isBiz, 
-        hasId: !!expenseRow.id,
-        inputsLocked: state.inputsLocked,
-        hasUser: !!currentUser,
-        supabaseReady
-      });
-      
       // Mark as data change for smart animations
       animationState.isDataChange = true;
-      
-      // Check if lock is active - if so, only save locally, not to cloud
-      if (state.inputsLocked) {
-        console.log('🔒 Inputs locked, saving locally only');
-        saveToLocal();
-        return;
-      }
-      
-      if (!currentUser || !supabaseReady) {
-        console.log('❌ No user or Supabase not ready, saving locally only');
-        saveToLocal();
-        return;
-      }
-      
+
+      // Lock check — local save only
+      if (state.inputsLocked) { saveToLocal(); return; }
+      if (!currentUser || !supabaseReady) { saveToLocal(); return; }
+
       const tableName = isBiz ? 'business_expenses' : 'personal_expenses';
-      const rowKey = `${tableName}-${expenseRow.id || 'new'}`;
-      
-      // Prevent duplicate saves for the same row, but queue the latest data
+      const rowKey    = `${tableName}-${expenseRow.id || 'new'}`;
+
+      // Per-row serialisation: queue the latest data if already in flight
       if (expenseSaveInProgress.has(rowKey)) {
         pendingExpenseSaves.set(rowKey, { expenseRow, isBiz });
         return;
       }
-      
+
       expenseSaveInProgress.add(rowKey);
       updateSyncStatus('syncing');
-      
+
       try {
-        // Construct standard payload
-        const saveData = {
-          name: expenseRow.name || '',
-          cost: Number(expenseRow.cost) || 0,
-          status: expenseRow.status || 'Active',
-          billing: expenseRow.billing || 'Monthly',
+        // Build column payload
+        const payload = {
+          name:        expenseRow.name    || '',
+          cost:        Number(expenseRow.cost) || 0,
+          status:      expenseRow.status  || 'Active',
+          billing:     expenseRow.billing || 'Monthly',
           monthly_usd: expenseRow.monthlyUSD || 0,
-          yearly_usd: expenseRow.yearlyUSD || 0,
+          yearly_usd:  expenseRow.yearlyUSD  || 0,
           monthly_egp: expenseRow.monthlyEGP || 0,
-          yearly_egp: expenseRow.yearlyEGP || 0,
-          icon: expenseRow.icon || null,
-          order: expenseRow.order || 0
+          yearly_egp:  expenseRow.yearlyEGP  || 0,
+          icon:        expenseRow.icon    || null,
+          order:       expenseRow.order   || 0
         };
-        
-        // Add business-specific fields
         if (isBiz) {
-          saveData.next_payment = expenseRow.next ? new Date(expenseRow.next).toISOString().split('T')[0] : null;
+          payload.next_payment = expenseRow.next
+            ? new Date(expenseRow.next).toISOString().split('T')[0]
+            : null;
         }
 
-        if (expenseRow.id) {
-          // Update existing row - 0ms delay
-          const { error } = await window.supabaseClient
-            .from(tableName)
-            .update({
-              ...saveData,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', expenseRow.id);
-            
-          if (error) throw error;
-          console.log(`✅ Expense ${expenseRow.id} updated in Supabase`);
-
+        // Use unified saveSingleRow (handles echo suppression automatically)
+        if (window.saveSingleRow) {
+          const saved = await window.saveSingleRow(tableName, payload, expenseRow.id || null);
+          if (!expenseRow.id && saved?.id) expenseRow.id = saved.id;
         } else {
-          // Create new row - 0ms delay
-          const { data, error } = await window.supabaseClient
-            .from(tableName)
-            .insert({
-              ...saveData,
-              user_id: currentUser.id
-            })
-            .select()
-            .single();
-            
-          if (error) throw error;
-          
-          // Update the local row with the new ID
-          expenseRow.id = data.id;
-          console.log(`✅ Expense created in Supabase with ID:`, data.id);
+          // Fallback: direct Supabase call (no echo suppression)
+          if (expenseRow.id) {
+            const { error } = await window.supabaseClient.from(tableName)
+              .update({ ...payload, updated_at: new Date().toISOString() })
+              .eq('id', expenseRow.id);
+            if (error) throw error;
+          } else {
+            const { data, error } = await window.supabaseClient.from(tableName)
+              .insert({ ...payload, user_id: currentUser.id }).select().single();
+            if (error) throw error;
+            expenseRow.id = data.id;
+          }
         }
-        
-        // Also save locally as backup
+
         saveToLocal();
-        
+
       } catch (error) {
-        console.error('❌ Failed to save expense to Supabase:', error);
+        console.error('❌ instantSaveExpenseRow failed:', error);
         updateSyncStatus('error');
-        // Fallback to local save
         saveToLocal();
       } finally {
-        // Remove from in-progress set
         expenseSaveInProgress.delete(rowKey);
-        
-        // Update sync status indicator when all background saves are completed
+
         if (expenseSaveInProgress.size === 0 && incomeSaveInProgress.size === 0) {
           updateSyncStatus('success');
           setTimeout(() => {
@@ -6380,8 +6345,8 @@ async function saveProfile({ fullName, file }) {
             }
           }, 1000);
         }
-        
-        // Execute any pending save for this row
+
+        // Execute any pending save queued during this flight
         if (pendingExpenseSaves.has(rowKey)) {
           const pending = pendingExpenseSaves.get(rowKey);
           pendingExpenseSaves.delete(rowKey);
@@ -6389,130 +6354,64 @@ async function saveProfile({ fullName, file }) {
         }
       }
     }
-    
+
     async function instantSaveIncomeRow(incomeRow, year) {
-      console.log('💾 instantSaveIncomeRow called:', { 
-        name: incomeRow.name, 
-        progress: incomeRow.progress,
-        note: incomeRow.note,
-        hasId: !!incomeRow.id,
-        year: year,
-        inputsLocked: state.inputsLocked,
-        hasUser: !!currentUser,
-        supabaseReady
-      });
-      
-      // Mark as data change for smart animations
       animationState.isDataChange = true;
-      
-      // Check if lock is active - if so, only save locally, not to cloud
-      if (state.inputsLocked) {
-        console.log('🔒 Inputs locked, saving locally only');
-        saveToLocal();
-        return;
-      }
-      
-      if (!currentUser || !supabaseReady) {
-        console.log('❌ No user or Supabase not ready, saving locally only');
-        saveToLocal();
-        return;
-      }
-      
+
+      if (state.inputsLocked) { saveToLocal(); return; }
+      if (!currentUser || !supabaseReady) { saveToLocal(); return; }
+
       const rowKey = `income-${incomeRow.id || 'new'}`;
-      
-      // Prevent duplicate saves for the same row, but queue the latest data
+
       if (incomeSaveInProgress.has(rowKey)) {
         pendingIncomeSaves.set(rowKey, { incomeRow, year });
         return;
       }
-      
-      incomeSaveInProgress.add(rowKey);
-      
-      try {
-        if (incomeRow.id) {
-          // Update existing row - 0ms delay
-          const updateData = {
-            name: incomeRow.name || '',
-            tags: incomeRow.tags || '',
-            date: incomeRow.date || new Date().toISOString().split('T')[0],
-            all_payment: incomeRow.allPayment || 0,
-            paid_usd: incomeRow.paidUsd || 0,
-            paid_egp: incomeRow.paidEgp || null,
-            method: incomeRow.method || 'Bank Transfer',
-            icon: incomeRow.icon || 'fa:dollar-sign',
-            year: parseInt(year),
-            order: incomeRow.order || 0,
-            progress: incomeRow.progress || 10,
-            note: incomeRow.note || '',
-            updated_at: new Date().toISOString()
-          };
-          
-          console.log('🔄 Updating income in Supabase:', {
-            id: incomeRow.id,
-            updateData: updateData
-          });
-          
-          const { error } = await window.supabaseClient
-            .from('income')
-            .update(updateData)
-            .eq('id', incomeRow.id);
-            
-          if (error) {
-            console.error('❌ Supabase update error:', error);
-            throw error;
-          }
-          console.log('✅ Income updated in Supabase for row:', incomeRow.id);
 
+      incomeSaveInProgress.add(rowKey);
+
+      try {
+        const payload = {
+          name:        incomeRow.name        || '',
+          tags:        incomeRow.tags        || '',
+          date:        incomeRow.date        || new Date().toISOString().split('T')[0],
+          all_payment: incomeRow.allPayment  || 0,
+          paid_usd:    incomeRow.paidUsd     || 0,
+          paid_egp:    incomeRow.paidEgp     || null,
+          method:      incomeRow.method      || 'Bank Transfer',
+          icon:        incomeRow.icon        || 'fa:dollar-sign',
+          year:        parseInt(year),
+          order:       incomeRow.order       || 0,
+          progress:    incomeRow.progress    || 10,
+          note:        incomeRow.note        || ''
+        };
+
+        if (window.saveSingleRow) {
+          const saved = await window.saveSingleRow('income', payload, incomeRow.id || null);
+          if (!incomeRow.id && saved?.id) incomeRow.id = saved.id;
         } else {
-          // Create new row - 0ms delay
-          const insertData = {
-            user_id: currentUser.id,
-            name: incomeRow.name || '',
-            tags: incomeRow.tags || '',
-            date: incomeRow.date || new Date().toISOString().split('T')[0],
-            all_payment: incomeRow.allPayment || 0,
-            paid_usd: incomeRow.paidUsd || 0,
-            paid_egp: incomeRow.paidEgp || null,
-            method: incomeRow.method || 'Bank Transfer',
-            icon: incomeRow.icon || 'fa:dollar-sign',
-            year: parseInt(year),
-            order: incomeRow.order || 0,
-            progress: incomeRow.progress || 10,
-            note: incomeRow.note || ''
-          };
-          
-          console.log('🔄 Creating income in Supabase:', {
-            insertData: insertData
-          });
-          
-          const { data, error } = await window.supabaseClient
-            .from('income')
-            .insert(insertData)
-            .select()
-            .single();
-            
-          if (error) {
-            console.error('❌ Supabase insert error:', error);
-            throw error;
+          // Fallback
+          if (incomeRow.id) {
+            const { error } = await window.supabaseClient.from('income')
+              .update({ ...payload, updated_at: new Date().toISOString() })
+              .eq('id', incomeRow.id);
+            if (error) throw error;
+          } else {
+            const { data, error } = await window.supabaseClient.from('income')
+              .insert({ ...payload, user_id: currentUser.id }).select().single();
+            if (error) throw error;
+            incomeRow.id = data.id;
           }
-          
-          // Update the local row with the new ID
-          incomeRow.id = data.id;
-          console.log('✅ Income created in Supabase with ID:', data.id);
         }
-        
-        // Also save locally as backup
+
         saveToLocal();
-        
+
       } catch (error) {
-        console.error('❌ Error saving income to Supabase:', error);
-        // Fallback to local save
+        console.error('❌ instantSaveIncomeRow failed:', error);
         saveToLocal();
       } finally {
-        // Remove from in-progress set
         incomeSaveInProgress.delete(rowKey);
-        
-        // Execute any pending save for this row
+
         if (pendingIncomeSaves.has(rowKey)) {
           const pending = pendingIncomeSaves.get(rowKey);
           pendingIncomeSaves.delete(rowKey);
@@ -7219,26 +7118,42 @@ async function saveProfile({ fullName, file }) {
     // Save user settings to cloud (including currency preference)
     async function saveUserSettingsToCloud() {
       if (!currentUser || !supabaseReady) return;
-      
+
+      const settings = {
+        fx_rate:                   state.fx || 48.1843,
+        theme:                     state.theme || 'dark',
+        autosave:                  state.autosave === 'on',
+        include_annual_in_monthly: state.includeAnnualInMonthly !== undefined ? state.includeAnnualInMonthly : true,
+        inputs_locked:             state.inputsLocked || false,
+        preferred_currency:        state.selectedCurrency || 'EGP',
+        column_order:              typeof columnOrder !== 'undefined' ? columnOrder : ['monthly', 'yearly', 'monthly-egp', 'yearly-egp'],
+        available_years:           typeof state.income !== 'undefined' ? Object.keys(state.income).map(y => parseInt(y)).sort((a, b) => a - b) : []
+      };
+
       try {
-        await window.supabaseClient
-          .from('user_settings')
-          .upsert({
-            user_id: currentUser.id,
-            preferred_currency: state.selectedCurrency || 'EGP',
-            fx_rate: state.fx || 48.1843,
-            theme: state.theme || 'dark',
-            autosave: state.autosave === 'on',
-            include_annual_in_monthly: state.includeAnnualInMonthly !== undefined ? state.includeAnnualInMonthly : true,
-            inputs_locked: state.inputsLocked || false
-          }, {
-            onConflict: 'user_id'
-          });
-        
-        console.log('✅ User settings (including currency) saved to cloud');
+        // Use the new unified settings saver (includes echo suppression)
+        if (window.saveSettingsRow) {
+          await window.saveSettingsRow(settings);
+        } else {
+          // Fallback to direct upsert
+          await window.supabaseClient
+            .from('user_settings')
+            .upsert({ user_id: currentUser.id, ...settings }, { onConflict: 'user_id' });
+        }
+        console.log('✅ User settings saved to cloud');
       } catch (error) {
         console.error('❌ Failed to save user settings to cloud:', error);
       }
+    }
+
+    // Debounced wrapper — call this for lightweight setting changes (FX rate, currency, etc.)
+    // Batches rapid changes into a single network request after 800ms quiet time.
+    let _settingsDebounceTimer = null;
+    function saveSettingsDebounced() {
+      clearTimeout(_settingsDebounceTimer);
+      _settingsDebounceTimer = setTimeout(() => {
+        saveUserSettingsToCloud();
+      }, 800);
     }
     
     // Function to render all tables
@@ -14153,7 +14068,7 @@ async function saveProfile({ fullName, file }) {
             billingText.textContent = 'M';
           }
            
-           save('billing-toggle');
+           instantSaveExpenseRow(row, isBiz);
            updateRowCalculations(div, row, isBiz);
            // Update totals live
            const containerId = isBiz ? 'list-biz' : 'list-personal';
@@ -17195,7 +17110,7 @@ function loadNonCriticalResources() {
       state.currencyRate = state.fx; // Keep both in sync
       // Update the currencyRates object with the new rate
       currencyRates[state.selectedCurrency] = state.currencyRate;
-      save('fx-rate');
+      saveSettingsDebounced();
       // Update only EGP calculations without re-rendering inputs
       updateAllCalculationsWithoutRerender();
       // Update income KPIs live when FX rate changes
@@ -17206,7 +17121,7 @@ function loadNonCriticalResources() {
     $('#inputIncludeAnnual').addEventListener('change', function() {
       state.includeAnnualInMonthly = this.value === 'true';
       updateAutosaveStatus();
-      save('include-annual-setting');
+      saveSettingsDebounced();
       // Update only calculations without re-rendering inputs
       updateAllCalculationsWithoutRerender();
     });

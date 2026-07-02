@@ -81,6 +81,14 @@ function setupRealtimeListeners() {
  * Handle personal expense updates
  */
 function handlePersonalExpenseUpdate(eventType, data, oldData) {
+  // Suppress echo from our own writes
+  const rowId = data?.id || oldData?.id;
+  if (rowId && window.recentlySavedRowIds?.has(rowId)) {
+    console.log(`🔕 Suppressing own Realtime echo for personal_expenses id=${rowId}`);
+    window.recentlySavedRowIds.delete(rowId);
+    return;
+  }
+
   if (eventType === 'INSERT') {
     // Add new expense to local state
     const expense = mapSupabaseToLocalExpense(data);
@@ -116,6 +124,14 @@ function handlePersonalExpenseUpdate(eventType, data, oldData) {
  * Handle business expense updates
  */
 function handleBusinessExpenseUpdate(eventType, data, oldData) {
+  // Suppress echo from our own writes
+  const rowId = data?.id || oldData?.id;
+  if (rowId && window.recentlySavedRowIds?.has(rowId)) {
+    console.log(`🔕 Suppressing own Realtime echo for business_expenses id=${rowId}`);
+    window.recentlySavedRowIds.delete(rowId);
+    return;
+  }
+
   if (eventType === 'INSERT') {
     const expense = mapSupabaseToLocalExpense(data);
     if (typeof state !== 'undefined' && state.biz) {
@@ -147,6 +163,14 @@ function handleBusinessExpenseUpdate(eventType, data, oldData) {
  * Handle income updates
  */
 function handleIncomeUpdate(eventType, data, oldData) {
+  // Suppress echo from our own writes
+  const rowId = data?.id || oldData?.id;
+  if (rowId && window.recentlySavedRowIds?.has(rowId)) {
+    console.log(`🔕 Suppressing own Realtime echo for income id=${rowId}`);
+    window.recentlySavedRowIds.delete(rowId);
+    return;
+  }
+
   if (eventType === 'INSERT') {
     const income = mapSupabaseToLocalIncome(data);
     if (typeof state !== 'undefined' && state.income) {
@@ -188,6 +212,14 @@ function handleIncomeUpdate(eventType, data, oldData) {
  * Handle user settings updates
  */
 function handleUserSettingsUpdate(eventType, data, oldData) {
+  // Suppress echo from our own writes
+  const rowId = data?.id || oldData?.id;
+  if (rowId && window.recentlySavedRowIds?.has(rowId)) {
+    console.log(`🔕 Suppressing own Realtime echo for user_settings id=${rowId}`);
+    window.recentlySavedRowIds.delete(rowId);
+    return;
+  }
+
   if (eventType === 'UPDATE' && typeof state !== 'undefined') {
     // Update local state with new settings
     if (data.fx_rate !== undefined) state.fx = data.fx_rate;
@@ -486,6 +518,23 @@ window.loadFromSupabase = loadFromSupabase;
 window.deleteExpense = deleteExpense;
 window.deleteIncomeEntry = deleteIncomeEntry;
 window.cleanupSync = cleanupSync;
+
+// Expose saveSingleRow and saveSettingsRow directly on window for use in script.js
+Object.defineProperty(window, 'saveSingleRow', {
+  get: () => syncManager?.saveSingleRow?.bind(syncManager) || null,
+  enumerable: true,
+  configurable: true
+});
+Object.defineProperty(window, 'saveSettingsRow', {
+  get: () => syncManager?.saveSettingsRow?.bind(syncManager) || null,
+  enumerable: true,
+  configurable: true
+});
+
+// Initialize the recentlySavedRowIds Set globally
+if (!window.recentlySavedRowIds) {
+  window.recentlySavedRowIds = new Set();
+}
 
 // Expose initialization status
 Object.defineProperty(window, 'isInitialized', {
