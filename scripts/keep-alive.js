@@ -4,11 +4,11 @@
  * Runs in the cloud via GitHub Actions so the DB never goes idle.
  */
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ Error: Missing SUPABASE_URL or SUPABASE_KEY environment variables.");
+  console.error("❌ Error: Missing Supabase credentials (SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL or SUPABASE_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY).");
   process.exit(1);
 }
 
