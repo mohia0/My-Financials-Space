@@ -1,4 +1,4 @@
-﻿// Global variables
+// Global variables
 let state = {
   fx: null,
   autosave: 'on',
@@ -2419,6 +2419,7 @@ async function saveProfile({ fullName, file }) {
         if (session?.user) {
           console.log('🔐 User signed in:', session.user.email);
           currentUser = session.user;
+          window.currentUser = session.user;
           updateAuthUI();
           updateUserDisplay();
           loadUserData();
@@ -2468,6 +2469,7 @@ async function saveProfile({ fullName, file }) {
           console.log('✅ User signed in, cloud sync enabled');
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
+          window.currentUser = null;
           updateAuthUI();
           
         // Cleanup sync system when user signs out
