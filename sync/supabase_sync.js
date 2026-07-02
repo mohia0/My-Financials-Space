@@ -472,11 +472,128 @@ class SupabaseSync {
   }
 
   /**
+   * Start the Supabase Hearth-Pulse heartbeat
+   * Implements the exact pattern from github.com/bennytaccardi/supabase-hearth-pulse:
+   * DELETE all rows + INSERT a new row on a dedicated hearth_pulse ping table
+   * to prevent the free-tier Supabase DB from going inactive due to idle time.
+   */
+  startHeartbeat(intervalMs = 30000) {
+    if (this._heartbeatInterval) {
+      clearInterval(this._heartbeatInterval);
+    }
+
+    console.log('💓 Supabase Hearth-Pulse started (interval:', intervalMs, 'ms)');
+
+    this._heartbeatInterval = setInterval(async () => {
+      try {
+        // Exact keepAlive implementation from supabase-hearth-pulse library:
+        // Step 1: DELETE all rows from the ping table
+        await this.client.from('hearth_pulse').delete().neq('id', 0);
+        // Step 2: INSERT a fresh row with a random name (UUID)
+        const { error } = await this.client
+          .from('hearth_pulse')
+          .insert({ name: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() });
+
+        if (error) {
+          console.warn('💓 Hearth-Pulse: ping returned error, will reconnect:', error.message);
+          await this.reconnectChannels();
+          return;
+        }
+
+        console.log('💓 Hearth-Pulse: ping OK');
+
+        // 2. Check realtime channel health & reconnect any dead ones
+        await this.reconnectChannels();
+
+      } catch (err) {
+        console.warn('💓 Hearth-Pulse: error during ping, attempting reconnect:', err.message);
+        try {
+          await this.reconnectChannels();
+        } catch (reconnectErr) {
+          console.error('💓 Hearth-Pulse: reconnect also failed:', reconnectErr.message);
+        }
+      }
+    }, intervalMs);
+
+    // Store interval ID globally so cleanup can find it
+    window._supabaseHearthPulseInterval = this._heartbeatInterval;
+  }
+
+  /**
+   * Stop the heartbeat
+   */
+  stopHeartbeat() {
+    if (this._heartbeatInterval) {
+      clearInterval(this._heartbeatInterval);
+      this._heartbeatInterval = null;
+      window._supabaseHearthPulseInterval = null;
+      console.log('💓 Supabase Hearth-Pulse stopped');
+    }
+  }
+
+  /**
+   * Check realtime channel states and reconnect any that are not SUBSCRIBED
+   */
+  async reconnectChannels() {
+    const tables = [
+      { name: 'personal_expenses', event: 'personal_expenses_changed' },
+      { name: 'business_expenses', event: 'business_expenses_changed' },
+      { name: 'income', event: 'income_changed' },
+      { name: 'user_settings', event: 'user_settings_changed' }
+    ];
+
+    for (const table of tables) {
+      const existingChannel = this.realtimeChannels.get(table.name);
+
+      // Check subscription state — SUBSCRIBED means healthy
+      const state = existingChannel ? existingChannel.state : null;
+      if (state === 'joined' || state === 'joining') {
+        // Channel is healthy, skip
+        continue;
+      }
+
+      console.log(`💓 Hearth-Pulse: reconnecting channel for ${table.name} (state: ${state})`);
+
+      // Remove the old dead channel if it exists
+      if (existingChannel) {
+        try {
+          await this.client.removeChannel(existingChannel);
+        } catch (_) { /* ignore */ }
+        this.realtimeChannels.delete(table.name);
+      }
+
+      // Create a fresh subscription
+      try {
+        const channel = this.client
+          .channel(`${table.name}_${this.userId}_${Date.now()}`)
+          .on('postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: table.name,
+              filter: `user_id=eq.${this.userId}`
+            },
+            (payload) => this.handleRealtimeUpdate(table.name, payload)
+          )
+          .subscribe();
+
+        this.realtimeChannels.set(table.name, channel);
+        console.log(`💓 Hearth-Pulse: channel for ${table.name} reconnected`);
+      } catch (err) {
+        console.error(`💓 Hearth-Pulse: failed to reconnect ${table.name}:`, err);
+      }
+    }
+  }
+
+  /**
    * Cleanup and disconnect
    */
   async cleanup() {
     try {
       console.log('🧹 Cleaning up Supabase sync...');
+
+      // Stop the heartbeat first
+      this.stopHeartbeat();
       
       // Unsubscribe from all realtime channels
       for (const [tableName, channel] of this.realtimeChannels) {

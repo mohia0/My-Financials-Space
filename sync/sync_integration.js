@@ -16,31 +16,37 @@ async function initializeSync() {
     return;
   }
 
-  try {
-    // Check if we have the required dependencies
-    if (!window.supabaseClient || !window.currentUser) {
-      console.log('⚠️ Supabase client or user not available');
-      return;
-    }
+  // Check if we have the required dependencies
+  if (!window.supabaseClient || !window.currentUser) {
+    console.log('⚠️ Supabase client or user not available');
+    return;
+  }
 
-    console.log('🚀 Initializing sync system...');
-    
-    // Create sync manager
-    syncManager = new SupabaseSync(window.supabaseClient, window.currentUser.id);
-    
-    // Initialize the sync system
+  console.log('🚀 Initializing sync system...');
+
+  // Create sync manager instance immediately
+  syncManager = new SupabaseSync(window.supabaseClient, window.currentUser.id);
+
+  // 💓 Start Hearth-Pulse RIGHT AWAY — independent of init success/failure
+  // This keeps the free-tier DB alive even if realtime setup has hiccups
+  syncManager.startHeartbeat(30000);
+
+  try {
+    // Initialize (testConnection + realtime subscriptions)
     await syncManager.initialize();
-    
+
     isInitialized = true;
-    
+
     // Set up event listeners for realtime updates
     setupRealtimeListeners();
-    
+
     console.log('✅ Sync system initialized successfully');
-    
+
   } catch (error) {
-    console.error('❌ Failed to initialize sync system:', error);
-    throw error;
+    console.error('❌ Failed to fully initialize sync system (heartbeat still running):', error);
+    // Don't throw — the heartbeat is running and basic save/load still works
+    // Mark as initialized so subsequent calls don't try again endlessly
+    isInitialized = true;
   }
 }
 
@@ -465,6 +471,7 @@ async function deleteIncomeEntry(incomeId) {
  */
 async function cleanupSync() {
   if (syncManager) {
+    // stopHeartbeat is called inside syncManager.cleanup()
     await syncManager.cleanup();
     syncManager = null;
     isInitialized = false;
