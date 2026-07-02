@@ -198,17 +198,34 @@ class SupabaseSync {
       
       const results = await Promise.allSettled(operations);
       
+      // Check for errors in results
+      let hasError = false;
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'rejected') {
+          console.error(`❌ Promise rejected for personal expense operation ${i}:`, result.reason);
+          hasError = true;
+        } else if (result.value && result.value.error) {
+          console.error(`❌ Supabase error for personal expense operation ${i}:`, result.value.error.message, result.value.error);
+          hasError = true;
+        }
+      }
+      
       // Update local IDs for new expenses
       let newExpenseIndex = 0;
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
-        if (result.status === 'fulfilled' && result.value.data && !expenses[i].id) {
+        if (result.status === 'fulfilled' && result.value && result.value.data && !expenses[i].id) {
           expenses[i].id = result.value.data.id;
           newExpenseIndex++;
         }
       }
       
-      console.log(`✅ Personal expenses saved to Supabase (${expenses.length} items)`);
+      if (hasError) {
+        console.warn(`⚠️ Personal expenses saved with some errors`);
+      } else {
+        console.log(`✅ Personal expenses saved successfully to Supabase (${expenses.length} items)`);
+      }
       return results;
       
     } catch (error) {
@@ -273,17 +290,34 @@ class SupabaseSync {
       
       const results = await Promise.allSettled(operations);
       
+      // Check for errors in results
+      let hasError = false;
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'rejected') {
+          console.error(`❌ Promise rejected for business expense operation ${i}:`, result.reason);
+          hasError = true;
+        } else if (result.value && result.value.error) {
+          console.error(`❌ Supabase error for business expense operation ${i}:`, result.value.error.message, result.value.error);
+          hasError = true;
+        }
+      }
+      
       // Update local IDs for new expenses
       let newExpenseIndex = 0;
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
-        if (result.status === 'fulfilled' && result.value.data && !expenses[i].id) {
+        if (result.status === 'fulfilled' && result.value && result.value.data && !expenses[i].id) {
           expenses[i].id = result.value.data.id;
           newExpenseIndex++;
         }
       }
       
-      console.log(`✅ Business expenses saved to Supabase (${expenses.length} items)`);
+      if (hasError) {
+        console.warn(`⚠️ Business expenses saved with some errors`);
+      } else {
+        console.log(`✅ Business expenses saved successfully to Supabase (${expenses.length} items)`);
+      }
       return results;
       
     } catch (error) {
