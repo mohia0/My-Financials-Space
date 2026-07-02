@@ -2287,7 +2287,11 @@ async function saveProfile({ fullName, file }) {
       }
       
       // Save and re-render efficiently
-      save('add-row'); 
+      if (group === 'biz') {
+        instantSaveExpenseRow(state.biz[state.biz.length - 1], true);
+      } else if (group === 'personal') {
+        instantSaveExpenseRow(state.personal[state.personal.length - 1], false);
+      }
       clearCalculationCache(); // Clear cache when data changes
       
       // Only re-render the specific table that was updated (force full render for new rows)
@@ -6302,43 +6306,48 @@ async function saveProfile({ fullName, file }) {
       }
       
       expenseSaveInProgress.add(rowKey);
+      updateSyncStatus('syncing');
       
       try {
+        // Construct standard payload
+        const saveData = {
+          name: expenseRow.name || '',
+          cost: Number(expenseRow.cost) || 0,
+          status: expenseRow.status || 'Active',
+          billing: expenseRow.billing || 'Monthly',
+          monthly_usd: expenseRow.monthlyUSD || 0,
+          yearly_usd: expenseRow.yearlyUSD || 0,
+          monthly_egp: expenseRow.monthlyEGP || 0,
+          yearly_egp: expenseRow.yearlyEGP || 0,
+          icon: expenseRow.icon || null,
+          order: expenseRow.order || 0
+        };
+        
+        // Add business-specific fields
+        if (isBiz) {
+          saveData.next_payment = expenseRow.next ? new Date(expenseRow.next).toISOString().split('T')[0] : null;
+        }
+
         if (expenseRow.id) {
           // Update existing row - 0ms delay
           const { error } = await window.supabaseClient
             .from(tableName)
             .update({
-              name: expenseRow.name,
-              cost: expenseRow.cost,
-              status: expenseRow.status,
-              billing: expenseRow.billing,
-              next_payment: expenseRow.next ? new Date(expenseRow.next).toISOString().split('T')[0] : null,
-              monthly_usd: expenseRow.monthlyUSD || 0,
-              yearly_usd: expenseRow.yearlyUSD || 0,
-              monthly_egp: expenseRow.monthlyEGP || 0,
-              yearly_egp: expenseRow.yearlyEGP || 0,
-              icon: expenseRow.icon
+              ...saveData,
+              updated_at: new Date().toISOString()
             })
             .eq('id', expenseRow.id);
             
           if (error) throw error;
+          console.log(`✅ Expense ${expenseRow.id} updated in Supabase`);
 
         } else {
           // Create new row - 0ms delay
           const { data, error } = await window.supabaseClient
             .from(tableName)
             .insert({
-              name: expenseRow.name,
-              cost: expenseRow.cost,
-              status: expenseRow.status,
-              billing: expenseRow.billing,
-              next_payment: expenseRow.next ? new Date(expenseRow.next).toISOString().split('T')[0] : null,
-              monthly_usd: expenseRow.monthlyUSD || 0,
-              yearly_usd: expenseRow.yearlyUSD || 0,
-              monthly_egp: expenseRow.monthlyEGP || 0,
-              yearly_egp: expenseRow.yearlyEGP || 0,
-              icon: expenseRow.icon
+              ...saveData,
+              user_id: currentUser.id
             })
             .select()
             .single();
@@ -6347,19 +6356,30 @@ async function saveProfile({ fullName, file }) {
           
           // Update the local row with the new ID
           expenseRow.id = data.id;
-
+          console.log(`✅ Expense created in Supabase with ID:`, data.id);
         }
         
         // Also save locally as backup
         saveToLocal();
         
       } catch (error) {
-
+        console.error('❌ Failed to save expense to Supabase:', error);
+        updateSyncStatus('error');
         // Fallback to local save
         saveToLocal();
       } finally {
         // Remove from in-progress set
         expenseSaveInProgress.delete(rowKey);
+        
+        // Update sync status indicator when all background saves are completed
+        if (expenseSaveInProgress.size === 0 && incomeSaveInProgress.size === 0) {
+          updateSyncStatus('success');
+          setTimeout(() => {
+            if (expenseSaveInProgress.size === 0 && incomeSaveInProgress.size === 0) {
+              updateSyncStatus('');
+            }
+          }, 1000);
+        }
         
         // Execute any pending save for this row
         if (pendingExpenseSaves.has(rowKey)) {
@@ -13306,7 +13326,8 @@ async function saveProfile({ fullName, file }) {
           if (isIncomeRow && arr[idx]) {
             instantSaveIncomeRow(arr[idx], currentYear);
           } else {
-            save();
+            const isBiz = (arr === state.biz);
+            instantSaveExpenseRow(arr[idx], isBiz);
           }
           
         iconPickerEl.close();
@@ -13611,7 +13632,8 @@ async function saveProfile({ fullName, file }) {
         if (isIncomeRow && arr[idx]) {
           instantSaveIncomeRow(arr[idx], currentYear);
         } else {
-          save();
+          const isBiz = (arr === state.biz);
+          instantSaveExpenseRow(arr[idx], isBiz);
         }
         
         iconPickerEl.close();
@@ -13670,7 +13692,8 @@ async function saveProfile({ fullName, file }) {
         if (isIncomeRow && arr[idx]) {
           instantSaveIncomeRow(arr[idx], currentYear);
         } else {
-          save();
+          const isBiz = (arr === state.biz);
+          instantSaveExpenseRow(arr[idx], isBiz);
         }
         
         iconPickerEl.close();
@@ -14013,12 +14036,15 @@ async function saveProfile({ fullName, file }) {
          nameInput.placeholder = 'Item name';
          nameInput.addEventListener('input', function() {
            row.name = this.value;
-           save('name-input');
            // Update totals and KPIs live (name doesn't affect calculations but keep UI fresh)
            updateRowCalculations(div, row, isBiz);
            const containerId = isBiz ? 'list-biz' : 'list-personal';
            const arr = isBiz ? state.biz : state.personal;
            updateExpenseSum(containerId, arr, isBiz);
+         });
+         nameInput.addEventListener('change', function() {
+           row.name = this.value;
+           instantSaveExpenseRow(row, isBiz);
          });
          nameDiv.appendChild(nameInput);
          
@@ -14030,7 +14056,6 @@ async function saveProfile({ fullName, file }) {
          costInput.value = (row.cost || 0);
          costInput.addEventListener('input', function() {
            row.cost = Number(this.value) || 0;
-           save('cost-input');
           // Live calculations as you type
            updateRowCalculations(div, row, isBiz);
            // Update totals live
@@ -14038,6 +14063,10 @@ async function saveProfile({ fullName, file }) {
            const arr = isBiz ? state.biz : state.personal;
            updateExpenseSum(containerId, arr, isBiz);
            // KPIs will be updated by updateRowCalculations
+         });
+         costInput.addEventListener('change', function() {
+           row.cost = Number(this.value) || 0;
+           instantSaveExpenseRow(row, isBiz);
          });
          costInput.addEventListener('blur', function() {
            this.value = (Number(this.value) || 0);
@@ -14084,7 +14113,7 @@ async function saveProfile({ fullName, file }) {
              div.classList.remove('inactive');
            }
            
-           save('status-toggle');
+           instantSaveExpenseRow(row, isBiz);
            updateRowCalculations(div, row, isBiz);
            // Update totals live
            const containerId = isBiz ? 'list-biz' : 'list-personal';
@@ -14209,7 +14238,7 @@ async function saveProfile({ fullName, file }) {
           dateInput.addEventListener('change', function() {
             row.next = this.value;
             updateDateDisplay();
-            save('date-input');
+            instantSaveExpenseRow(row, isBiz);
             renderKPIs(); // Update KPIs for renewal analytics
           });
           
@@ -14263,7 +14292,6 @@ async function saveProfile({ fullName, file }) {
 
         // wire inputs - event listeners already added above, no need to add them again
         // Note: Event listeners for nameInput and costInput are already bound above in lines 5241-5259
-        if(isBiz){ const dateInp=div.querySelector('input[type="date"]'); if(dateInp){ dateInp.addEventListener('change', ()=>{ row.next=dateInp.value; save('date-input'); }); } }
         const iconBtn=iconDiv.querySelector('[data-choose-icon]');
         iconBtn.addEventListener('click', async (e)=> {
           const rowElement = e.target.closest('.row');
