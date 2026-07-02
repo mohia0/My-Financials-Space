@@ -1708,7 +1708,7 @@ async function saveProfile({ fullName, file }) {
       
       // Save changes locally and to Supabase
       // This will update available_years in user_settings (removing the deleted year)
-      save();
+      saveSettingsDebounced();
       
       // Explicitly sync to ensure available_years is updated immediately
       if (typeof window.saveToSupabase === 'function' && window.syncSystemReady && window.isInitialized) {
@@ -2078,7 +2078,7 @@ async function saveProfile({ fullName, file }) {
       
       // Save changes locally and to Supabase
       // This will update available_years in user_settings (including the new year)
-      save();
+      saveSettingsDebounced();
       
       // Explicitly sync to ensure available_years is updated immediately
       if (typeof window.saveToSupabase === 'function' && window.syncSystemReady && window.isInitialized) {
@@ -5231,7 +5231,7 @@ async function saveProfile({ fullName, file }) {
         if (state.autocomplete[field].length > 10) {
           state.autocomplete[field] = state.autocomplete[field].slice(0, 10);
         }
-        save();
+        saveToLocal();
       }
     }
     
@@ -13639,7 +13639,7 @@ async function saveProfile({ fullName, file }) {
           if (isIncomeRow && arr[idx]) {
             instantSaveIncomeRow(arr[idx], currentYear);
           } else {
-            save();
+            instantSaveExpenseRow(arr[idx], arr === state.biz);
           }
           
           iconPickerEl.close();
@@ -13683,7 +13683,7 @@ async function saveProfile({ fullName, file }) {
           if (isIncomeRow && arr[idx]) {
             instantSaveIncomeRow(arr[idx], currentYear);
           } else {
-            save();
+            instantSaveExpenseRow(arr[idx], arr === state.biz);
           }
           
           iconPickerEl.close();
@@ -17858,7 +17858,7 @@ function loadNonCriticalResources() {
           
           // Update currency system and save
           updateCurrency(state.selectedCurrency);
-          save();
+          saveSettingsDebounced();
           
           // Show notification
           showNotification(`Currency rate updated to ${newRate.toFixed(4)} ${state.currencySymbol}`);
@@ -17908,7 +17908,7 @@ function loadNonCriticalResources() {
         
         // Update currency system and save
         updateCurrency(state.selectedCurrency);
-        save();
+        saveSettingsDebounced();
         
         // Show warning notification
         showNotification(`API unavailable, using fallback rate: ${fallbackRate.toFixed(4)} ${state.currencySymbol}`, 'warning');
@@ -18055,7 +18055,7 @@ function loadNonCriticalResources() {
         updateAllKPIDisplays();
         
         // Save the changes
-        save();
+        saveSettingsDebounced();
       });
     }
     
@@ -19783,7 +19783,8 @@ function loadNonCriticalResources() {
           renderAll();
         }, 500);
       } else {
-        save();
+        const isBiz = wrapper.closest('#list-biz') !== null;
+        instantSaveExpenseRow(row, isBiz);
       }
     }
     
