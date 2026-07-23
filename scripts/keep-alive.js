@@ -8,8 +8,12 @@ const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE
 const supabaseKey = process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ Error: Missing Supabase credentials (SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL or SUPABASE_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY).");
-  process.exit(1);
+  console.warn("⚠️  Warning: Supabase credentials are not configured.");
+  console.warn("   To enable the keep-alive ping, add these secrets to your GitHub repository:");
+  console.warn("   - SUPABASE_URL  (Settings → Secrets and variables → Actions → New repository secret)");
+  console.warn("   - SUPABASE_KEY  (your Supabase anon/service key)");
+  console.warn("   Skipping ping — workflow will still pass (exit 0) until credentials are set.");
+  process.exit(0); // Exit successfully so GitHub does NOT send failure emails
 }
 
 // Clean up trailing slash from URL if present
